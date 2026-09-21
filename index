@@ -79,7 +79,7 @@
 (() => {
   'use strict';
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
-  const APPS_SCRIPT_URL = 'https://script.google.com/u/0/home/projects/1k9M8xEzExUbM3X82OhAGBMPgDx-9aue6ZFJy5peOKZUpZkTWftzwKmd_/edit';
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','flash','scorePop','eventName','player','laserColor','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
