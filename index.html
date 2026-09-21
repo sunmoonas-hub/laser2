@@ -5,18 +5,20 @@
   <meta name="theme-color" content="#07111f">
   <title>LASER MATCH</title>
   <style>
-    :root{--bg:#07111f;--panel:#101d30;--line:#29415e;--text:#f5f8ff;--muted:#93a5bb;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
+    :root{--bg:#07111f;--panel:#101d30;--line:#29415e;--text:#f5f8ff;--muted:#aab9cc;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940;font-size:clamp(16px,4.15vw,19px)}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% -15%,#17375a 0,var(--bg) 45%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}button,input,select{font:inherit}button{cursor:pointer}
-    .app{max-width:760px;margin:auto;min-height:100vh;padding:env(safe-area-inset-top) 14px calc(92px + env(safe-area-inset-bottom))}
-    header{height:72px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:11px}.brand-mark{width:42px;height:42px;border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 22px #29e7d655}.brand-mark:before{content:"";width:18px;height:18px;border:2px solid var(--red);border-radius:50%;box-shadow:inset 0 0 0 4px var(--bg)}h1{font-size:19px;letter-spacing:1.8px;margin:0}.sub{font-size:11px;color:var(--muted);margin-top:2px}.status{font-size:12px;color:var(--cyan);display:flex;gap:6px;align-items:center}.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
-    .panel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid var(--line);border-radius:18px;box-shadow:0 16px 40px #0005;overflow:hidden}.setup{padding:16px;margin-bottom:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field label{display:block;color:var(--muted);font-size:11px;margin:0 0 6px 3px}.field input,.field select{width:100%;border:1px solid var(--line);border-radius:11px;background:#091426;color:white;padding:11px 12px;outline:none}.field input:focus,.field select:focus{border-color:var(--cyan)}
-    .camera{position:relative;aspect-ratio:3/4;background:#02060c;border-radius:18px;overflow:hidden;border:1px solid var(--line)}video,.overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.overlay{touch-action:none}.camera-msg{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:30px;color:var(--muted);background:radial-gradient(circle,#10243a,#050a12)}.camera-msg b{color:white;font-size:18px;margin-bottom:7px}.hud{position:absolute;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;pointer-events:none}.pill{border:1px solid #ffffff28;background:#06101dcc;backdrop-filter:blur(9px);border-radius:999px;padding:7px 11px;font-size:12px}.live{color:var(--red)}
-    .guide{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:max-content;max-width:90%;padding:8px 12px;border-radius:10px;background:#06101ddd;color:white;text-align:center;font-size:12px;pointer-events:none}.flash{position:absolute;inset:0;display:grid;place-items:center;background:#07111faa;opacity:0;pointer-events:none;transition:.15s}.flash.show{opacity:1}.score-pop{font-size:92px;font-weight:900;color:var(--lime);text-shadow:0 0 30px #b7ff3c99}.miss{color:var(--red)}
-    .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.btn{border:0;border-radius:13px;padding:13px 14px;font-weight:800;color:#08111d;background:var(--cyan)}.btn.secondary{background:#1b2c43;color:white;border:1px solid #34506f}.btn.danger{background:#ff526a;color:white}.btn:disabled{opacity:.45;cursor:not-allowed}.wide{grid-column:1/-1}
-    .scoreboard{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:var(--line);margin-bottom:12px}.metric{background:#0e1b2d;padding:15px;text-align:center}.metric small{display:block;color:var(--muted);font-size:11px;margin-bottom:5px}.metric strong{font-size:25px}.metric:first-child strong{color:var(--lime);font-size:31px}
-    .shots{padding:15px;margin-bottom:12px}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-title h2{font-size:15px;margin:0}.shot-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.shot{aspect-ratio:1;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:12px;color:var(--muted);background:#091426}.shot.hit{color:#07111f;background:var(--lime);border-color:var(--lime);font-weight:900}.shot.miss{background:var(--red);border-color:var(--red);color:white}.hint{font-size:12px;line-height:1.55;color:var(--muted);margin-top:12px}.toggle{display:flex;gap:6px}.toggle button{padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:#091426;color:var(--muted);font-size:11px}.toggle button.active{border-color:var(--cyan);color:var(--cyan)}
+    .app{width:100%;max-width:680px;margin:auto;min-height:100svh;padding:max(env(safe-area-inset-top),8px) clamp(10px,3vw,18px) calc(40px + env(safe-area-inset-bottom))}
+    header{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:10px}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand-mark{flex:0 0 auto;width:clamp(38px,10vw,46px);height:clamp(38px,10vw,46px);border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 22px #29e7d655}.brand-mark:before{content:"";width:42%;height:42%;border:2px solid var(--red);border-radius:50%;box-shadow:inset 0 0 0 4px var(--bg)}h1{font-size:clamp(1.05rem,5vw,1.35rem);letter-spacing:.08em;margin:0;white-space:nowrap}.sub{font-size:.72rem;color:var(--muted);margin-top:2px}.status{font-size:.75rem;color:var(--cyan);display:flex;gap:6px;align-items:center;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+    .panel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid var(--line);border-radius:18px;box-shadow:0 16px 40px #0005;overflow:hidden}.setup{padding:clamp(12px,3.5vw,18px);margin-bottom:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field label{display:block;color:var(--muted);font-size:.74rem;margin:0 0 6px 3px}.field input,.field select{width:100%;min-height:48px;border:1px solid var(--line);border-radius:11px;background:#091426;color:white;padding:10px 12px;outline:none;font-size:.92rem}.field input:focus,.field select:focus{border-color:var(--cyan)}
+    .camera{position:relative;width:100%;height:clamp(360px,61svh,680px);background:#02060c;border-radius:18px;overflow:hidden;border:1px solid var(--line)}video,.overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.overlay{touch-action:none}.camera-msg{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:24px;color:var(--muted);background:radial-gradient(circle,#10243a,#050a12);font-size:.9rem;line-height:1.55}.camera-msg b{color:white;font-size:1.12rem;margin-bottom:7px}.hud{position:absolute;left:10px;right:10px;top:10px;display:flex;justify-content:space-between;pointer-events:none}.pill{border:1px solid #ffffff28;background:#06101dcc;backdrop-filter:blur(9px);border-radius:999px;padding:7px 10px;font-size:.72rem}.live{color:var(--red)}
+    .guide{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:max-content;max-width:94%;padding:9px 12px;border-radius:10px;background:#06101dee;color:white;text-align:center;font-size:.75rem;line-height:1.35;pointer-events:none}.flash{position:absolute;inset:0;display:grid;place-items:center;background:#07111faa;opacity:0;pointer-events:none;transition:.15s}.flash.show{opacity:1}.score-pop{font-size:clamp(4.5rem,25vw,7rem);font-weight:900;color:var(--lime);text-shadow:0 0 30px #b7ff3c99}.miss{color:var(--red)}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.btn{min-height:52px;border:0;border-radius:13px;padding:12px 10px;font-size:.9rem;font-weight:850;color:#08111d;background:var(--cyan)}.btn.secondary{background:#1b2c43;color:white;border:1px solid #34506f}.btn.danger{background:#ff526a;color:white}.btn:disabled{opacity:.45;cursor:not-allowed}.wide{grid-column:1/-1}
+    .scoreboard{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:var(--line);margin-bottom:12px}.metric{background:#0e1b2d;padding:14px 6px;text-align:center}.metric small{display:block;color:var(--muted);font-size:.7rem;margin-bottom:5px}.metric strong{font-size:1.5rem}.metric:first-child strong{color:var(--lime);font-size:1.9rem}
+    .shots{padding:14px;margin-bottom:12px}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-title h2{font-size:.95rem;margin:0}.shot-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.shot{aspect-ratio:1;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:.72rem;color:var(--muted);background:#091426}.shot.hit{color:#07111f;background:var(--lime);border-color:var(--lime);font-weight:900}.shot.miss{background:var(--red);border-color:var(--red);color:white}.hint{font-size:.76rem;line-height:1.6;color:var(--muted);margin-top:12px}.toggle{display:flex;gap:6px}.toggle button{min-height:38px;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:#091426;color:var(--muted);font-size:.7rem}.toggle button.active{border-color:var(--cyan);color:var(--cyan)}
     dialog{border:1px solid var(--line);border-radius:20px;padding:0;background:#0c1728;color:white;width:min(92%,560px);box-shadow:0 25px 80px #000b}dialog::backdrop{background:#020712cc}.modal{padding:20px}.modal h3{margin:0 0 15px}.leader-row{display:grid;grid-template-columns:34px 1fr 60px 55px;gap:8px;padding:11px 4px;border-bottom:1px solid #263a53;align-items:center}.rank{color:var(--gold);font-weight:900}.empty{color:var(--muted);text-align:center;padding:30px}.footer-actions{display:flex;gap:8px;margin-top:16px}.footer-actions .btn{flex:1}.toast{position:fixed;z-index:20;left:50%;bottom:28px;transform:translate(-50%,120px);background:#effffb;color:#07111f;padding:11px 16px;border-radius:12px;font-weight:700;box-shadow:0 10px 35px #0009;transition:.25s}.toast.show{transform:translate(-50%,0)}
-    @media(max-width:430px){.app{padding-left:10px;padding-right:10px}.shot-grid{grid-template-columns:repeat(5,1fr)}.grid{grid-template-columns:1fr}.camera{aspect-ratio:3/4}}
+    @media(max-width:520px){.grid{grid-template-columns:1fr 1fr}.shot-grid{grid-template-columns:repeat(5,1fr)}}
+    @media(max-width:380px){:root{font-size:15px}.status span{display:none}.camera{height:58svh}.btn{font-size:.84rem}.grid{grid-template-columns:1fr}}
+    @media(orientation:landscape) and (max-height:600px){.camera{height:78svh}.app{max-width:920px}.setup .grid{grid-template-columns:repeat(4,1fr)}}
   </style>
 </head>
 <body>
@@ -40,13 +42,13 @@
     <canvas id="overlay" class="overlay"></canvas>
     <div class="camera-msg" id="cameraMsg"><b>카메라를 시작하세요</b><span>표적지가 화면 중앙에 오도록<br>휴대폰을 단단히 고정합니다.</span></div>
     <div class="hud"><span class="pill live" id="livePill">● OFF</span><span class="pill" id="fpsPill">감도 70</span></div>
-    <div class="guide" id="guide">① 카메라 시작 → ② 표적 보정 → ③ 경기 시작</div>
+    <div class="guide" id="guide">① 카메라 시작 → ② 표적 자동 보정 → ③ 경기 시작</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
   </section>
 
   <div class="controls">
     <button class="btn" id="cameraBtn">카메라 시작</button>
-    <button class="btn secondary" id="calibrateBtn" disabled>표적 보정</button>
+    <button class="btn secondary" id="calibrateBtn" disabled>표적 자동 보정</button>
     <button class="btn wide" id="matchBtn" disabled>경기 시작</button>
     <button class="btn secondary" id="manualBtn" disabled>수동 명중 입력</button>
     <button class="btn danger" id="undoBtn" disabled>마지막 발 취소</button>
@@ -61,7 +63,7 @@
   <section class="panel shots">
     <div class="section-title"><h2>탄착 기록</h2><div class="toggle"><button id="sensitivityDown">감도−</button><button id="sensitivityUp">감도＋</button></div></div>
     <div class="shot-grid" id="shotGrid"></div>
-    <div class="hint" id="calibrationInfo">표적 보정 전입니다. 휴대폰을 고정한 뒤 표적의 중심과 1점 원 바깥쪽을 지정하세요.</div>
+    <div class="hint" id="calibrationInfo">표적 보정 전입니다. 표적 전체가 화면에 보이도록 휴대폰을 정면으로 고정하세요.</div>
   </section>
 
   <div class="controls">
@@ -84,7 +86,7 @@
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','flash','scorePop','eventName','player','laserColor','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,running:false,calibrationMode:0,center:null,radius:0,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:70,raf:0,processing:false};
+  const state = {stream:null,running:false,calibrationMode:0,center:null,radius:0,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:70,raf:0,processing:false,background:null,warmupFrames:0,detectorReady:false,autoCalibrating:false};
 
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
@@ -96,13 +98,63 @@
       if(state.stream) state.stream.getTracks().forEach(t=>t.stop());
       state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30}}});
       els.video.srcObject=state.stream;await els.video.play();els.cameraMsg.style.display='none';
-      els.cameraBtn.textContent='카메라 전환';els.calibrateBtn.disabled=false;els.livePill.textContent='● CAMERA';setStatus('카메라 연결');resize();processFrames();
+      els.cameraBtn.textContent='카메라 다시 시작';els.calibrateBtn.disabled=false;els.livePill.textContent='● CAMERA';setStatus('카메라 연결');els.guide.textContent='표적을 화면 중앙에 맞추면 자동으로 인식합니다.';resize();processFrames();setTimeout(()=>{if(state.stream&&!state.center&&!state.running)beginCalibration()},900);
     }catch(e){console.error(e);toast('카메라 권한을 허용해 주세요.');els.guide.textContent='브라우저 설정에서 카메라 권한을 허용한 뒤 다시 시도하세요.'}
   }
 
-  function beginCalibration(){
-    if(!state.stream)return;state.running=false;state.calibrationMode=1;state.center=null;state.radius=0;state.shots=[];updateScore();
-    els.guide.textContent='표적의 정확한 중심을 한 번 누르세요.';els.matchBtn.disabled=true;setStatus('표적 보정','#ffc940');drawOverlay();
+  async function beginCalibration(){
+    if(!state.stream||els.video.readyState<2||state.autoCalibrating)return;state.autoCalibrating=true;
+    state.running=false;state.center=null;state.radius=0;state.shots=[];state.calibrationMode=0;state.background=null;updateScore();drawOverlay();
+    els.calibrateBtn.disabled=true;els.matchBtn.disabled=true;els.guide.textContent='표적의 동심원과 중심을 분석하고 있습니다…';setStatus('자동 보정 중','#ffc940');
+    await new Promise(resolve=>setTimeout(resolve,350));
+    const target=detectTarget();
+    els.calibrateBtn.disabled=false;state.autoCalibrating=false;
+    if(target){
+      state.center={x:target.x,y:target.y};state.radius=target.radius;state.calibrationMode=0;
+      els.guide.textContent='표적 자동 보정 완료 · 경기 시작을 누르세요.';
+      els.calibrationInfo.textContent=`자동 보정 완료: 중심 (${Math.round(target.x)}, ${Math.round(target.y)}), 외곽 반지름 ${Math.round(target.radius)}px`;
+      els.matchBtn.disabled=false;setStatus('자동 보정 완료');drawOverlay();toast('표적을 자동으로 인식했습니다.');
+    }else{
+      state.calibrationMode=1;els.guide.textContent='자동 인식 실패 · 표적 중심을 한 번 눌러 수동 보정하세요.';
+      els.calibrationInfo.textContent='자동 인식이 어려운 조명입니다. 표적 중심과 가장 바깥쪽 1점 원을 차례로 눌러 주세요.';
+      setStatus('수동 보정','#ffc940');toast('표적을 더 크게, 정면으로 맞춘 뒤 다시 시도할 수 있습니다.');
+    }
+  }
+
+  function videoGeometry(){
+    const vw=els.video.videoWidth,vh=els.video.videoHeight,box=els.overlay.getBoundingClientRect();
+    const scale=Math.min(box.width/vw,box.height/vh);
+    return{vw,vh,box,scale,offX:(box.width-vw*scale)/2,offY:(box.height-vh*scale)/2};
+  }
+
+  function videoToScreen(vx,vy){const g=videoGeometry();return{x:g.offX+vx*g.scale,y:g.offY+vy*g.scale,scale:g.scale}}
+
+  function screenTargetToWork(sw,sh){
+    const g=videoGeometry();
+    return{x:(state.center.x-g.offX)/g.scale/g.vw*sw,y:(state.center.y-g.offY)/g.scale/g.vh*sh,r:state.radius/g.scale/g.vw*sw};
+  }
+
+  function detectTarget(){
+    const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return null;
+    const sw=360,sh=Math.max(200,Math.round(sw*vh/vw));els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);
+    const data=wctx.getImageData(0,0,sw,sh).data,gray=new Uint8Array(sw*sh);let mean=0;
+    for(let p=0,i=0;p<gray.length;p++,i+=4){const v=Math.round(data[i]*.299+data[i+1]*.587+data[i+2]*.114);gray[p]=v;mean+=v}mean/=gray.length;
+    const threshold=Math.max(45,Math.min(150,mean-38)),mask=new Uint8Array(sw*sh),seen=new Uint8Array(sw*sh);
+    for(let y=Math.round(sh*.08);y<sh*.92;y++)for(let x=Math.round(sw*.08);x<sw*.92;x++){const p=y*sw+x;if(gray[p]<threshold)mask[p]=1}
+    let best=null;const stack=[];
+    for(let y=2;y<sh-2;y+=2)for(let x=2;x<sw-2;x+=2){const start=y*sw+x;if(!mask[start]||seen[start])continue;stack.length=0;stack.push(start);seen[start]=1;let area=0,sumX=0,sumY=0,minX=x,maxX=x,minY=y,maxY=y;
+      while(stack.length&&area<12000){const p=stack.pop(),px=p%sw,py=(p/sw)|0;area++;sumX+=px;sumY+=py;if(px<minX)minX=px;if(px>maxX)maxX=px;if(py<minY)minY=py;if(py>maxY)maxY=py;const n=[p-1,p+1,p-sw,p+sw];for(const q of n){if(q>0&&q<mask.length&&mask[q]&&!seen[q]){seen[q]=1;stack.push(q)}}}
+      const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh;if(area<25||ratio<.62||ratio>1.6||bw>sw*.5||bh>sh*.65)continue;const cx=sumX/area,cy=sumY/area,dist=Math.hypot(cx-sw/2,cy-sh/2),fill=area/(bw*bh),score=area*(.4+fill)/(1+dist*.025);if(!best||score>best.score)best={cx,cy,bw,bh,score};
+    }
+    let cx=best?best.cx:sw/2,cy=best?best.cy:sh/2;if(Math.hypot(cx-sw/2,cy-sh/2)>Math.min(sw,sh)*.32){cx=sw/2;cy=sh/2}
+    const minR=Math.max(16,best?Math.max(best.bw,best.bh)*.7:18),maxR=Math.min(sw,sh)*.46,profile=[];
+    for(let r=Math.round(minR);r<=maxR;r++){let sum=0,covered=0;const samples=96;for(let a=0;a<samples;a++){const t=a*Math.PI*2/samples,cs=Math.cos(t),sn=Math.sin(t),x1=Math.round(cx+cs*(r-2)),y1=Math.round(cy+sn*(r-2)),x2=Math.round(cx+cs*(r+2)),y2=Math.round(cy+sn*(r+2));if(x1<1||x1>=sw-1||y1<1||y1>=sh-1||x2<1||x2>=sw-1||y2<1||y2>=sh-1)continue;const d=Math.abs(gray[y2*sw+x2]-gray[y1*sw+x1]);sum+=d;if(d>22)covered++}profile.push({r,score:sum/samples,coverage:covered/samples})}
+    const avg=profile.reduce((s,v)=>s+v.score,0)/Math.max(1,profile.length);const peaks=profile.filter((v,i)=>i>1&&i<profile.length-2&&v.coverage>.12&&v.score>avg*1.22&&v.score>=profile[i-1].score&&v.score>=profile[i+1].score);
+    if(peaks.length<3)return null;
+    const outer=peaks.filter(p=>p.r>minR*1.8).sort((a,b)=>b.r-a.r)[0];if(!outer)return null;
+    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadius=outer.r/sw*vw*mapped.scale;
+    if(screenRadius<45||screenRadius>Math.min(els.overlay.clientWidth,els.overlay.clientHeight)*.49)return null;
+    return{x:mapped.x,y:mapped.y,radius:screenRadius};
   }
 
   function canvasPoint(ev){const r=els.overlay.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top}}
@@ -123,8 +175,8 @@
 
   function startMatch(){
     if(!state.center||!state.radius)return;if(!els.player.value.trim()){toast('선수 이름을 입력해 주세요.');els.player.focus();return}
-    state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;
-    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='경기 진행 중';els.matchBtn.disabled=true;els.guide.textContent='사격 준비 완료 · 표적을 향해 발사하세요.';els.livePill.textContent='● LIVE';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();
+    state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;state.background=null;state.warmupFrames=0;state.detectorReady=false;
+    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent='2초 동안 레이저를 쏘지 마세요 · 표적 기준 화면을 저장합니다.';els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();
   }
 
   function finishMatch(){state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');saveMatch()}
@@ -161,20 +213,23 @@
 
   function detectLaser(){
     const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return;
-    const sw=240,sh=Math.round(sw*vh/vw);els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);const img=wctx.getImageData(0,0,sw,sh),data=img.data;
-    const points=[];let sx=0,sy=0,weight=0;const threshold=255-state.sensitivity*1.55;
-    for(let y=1;y<sh-1;y+=2){for(let x=1;x<sw-1;x+=2){const i=(y*sw+x)*4,r=data[i],g=data[i+1],b=data[i+2],brightness=Math.max(r,g,b);if(brightness<threshold)continue;const color=els.laserColor.value==='red'?(r>g*1.28&&r>b*1.28):(g>r*1.2&&g>b*1.18);if(!color)continue;const wt=brightness-threshold+1;sx+=x*wt;sy+=y*wt;weight+=wt;points.push(1)}}
-    if(points.length<1||points.length>90){state.candidateFrames=0;state.missingFrames++;if(state.missingFrames>=4)state.spotLatched=false;return}
-    state.missingFrames=0;
-    const px=sx/weight,py=sy/weight;const vr=els.video.getBoundingClientRect(),box=els.overlay.getBoundingClientRect();const videoRatio=vw/vh,boxRatio=box.width/box.height;let scale,offX=0,offY=0;if(videoRatio>boxRatio){scale=box.height/vh;offX=(vw*scale-box.width)/2}else{scale=box.width/vw;offY=(vh*scale-box.height)/2}const screenX=px/sw*vw*scale-offX,screenY=py/sh*vh*scale-offY;
-    if(screenX<0||screenY<0||screenX>box.width||screenY>box.height)return;
+    const sw=320,sh=Math.max(180,Math.round(sw*vh/vw));els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh,lum=new Uint8Array(total);
+    for(let p=0,i=0;p<total;p++,i+=4)lum[p]=Math.round(data[i]*.299+data[i+1]*.587+data[i+2]*.114);
+    if(!state.background||state.background.length!==total){state.background=new Float32Array(lum);state.warmupFrames=0;return}
+    if(state.warmupFrames<45){for(let p=0;p<total;p++)state.background[p]=state.background[p]*.8+lum[p]*.2;state.warmupFrames++;if(state.warmupFrames===45){state.detectorReady=true;els.matchBtn.textContent='경기 진행 중';els.guide.textContent='자동 감지 준비 완료 · 표적을 향해 발사하세요.';els.livePill.textContent='● LIVE';setStatus('자동 감지 중','#ff4d66');toast('레이저 자동 감지가 시작되었습니다.')}return}
+    const t=screenTargetToWork(sw,sh),x0=Math.max(1,Math.floor(t.x-t.r*1.12)),x1=Math.min(sw-2,Math.ceil(t.x+t.r*1.12)),y0=Math.max(1,Math.floor(t.y-t.r*1.12)),y1=Math.min(sh-2,Math.ceil(t.y+t.r*1.12));
+    let count=0,sx=0,sy=0,weight=0;const deltaThreshold=Math.max(18,62-state.sensitivity*.42),color=els.laserColor.value;
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){if(Math.hypot(x-t.x,y-t.y)>t.r*1.12)continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],bright=Math.max(r,g,b),delta=lum[p]-state.background[p];if(delta<deltaThreshold||bright<135)continue;const colored=color==='red'?(r>g+14&&r>b+14):(g>r+12&&g>b+10),whiteCore=bright>242&&Math.min(r,g,b)>185;if(!colored&&!whiteCore)continue;const wt=delta+Math.max(0,bright-180)*.35;sx+=x*wt;sy+=y*wt;weight+=wt;count++}
+    if(count<1||count>260){state.candidateFrames=0;state.missingFrames++;if(state.missingFrames>=3)state.spotLatched=false;const alpha=count>260?.18:.035;for(let p=0;p<total;p++)state.background[p]=state.background[p]*(1-alpha)+lum[p]*alpha;return}
+    state.missingFrames=0;const px=sx/weight,py=sy/weight,mapped=videoToScreen(px/sw*vw,py/sh*vh),screenX=mapped.x,screenY=mapped.y;
+    if(Math.hypot(screenX-state.center.x,screenY-state.center.y)>state.radius*1.15)return;
     if(state.spotLatched)return;
-    if(state.candidate&&Math.hypot(screenX-state.candidate.x,screenY-state.candidate.y)<16)state.candidateFrames++;else{state.candidate={x:screenX,y:screenY};state.candidateFrames=1}
-    if(state.candidateFrames>=2&&performance.now()-state.lastHit>500){recordShot(screenX,screenY);state.spotLatched=true;state.candidateFrames=0}
+    if(state.candidate&&Math.hypot(screenX-state.candidate.x,screenY-state.candidate.y)<18)state.candidateFrames++;else{state.candidate={x:screenX,y:screenY};state.candidateFrames=1}
+    if(state.candidateFrames>=2&&performance.now()-state.lastHit>450){recordShot(screenX,screenY);state.spotLatched=true;state.candidateFrames=0}
   }
 
   function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay()}
-  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;els.player.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent='경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'새 선수를 입력하고 경기 시작을 누르세요.':'카메라 시작 후 표적을 보정하세요.';setStatus('준비');updateScore();drawOverlay()}
+  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;state.background=null;state.detectorReady=false;els.player.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent='경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'새 선수를 입력하고 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus('준비');updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
