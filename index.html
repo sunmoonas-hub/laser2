@@ -18,12 +18,13 @@
     .scoreboard{grid-area:score;display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:var(--line);margin-bottom:12px}.metric{background:#0e1b2d;padding:14px 6px;text-align:center}.metric small{display:block;color:var(--muted);font-size:.7rem;margin-bottom:5px}.metric strong{font-size:1.5rem}.metric:first-child strong{color:var(--lime);font-size:1.9rem}
     .shots{grid-area:shots;padding:14px;margin-bottom:12px}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-title h2{font-size:.95rem;margin:0}.shot-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.shot{aspect-ratio:1;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:.72rem;color:var(--muted);background:#091426}.shot.hit{color:#07111f;background:var(--lime);border-color:var(--lime);font-weight:900}.shot.miss{background:var(--red);border-color:var(--red);color:white}.hint{font-size:.76rem;line-height:1.6;color:var(--muted);margin-top:12px}.toggle{display:flex;gap:6px}.toggle button{min-height:38px;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:#091426;color:var(--muted);font-size:.7rem}.toggle button.active{border-color:var(--cyan);color:var(--cyan)}
     .match-controls{grid-area:match}.footer-controls{grid-area:footer}
+    .side-panel{display:contents}
     dialog{border:1px solid var(--line);border-radius:20px;padding:0;background:#0c1728;color:white;width:min(92%,560px);box-shadow:0 25px 80px #000b}dialog::backdrop{background:#020712cc}.modal{padding:20px}.modal h3{margin:0 0 15px}.leader-row{display:grid;grid-template-columns:34px 1fr 60px 55px;gap:8px;padding:11px 4px;border-bottom:1px solid #263a53;align-items:center}.rank{color:var(--gold);font-weight:900}.empty{color:var(--muted);text-align:center;padding:30px}.footer-actions{display:flex;gap:8px;margin-top:16px}.footer-actions .btn{flex:1}.toast{position:fixed;z-index:20;left:50%;bottom:28px;transform:translate(-50%,120px);background:#effffb;color:#07111f;padding:11px 16px;border-radius:12px;font-weight:700;box-shadow:0 10px 35px #0009;transition:.25s}.toast.show{transform:translate(-50%,0)}
     @media(min-width:700px){.app{max-width:760px;margin:auto}.grid{grid-template-columns:1fr 1fr}}
     @media(max-width:520px){.shot-grid{grid-template-columns:repeat(5,1fr)}}
     @media(max-width:420px){.status{display:none}.fullscreen-btn{padding:7px 9px;font-size:.68rem}}
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
-    @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}.app{display:grid;width:100%;max-width:none;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-areas:"header header" "camera setup" "camera score" "camera match" "camera shots" "camera footer";gap:8px;padding:4px 8px 12px}.app>header{min-height:52px}.brand-mark{width:38px;height:38px}h1{font-size:1.08rem}.sub{font-size:.65rem}.camera{height:calc(100svh - 64px);min-height:300px;position:sticky;top:58px}.setup{margin:0;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:none}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
+    @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:52px minmax(0,1fr);grid-template-areas:"header header" "camera side";gap:8px;padding:4px 8px 8px}.app>header{min-height:52px}.brand-mark{width:38px;height:38px}h1{font-size:1.08rem}.sub{font-size:.65rem}.camera{height:100%;min-height:0;position:relative;top:auto}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 3px 18px 0;scrollbar-gutter:stable}.setup{margin:0 0 7px;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0 0 7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0 0 7px}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0 0 7px;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
   </style>
 </head>
 <body>
@@ -33,10 +34,13 @@
     <div class="header-actions"><div class="status" id="status"><i class="dot"></i><span>준비</span></div><button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶ 전체화면</button></div>
   </header>
 
+  <div class="side-panel" id="sidePanel">
+
   <section class="panel setup">
     <div class="grid">
       <div class="field"><label>대회명</label><input id="eventName" value="교내 레이저 사격대회" maxlength="80"></div>
       <div class="field"><label>선수명</label><input id="player" placeholder="선수 이름" maxlength="40"></div>
+      <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
       <div class="field"><label>레이저 색상</label><select id="laserColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
       <div class="field"><label>경기 발수</label><select id="maxShots"><option>5</option><option selected>10</option><option>20</option></select></div>
     </div>
@@ -80,6 +84,7 @@
     <button class="btn secondary" id="leaderBtn">순위표</button>
     <button class="btn secondary" id="resetBtn">새 경기</button>
   </div>
+  </div>
 </main>
 
 <dialog id="leaderDialog"><div class="modal"><h3>🏆 경기 순위표</h3><div id="leaderList" class="empty">기록을 불러오는 중입니다.</div><div class="footer-actions"><button class="btn secondary" onclick="leaderDialog.close()">닫기</button></div></div></dialog>
@@ -93,7 +98,7 @@
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
-  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','eventName','player','laserColor','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
+  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','eventName','player','firingLane','laserColor','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
   const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:80,raf:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,laserBlocked:false,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0};
@@ -222,12 +227,12 @@
   function startMatch(){
     if(!state.center||!state.radius)return;if(!els.player.value.trim()){toast('선수 이름을 입력해 주세요.');els.player.focus();return}
     state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.detectorReady=false;
-    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent='2초 동안 레이저를 쏘지 마세요 · 표적 기준 화면을 저장합니다.';els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();
+    els.player.disabled=true;els.firingLane.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 2초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();
   }
 
   function finishMatch(){state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');saveMatch()}
   async function saveMatch(){
-    const payload={matchId:state.matchId,eventName:els.eventName.value.trim(),player:els.player.value.trim(),maxShots:state.maxShots,totalScore:state.shots.reduce((a,s)=>a+s.score,0),device:navigator.userAgent,shots:state.shots};
+    const payload={matchId:state.matchId,eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),maxShots:state.maxShots,totalScore:state.shots.reduce((a,s)=>a+s.score,0),device:navigator.userAgent,shots:state.shots};
     localStorage.setItem('laserMatchLast',JSON.stringify(payload));
     if(!isServerConfigured()){setStatus('기기에 저장됨');els.guide.textContent='Apps Script 주소가 설정되지 않아 이 기기에만 기록했습니다.';toast('index.html에 Apps Script 주소를 넣어 주세요.');return}
     try{
@@ -300,12 +305,12 @@
   }
 
   function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay()}
-  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent='경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'새 선수를 입력하고 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus('준비');updateScore();drawOverlay()}
+  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent='경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'새 선수를 입력하고 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus('준비');updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
     const callback='laserLeaderboard_'+Date.now();const script=document.createElement('script');const timer=setTimeout(()=>finish(new Error('시간 초과')),10000);
-    function finish(error,rows){clearTimeout(timer);delete window[callback];script.remove();if(error){els.leaderList.className='empty';els.leaderList.textContent='순위표를 불러오지 못했습니다.';return}if(!rows.length){els.leaderList.className='empty';els.leaderList.textContent='아직 저장된 경기 기록이 없습니다.';return}els.leaderList.className='';els.leaderList.innerHTML=rows.map((r,i)=>`<div class="leader-row"><span class="rank">${i+1}</span><span>${escapeHtml(r.player)}</span><strong>${r.totalScore}점</strong><small>10점 ${r.tens}</small></div>`).join('')}
+    function finish(error,rows){clearTimeout(timer);delete window[callback];script.remove();if(error){els.leaderList.className='empty';els.leaderList.textContent='순위표를 불러오지 못했습니다.';return}if(!rows.length){els.leaderList.className='empty';els.leaderList.textContent='아직 저장된 경기 기록이 없습니다.';return}els.leaderList.className='';els.leaderList.innerHTML=rows.map((r,i)=>`<div class="leader-row"><span class="rank">${i+1}</span><span>${escapeHtml(r.player)} <small>· ${r.firingLane||'-'}사로</small></span><strong>${r.totalScore}점</strong><small>10점 ${r.tens}</small></div>`).join('')}
     window[callback]=rows=>finish(null,rows);script.onerror=()=>finish(new Error('network'));script.src=`${APPS_SCRIPT_URL}?action=leaderboard&eventName=${encodeURIComponent(els.eventName.value.trim())}&callback=${callback}&t=${Date.now()}`;document.head.appendChild(script);
   }
   function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
