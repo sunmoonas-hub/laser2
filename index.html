@@ -96,7 +96,7 @@
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','eventName','player','laserColor','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:76,raf:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,laserBlocked:false,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0};
+  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:80,raf:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,laserBlocked:false,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0};
 
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
@@ -130,20 +130,20 @@
   async function changeZoom(direction){
     if(!state.videoTrack||state.zoomMax<=state.zoomMin){toast('이 브라우저에서는 카메라 줌을 지원하지 않습니다.');return}
     const next=Math.min(state.zoomMax,Math.max(state.zoomMin,state.zoom+direction*state.zoomStep));if(Math.abs(next-state.zoom)<.001)return;
-    try{await state.videoTrack.applyConstraints({advanced:[{zoom:next}]});state.zoom=next;updateZoomUI();state.center=null;state.radius=0;state.targetVideo=null;clearDetectorBackground();els.matchBtn.disabled=true;drawOverlay();els.guide.textContent='배율이 변경되었습니다 · 표적을 다시 자동 보정합니다.';setTimeout(()=>beginCalibration(),450)}catch(e){console.error(e);toast('카메라 배율을 변경하지 못했습니다.')}
+    try{await state.videoTrack.applyConstraints({advanced:[{zoom:next}]});state.zoom=next;updateZoomUI();state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetVideo=null;clearDetectorBackground();els.matchBtn.disabled=true;drawOverlay();els.guide.textContent='배율이 변경되었습니다 · 표적을 다시 자동 보정합니다.';setTimeout(()=>beginCalibration(),450)}catch(e){console.error(e);toast('카메라 배율을 변경하지 못했습니다.')}
   }
 
   async function beginCalibration(){
     if(!state.stream||els.video.readyState<2||state.autoCalibrating)return;state.autoCalibrating=true;
-    state.running=false;state.center=null;state.radius=0;state.targetVideo=null;state.shots=[];state.calibrationMode=0;clearDetectorBackground();updateScore();drawOverlay();
+    state.running=false;state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetAngle=0;state.targetVideo=null;state.shots=[];state.calibrationMode=0;clearDetectorBackground();updateScore();drawOverlay();
     els.calibrateBtn.disabled=true;els.matchBtn.disabled=true;els.guide.textContent='표적의 동심원과 중심을 분석하고 있습니다…';setStatus('자동 보정 중','#ffc940');
     await new Promise(resolve=>setTimeout(resolve,350));
     const target=detectTarget();
     els.calibrateBtn.disabled=false;state.autoCalibrating=false;
     if(target){
-      state.center={x:target.x,y:target.y};state.radius=target.radius;state.calibrationMode=0;saveTargetToVideo();
+      state.center={x:target.x,y:target.y};state.radiusX=target.radiusX;state.radiusY=target.radiusY;state.radius=Math.max(target.radiusX,target.radiusY);state.targetAngle=target.angle;state.calibrationMode=0;saveTargetToVideo();
       els.guide.textContent='표적 자동 보정 완료 · 경기 시작을 누르세요.';
-      els.calibrationInfo.textContent=`자동 보정 완료: ${target.rings}개 원으로 표적 크기 계산 · 외곽 반지름 ${Math.round(target.radius)}px`;
+      els.calibrationInfo.textContent=`자동 보정 완료: 카메라 표적 형태 ${Math.round(target.radiusX)}×${Math.round(target.radiusY)}px · 기울기 ${Math.round(target.angle*180/Math.PI)}°`;
       els.matchBtn.disabled=false;setStatus('자동 보정 완료');drawOverlay();toast('표적을 자동으로 인식했습니다.');
     }else{
       state.calibrationMode=1;els.guide.textContent='자동 인식 실패 · 표적 중심을 한 번 눌러 수동 보정하세요.';
@@ -160,13 +160,13 @@
 
   function videoToScreen(vx,vy){const g=videoGeometry();return{x:g.offX+vx*g.scale,y:g.offY+vy*g.scale,scale:g.scale}}
 
-  function saveTargetToVideo(){if(!state.center||!state.radius||!els.video.videoWidth)return;const g=videoGeometry(),vx=(state.center.x-g.offX)/g.scale,vy=(state.center.y-g.offY)/g.scale;state.targetVideo={x:vx/g.vw,y:vy/g.vh,r:state.radius/g.scale/g.vw}}
+  function saveTargetToVideo(){if(!state.center||!state.radius||!els.video.videoWidth)return;const g=videoGeometry(),vx=(state.center.x-g.offX)/g.scale,vy=(state.center.y-g.offY)/g.scale;state.targetVideo={x:vx/g.vw,y:vy/g.vh,rx:state.radiusX/g.scale/g.vw,ry:state.radiusY/g.scale/g.vw,a:state.targetAngle}}
 
-  function restoreTargetFromVideo(){if(!state.targetVideo||!els.video.videoWidth)return;const g=videoGeometry(),mapped=videoToScreen(state.targetVideo.x*g.vw,state.targetVideo.y*g.vh);state.center={x:mapped.x,y:mapped.y};state.radius=state.targetVideo.r*g.vw*g.scale}
+  function restoreTargetFromVideo(){if(!state.targetVideo||!els.video.videoWidth)return;const g=videoGeometry(),mapped=videoToScreen(state.targetVideo.x*g.vw,state.targetVideo.y*g.vh);state.center={x:mapped.x,y:mapped.y};state.radiusX=(state.targetVideo.rx||state.targetVideo.r)*g.vw*g.scale;state.radiusY=(state.targetVideo.ry||state.targetVideo.r)*g.vw*g.scale;state.radius=Math.max(state.radiusX,state.radiusY);state.targetAngle=state.targetVideo.a||0}
 
   function screenTargetToWork(sw,sh){
     const g=videoGeometry();
-    return{x:(state.center.x-g.offX)/g.scale/g.vw*sw,y:(state.center.y-g.offY)/g.scale/g.vh*sh,r:state.radius/g.scale/g.vw*sw};
+    return{x:(state.center.x-g.offX)/g.scale/g.vw*sw,y:(state.center.y-g.offY)/g.scale/g.vh*sh,rx:state.radiusX/g.scale/g.vw*sw,ry:state.radiusY/g.scale/g.vw*sw,r:state.radius/g.scale/g.vw*sw,a:state.targetAngle};
   }
 
   function detectTarget(){
@@ -179,7 +179,7 @@
     let best=null;const stack=[];
     for(let y=2;y<sh-2;y+=2)for(let x=2;x<sw-2;x+=2){const start=y*sw+x;if(!mask[start]||seen[start])continue;stack.length=0;stack.push(start);seen[start]=1;let area=0,sumX=0,sumY=0,minX=x,maxX=x,minY=y,maxY=y;
       while(stack.length&&area<12000){const p=stack.pop(),px=p%sw,py=(p/sw)|0;area++;sumX+=px;sumY+=py;if(px<minX)minX=px;if(px>maxX)maxX=px;if(py<minY)minY=py;if(py>maxY)maxY=py;const n=[p-1,p+1,p-sw,p+sw];for(const q of n){if(q>0&&q<mask.length&&mask[q]&&!seen[q]){seen[q]=1;stack.push(q)}}}
-      const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh;if(area<25||ratio<.62||ratio>1.6||bw>sw*.5||bh>sh*.65)continue;const cx=sumX/area,cy=sumY/area,dist=Math.hypot(cx-sw/2,cy-sh/2),fill=area/(bw*bh),score=area*(.4+fill)/(1+dist*.025);if(!best||score>best.score)best={cx,cy,bw,bh,score};
+      const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh;if(area<25||ratio<.4||ratio>2.5||bw>sw*.58||bh>sh*.72)continue;const cx=sumX/area,cy=sumY/area,dist=Math.hypot(cx-sw/2,cy-sh/2),fill=area/(bw*bh),score=area*(.4+fill)/(1+dist*.025);if(!best||score>best.score)best={cx,cy,bw,bh,score};
     }
     let cx=best?best.cx:sw/2,cy=best?best.cy:sh/2;if(Math.hypot(cx-sw/2,cy-sh/2)>Math.min(sw,sh)*.32){cx=sw/2;cy=sh/2}
     const startR=5,maxR=Math.floor(Math.min(sw,sh)*.46),profile=[];
@@ -194,23 +194,27 @@
     if(fits.length){const bestQuality=Math.max(...fits.map(v=>v.quality)),bestHits=Math.max(...fits.filter(v=>v.quality>=bestQuality*.82).map(v=>v.hits));fit=fits.filter(v=>v.quality>=bestQuality*.82&&v.hits>=bestHits-1).sort((a,b)=>b.step-a.step)[0]}
     let outerR=fit?fit.step*10:0,rings=fit?fit.hits:0;
     if(!fit){const peaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.12&&v.score>avg*1.25&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score);if(peaks.length<3)return null;const outer=peaks.sort((a,b)=>b.r-a.r)[0];outerR=outer.r;rings=peaks.length}
-    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadius=outerR/sw*vw*mapped.scale;
-    if(screenRadius<45||screenRadius>Math.min(els.overlay.clientWidth,els.overlay.clientHeight)*.49)return null;
-    return{x:mapped.x,y:mapped.y,radius:screenRadius,rings:Math.min(10,rings)};
+    const edge=new Uint8Array(sw*sh);for(let y=1;y<sh-1;y++)for(let x=1;x<sw-1;x++){const p=y*sw+x;edge[p]=Math.min(255,Math.abs(gray[p+1]-gray[p-1])+Math.abs(gray[p+sw]-gray[p-sw]))}
+    let ellipse=null;const majorMin=Math.max(38,outerR*.82),majorMax=Math.min(Math.min(sw,sh)*.49,outerR*1.38);
+    for(let major=majorMin;major<=majorMax;major+=3)for(let ratio=.58;ratio<=1.001;ratio+=.06)for(let deg=0;deg<180;deg+=15){const minor=major*ratio,a=deg*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);let sum=0,covered=0,n=0;for(let ring=4;ring<=10;ring++){const k=ring/10,ringWeight=ring>=8?1.25:1;for(let j=0;j<48;j++){const t=j*Math.PI*2/48,ex=major*k*Math.cos(t),ey=minor*k*Math.sin(t),x=Math.round(cx+ex*ca-ey*sa),y=Math.round(cy+ex*sa+ey*ca);if(x<2||x>=sw-2||y<2||y>=sh-2)continue;const e=edge[y*sw+x];sum+=Math.min(100,e)*ringWeight;if(e>24)covered+=ringWeight;n+=ringWeight}}const coverage=covered/Math.max(1,n),score=sum/Math.max(1,n)+coverage*34+major*.015;if(coverage>.1&&(!ellipse||score>ellipse.score))ellipse={major,minor,a,score,coverage}}
+    if(!ellipse)ellipse={major:outerR,minor:outerR,a:0};
+    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadiusX=ellipse.major/sw*vw*mapped.scale,screenRadiusY=ellipse.minor/sw*vw*mapped.scale;
+    if(screenRadiusX<45||screenRadiusX>Math.min(els.overlay.clientWidth,els.overlay.clientHeight)*.55||screenRadiusY<32)return null;
+    return{x:mapped.x,y:mapped.y,radius:screenRadiusX,radiusX:screenRadiusX,radiusY:screenRadiusY,angle:ellipse.a,rings:Math.min(10,rings)};
   }
 
   function canvasPoint(ev){const r=els.overlay.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top}}
   els.overlay.addEventListener('pointerdown',ev=>{
     const p=canvasPoint(ev);
     if(state.calibrationMode===1){state.center=p;state.calibrationMode=2;els.guide.textContent='가장 바깥쪽 1점 원의 테두리를 누르세요.';drawOverlay();return}
-    if(state.calibrationMode===2){const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);if(d<40){toast('중심에서 더 먼 바깥 원을 눌러 주세요.');return}state.radius=d;state.calibrationMode=0;saveTargetToVideo();els.guide.textContent='보정 완료 · 경기 시작을 누르세요.';els.calibrationInfo.textContent=`보정 완료: 외곽 반지름 ${Math.round(d)}px · 표적이 움직이면 다시 보정하세요.`;els.matchBtn.disabled=false;setStatus('보정 완료');drawOverlay();return}
+    if(state.calibrationMode===2){const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);if(d<40){toast('중심에서 더 먼 바깥 원을 눌러 주세요.');return}state.radius=state.radiusX=state.radiusY=d;state.targetAngle=0;state.calibrationMode=0;saveTargetToVideo();els.guide.textContent='보정 완료 · 경기 시작을 누르세요.';els.calibrationInfo.textContent=`수동 보정 완료: 외곽 반지름 ${Math.round(d)}px`;els.matchBtn.disabled=false;setStatus('보정 완료');drawOverlay();return}
   });
 
   function drawOverlay(){
     const width=els.overlay.clientWidth,height=els.overlay.clientHeight;ctx.clearRect(0,0,width,height);
     if(!state.center)return;
     ctx.save();ctx.lineWidth=1.2;
-    if(state.radius){for(let i=10;i>=1;i--){ctx.beginPath();ctx.arc(state.center.x,state.center.y,state.radius*i/10,0,Math.PI*2);ctx.strokeStyle=i===10?'#29e7d6cc':'#ffffff55';ctx.stroke()}}
+    if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#29e7d6cc':'#ffffff55';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
     ctx.beginPath();ctx.arc(state.center.x,state.center.y,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
     state.shots.forEach((s,i)=>{if(s.manual||s.screenX==null)return;let px=s.screenX,py=s.screenY;if(Number.isFinite(s.videoX)&&Number.isFinite(s.videoY)){const g=videoGeometry(),mapped=videoToScreen(s.videoX*g.vw,s.videoY*g.vh);px=mapped.x;py=mapped.y}s.screenX=px;s.screenY=py;ctx.beginPath();ctx.arc(px,py,9,0,Math.PI*2);ctx.fillStyle=s.score?'#b7ff3c':'#ff4d66';ctx.fill();ctx.fillStyle='#07111f';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),px,py)});ctx.restore();
   }
@@ -237,11 +241,11 @@
 
   function recordShot(x,y,manualScore=null){
     if(!state.running||state.shots.length>=state.maxShots)return;
-    const dx=x==null?0:x-state.center.x,dy=y==null?0:y-state.center.y,nr=manualScore==null?Math.hypot(dx,dy)/state.radius:0;
+    const dx=x==null?0:x-state.center.x,dy=y==null?0:y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nr=manualScore==null?Math.hypot(ex/state.radiusX,ey/state.radiusY):0;
     const score=manualScore==null?(nr>1?0:Math.max(1,10-Math.floor(nr*10))):Number(manualScore);
-    const mmScale=80/state.radius;
+    const xMm=ex/state.radiusX*80,yMm=ey/state.radiusY*80;
     let videoX=null,videoY=null;if(x!=null&&y!=null){const g=videoGeometry();videoX=((x-g.offX)/g.scale)/g.vw;videoY=((y-g.offY)/g.scale)/g.vh}
-    state.shots.push({score,screenX:x,screenY:y,videoX,videoY,xMm:+(dx*mmScale).toFixed(1),yMm:+(dy*mmScale).toFixed(1),normalizedRadius:+nr.toFixed(4),manual:manualScore!=null,time:new Date().toLocaleTimeString('ko-KR',{hour12:false})});
+    state.shots.push({score,screenX:x,screenY:y,videoX,videoY,xMm:+xMm.toFixed(1),yMm:+yMm.toFixed(1),normalizedRadius:+nr.toFixed(4),manual:manualScore!=null,time:new Date().toLocaleTimeString('ko-KR',{hour12:false})});
     state.lastHit=performance.now();showScore(score);updateScore();drawOverlay();els.undoBtn.disabled=false;
     if(state.shots.length>=state.maxShots)setTimeout(finishMatch,650)
   }
@@ -260,34 +264,35 @@
     for(let p=0,i=0;p<total;p++,i+=4)lum[p]=Math.round(data[i]*.299+data[i+1]*.587+data[i+2]*.114);
     if(!state.background||state.background.length!==total){state.background=new Float32Array(lum);state.backgroundR=new Float32Array(total);state.backgroundG=new Float32Array(total);state.backgroundB=new Float32Array(total);for(let p=0,i=0;p<total;p++,i+=4){state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}state.prevLum=new Uint8Array(lum);state.warmupFrames=0;return}
     const warmupLimit=Math.max(36,Math.round((state.actualFps||30)*1.2));if(state.warmupFrames<warmupLimit){for(let p=0,i=0;p<total;p++,i+=4){state.background[p]=state.background[p]*.75+lum[p]*.25;state.backgroundR[p]=state.backgroundR[p]*.75+data[i]*.25;state.backgroundG[p]=state.backgroundG[p]*.75+data[i+1]*.25;state.backgroundB[p]=state.backgroundB[p]*.75+data[i+2]*.25}state.prevLum.set(lum);state.warmupFrames++;if(state.warmupFrames===warmupLimit){state.detectorReady=true;els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');toast('레이저 감지가 시작되었습니다.')}return}
-    const t=screenTargetToWork(sw,sh),scanR=t.r*1.38,x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
+    const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*1.3,x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
+    const insideScan=(x,y,margin=1.3)=>{const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;return Math.hypot(ex/t.rx,ey/t.ry)<=margin};
 
     let motionPixels=0,motionSamples=0,meanNow=0,meanBase=0;
-    for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(Math.hypot(x-t.x,y-t.y)>scanR)continue;const p=y*sw+x;motionSamples++;meanNow+=lum[p];meanBase+=state.background[p];if(Math.abs(lum[p]-state.prevLum[p])>18)motionPixels++}
+    for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!insideScan(x,y))continue;const p=y*sw+x;motionSamples++;meanNow+=lum[p];meanBase+=state.background[p];if(Math.abs(lum[p]-state.prevLum[p])>18)motionPixels++}
     const motionRatio=motionPixels/Math.max(1,motionSamples),exposureShift=Math.abs(meanNow-meanBase)/Math.max(1,motionSamples);state.prevLum.set(lum);
     if(motionRatio>.035||exposureShift>11){state.pendingLaser=null;state.laserBlocked=true;state.stableFrames=0;blendBackground(data,lum,total,.14);return}
     state.stableFrames++;if(state.stableFrames<2)return;
 
-    const points=[];let strongest=null;const color=els.laserColor.value,signalThreshold=Math.max(7,31-state.sensitivity*.22);
+    const points=[];let strongest=null;const color=els.laserColor.value,signalThreshold=Math.max(5,28-state.sensitivity*.23);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-      if(Math.hypot(x-t.x,y-t.y)>scanR)continue;
+      if(!insideScan(x,y))continue;
       const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],lumRise=lum[p]-state.background[p],maxRise=Math.max(dr,dg,db);
       const currentWarm=r-Math.max(g,b),baseWarm=state.backgroundR[p]-Math.max(state.backgroundG[p],state.backgroundB[p]),warmBoost=currentWarm-baseWarm;
-      const warmMixed=dr>6&&dr>=dg-6&&dr>=db-6,redHalo=currentWarm>10&&warmBoost>4&&dr>5,whitePink=r>190&&dr>10&&dr>=dg-8&&dr>=db-8;
-      const greenMixed=dg>7&&dg>=dr-4&&dg>=db-4;
+      const warmMixed=dr>4&&dr>=dg-8&&dr>=db-8,redHalo=currentWarm>8&&warmBoost>2&&dr>4,whitePink=r>180&&dr>7&&dr>=dg-10&&dr>=db-10;
+      const greenMixed=dg>5&&dg>=dr-6&&dg>=db-6;
       const colorMatch=color==='green'?greenMixed:(warmMixed||redHalo||whitePink);
-      if(!colorMatch||maxRise<signalThreshold||lumRise<3)continue;
+      if(!colorMatch||maxRise<signalThreshold||lumRise<2)continue;
       const colorBoost=color==='green'?dg-Math.max(dr,db):Math.max(warmBoost,dr-Math.max(dg,db)),signal=maxRise+Math.max(0,lumRise)*1.15+Math.max(0,colorBoost)*.65,point={x,y,wt:signal,delta:signal,bright:Math.max(r,g,b),colorBoost,lumRise};points.push(point);if(!strongest||signal>strongest.wt)strongest=point;
     }
     if(!points.length){
       state.laserBlocked=false;
-      if(state.pendingLaser){const pending=state.pendingLaser;state.pendingLaser=null;const confirmed=(pending.frames>=2&&pending.frames<=8&&pending.maxSignal>=22&&pending.maxContrast>=13&&pending.maxColorBoost>=4)||(pending.frames===1&&pending.maxSignal>=48&&pending.maxContrast>=28&&pending.maxColorBoost>=8);if(confirmed&&performance.now()-state.lastHit>300){const mapped=videoToScreen(pending.x/sw*vw,pending.y/sh*vh);if(Math.hypot(mapped.x-state.center.x,mapped.y-state.center.y)<=state.radius*1.25)recordShot(mapped.x,mapped.y)}}
+      if(state.pendingLaser){const pending=state.pendingLaser;state.pendingLaser=null;const confirmed=(pending.frames>=2&&pending.frames<=8&&pending.maxSignal>=18&&pending.maxContrast>=9&&pending.maxColorBoost>=2)||(pending.frames===1&&pending.maxSignal>=35&&pending.maxContrast>=18&&pending.maxColorBoost>=4);if(confirmed&&performance.now()-state.lastHit>280){const mapped=videoToScreen(pending.x/sw*vw,pending.y/sh*vh),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;if(Math.hypot(ex/state.radiusX,ey/state.radiusY)<=1.2)recordShot(mapped.x,mapped.y)}}
       blendBackground(data,lum,total,.025);return;
     }
     if(points.length>650){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,total,.16);return}
     let sx=0,sy=0,weight=0,localCount=0,clusterColorBoost=strongest.colorBoost,minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;for(const point of points){if(Math.hypot(point.x-strongest.x,point.y-strongest.y)<=9){sx+=point.x*point.wt;sy+=point.y*point.wt;weight+=point.wt;localCount++;clusterColorBoost=Math.max(clusterColorBoost,point.colorBoost);if(point.x<minX)minX=point.x;if(point.x>maxX)maxX=point.x;if(point.y<minY)minY=point.y;if(point.y>maxY)maxY=point.y}}
     const clusterW=maxX-minX+1,clusterH=maxY-minY+1,shape=clusterW/Math.max(1,clusterH);let surround=0,surroundN=0;for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){const distance=Math.hypot(ox,oy);if(distance<6||distance>10)continue;const nx=strongest.x+ox,ny=strongest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;surround+=lum[ny*sw+nx];surroundN++}const localContrast=strongest.bright-surround/Math.max(1,surroundN);
-    if(localCount>100||shape<.34||shape>3||(localCount<2&&strongest.delta<42)||localContrast<8){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,total,.04);return}
+    if(localCount>120||shape<.28||shape>3.5||(localCount<2&&strongest.delta<32)||localContrast<5){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,total,.04);return}
     if(state.laserBlocked)return;
     const px=weight?sx/weight:strongest.x,py=weight?sy/weight:strongest.y;
     if(state.pendingLaser&&Math.hypot(px-state.pendingLaser.x,py-state.pendingLaser.y)<12){const n=state.pendingLaser.frames;state.pendingLaser.x=(state.pendingLaser.x*n+px)/(n+1);state.pendingLaser.y=(state.pendingLaser.y*n+py)/(n+1);state.pendingLaser.frames++;state.pendingLaser.maxSignal=Math.max(state.pendingLaser.maxSignal,strongest.delta);state.pendingLaser.maxContrast=Math.max(state.pendingLaser.maxContrast,localContrast);state.pendingLaser.maxColorBoost=Math.max(state.pendingLaser.maxColorBoost,clusterColorBoost);if(state.pendingLaser.frames>8){state.pendingLaser=null;state.laserBlocked=true}}
