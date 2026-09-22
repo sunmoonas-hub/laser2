@@ -9,7 +9,7 @@
     :root{--bg:#07111f;--panel:#101d30;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940;font-size:clamp(20px,5.2vw,23px)}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{width:100%;max-width:100%;margin:0;min-height:100%;overflow-x:hidden;background:radial-gradient(circle at 50% -15%,#17375a 0,var(--bg) 45%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;-webkit-text-size-adjust:100%;text-size-adjust:100%}button,input,select{font:inherit}button{cursor:pointer}
     .app{width:100vw;max-width:none;margin:0;min-height:100svh;padding:max(env(safe-area-inset-top),4px) max(env(safe-area-inset-left),6px) calc(26px + env(safe-area-inset-bottom)) max(env(safe-area-inset-right),6px)}
-    header{grid-area:header;min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:10px}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand-mark{flex:0 0 auto;width:clamp(38px,10vw,46px);height:clamp(38px,10vw,46px);border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 22px #29e7d655}.brand-mark:before{content:"";width:42%;height:42%;border:2px solid var(--red);border-radius:50%;box-shadow:inset 0 0 0 4px var(--bg)}h1{font-size:clamp(1.05rem,5vw,1.35rem);letter-spacing:.08em;margin:0;white-space:nowrap}.sub{font-size:.72rem;color:var(--muted);margin-top:2px}.status{font-size:.75rem;color:var(--cyan);display:flex;gap:6px;align-items:center;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+    header{grid-area:header;min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:8px}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand-mark{flex:0 0 auto;width:clamp(38px,10vw,46px);height:clamp(38px,10vw,46px);border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 22px #29e7d655}.brand-mark:before{content:"";width:42%;height:42%;border:2px solid var(--red);border-radius:50%;box-shadow:inset 0 0 0 4px var(--bg)}h1{font-size:clamp(1.05rem,5vw,1.35rem);letter-spacing:.08em;margin:0;white-space:nowrap}.sub{font-size:.72rem;color:var(--muted);margin-top:2px}.header-actions{display:flex;align-items:center;gap:7px}.status{font-size:.75rem;color:var(--cyan);display:flex;gap:6px;align-items:center;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}.fullscreen-btn{min-height:44px;border:1px solid #3b5877;border-radius:11px;background:#142941;color:white;padding:8px 11px;font-size:.72rem;font-weight:800;white-space:nowrap}.fullscreen-btn:active{background:var(--cyan);color:#07111f}:fullscreen .app{min-height:100vh}
     .panel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 40px #0005;overflow:hidden}.setup{grid-area:setup;padding:14px 12px;margin-bottom:10px}.grid{display:grid;grid-template-columns:1fr;gap:11px}.field label{display:block;color:var(--muted);font-size:.78rem;margin:0 0 7px 3px;font-weight:700}.field input,.field select{width:100%;min-height:58px;border:1px solid var(--line);border-radius:12px;background:#091426;color:white;padding:12px 14px;outline:none;font-size:1rem}.field input:focus,.field select:focus{border-color:var(--cyan)}
     .camera{grid-area:camera;position:relative;width:100%;height:clamp(440px,68svh,780px);background:#02060c;border-radius:14px;overflow:hidden;border:1px solid var(--line)}video,.overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.overlay{touch-action:none}.camera-msg{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:22px;color:var(--muted);background:radial-gradient(circle,#10243a,#050a12);font-size:1rem;line-height:1.6}.camera-msg b{color:white;font-size:1.25rem;margin-bottom:8px}.hud{position:absolute;left:9px;right:9px;top:9px;display:flex;justify-content:space-between;pointer-events:none}.pill{border:1px solid #ffffff28;background:#06101dcc;backdrop-filter:blur(9px);border-radius:999px;padding:9px 12px;font-size:.78rem}.live{color:var(--red)}
     .zoom-controls{position:absolute;z-index:5;right:10px;top:56px;display:grid;grid-template-columns:46px 58px 46px;align-items:center;border:1px solid #ffffff32;border-radius:14px;overflow:hidden;background:#06101de8;backdrop-filter:blur(10px)}.zoom-controls button{width:46px;height:46px;border:0;background:#142941;color:white;font-size:1.45rem;font-weight:800}.zoom-controls button:active{background:var(--cyan);color:#07111f}.zoom-controls button:disabled{opacity:.35}.zoom-controls span{font-size:.72rem;text-align:center;color:var(--cyan);font-weight:800}
@@ -21,7 +21,8 @@
     dialog{border:1px solid var(--line);border-radius:20px;padding:0;background:#0c1728;color:white;width:min(92%,560px);box-shadow:0 25px 80px #000b}dialog::backdrop{background:#020712cc}.modal{padding:20px}.modal h3{margin:0 0 15px}.leader-row{display:grid;grid-template-columns:34px 1fr 60px 55px;gap:8px;padding:11px 4px;border-bottom:1px solid #263a53;align-items:center}.rank{color:var(--gold);font-weight:900}.empty{color:var(--muted);text-align:center;padding:30px}.footer-actions{display:flex;gap:8px;margin-top:16px}.footer-actions .btn{flex:1}.toast{position:fixed;z-index:20;left:50%;bottom:28px;transform:translate(-50%,120px);background:#effffb;color:#07111f;padding:11px 16px;border-radius:12px;font-weight:700;box-shadow:0 10px 35px #0009;transition:.25s}.toast.show{transform:translate(-50%,0)}
     @media(min-width:700px){.app{max-width:760px;margin:auto}.grid{grid-template-columns:1fr 1fr}}
     @media(max-width:520px){.shot-grid{grid-template-columns:repeat(5,1fr)}}
-    @media(max-width:380px){:root{font-size:19px}.status span{display:none}.camera{height:66svh}.btn{font-size:.96rem}}
+    @media(max-width:420px){.status{display:none}.fullscreen-btn{padding:7px 9px;font-size:.68rem}}
+    @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
     @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}.app{display:grid;width:100%;max-width:none;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-areas:"header header" "camera setup" "camera score" "camera match" "camera shots" "camera footer";gap:8px;padding:4px 8px 12px}.app>header{min-height:52px}.brand-mark{width:38px;height:38px}h1{font-size:1.08rem}.sub{font-size:.65rem}.camera{height:calc(100svh - 64px);min-height:300px;position:sticky;top:58px}.setup{margin:0;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:none}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
   </style>
 </head>
@@ -29,7 +30,7 @@
 <main class="app">
   <header>
     <div class="brand"><div class="brand-mark"></div><div><h1>LASER MATCH</h1><div class="sub">모바일 자동채점 시스템</div></div></div>
-    <div class="status" id="status"><i class="dot"></i><span>준비</span></div>
+    <div class="header-actions"><div class="status" id="status"><i class="dot"></i><span>준비</span></div><button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶ 전체화면</button></div>
   </header>
 
   <section class="panel setup">
@@ -92,7 +93,7 @@
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
-  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','eventName','player','laserColor','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status'].map(id => [id,$(id)]));
+  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','eventName','player','laserColor','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
   const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:76,raf:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,laserBlocked:false,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0};
@@ -142,7 +143,7 @@
     if(target){
       state.center={x:target.x,y:target.y};state.radius=target.radius;state.calibrationMode=0;saveTargetToVideo();
       els.guide.textContent='표적 자동 보정 완료 · 경기 시작을 누르세요.';
-      els.calibrationInfo.textContent=`자동 보정 완료: 중심 (${Math.round(target.x)}, ${Math.round(target.y)}), 외곽 반지름 ${Math.round(target.radius)}px`;
+      els.calibrationInfo.textContent=`자동 보정 완료: ${target.rings}개 원으로 표적 크기 계산 · 외곽 반지름 ${Math.round(target.radius)}px`;
       els.matchBtn.disabled=false;setStatus('자동 보정 완료');drawOverlay();toast('표적을 자동으로 인식했습니다.');
     }else{
       state.calibrationMode=1;els.guide.textContent='자동 인식 실패 · 표적 중심을 한 번 눌러 수동 보정하세요.';
@@ -181,14 +182,19 @@
       const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh;if(area<25||ratio<.62||ratio>1.6||bw>sw*.5||bh>sh*.65)continue;const cx=sumX/area,cy=sumY/area,dist=Math.hypot(cx-sw/2,cy-sh/2),fill=area/(bw*bh),score=area*(.4+fill)/(1+dist*.025);if(!best||score>best.score)best={cx,cy,bw,bh,score};
     }
     let cx=best?best.cx:sw/2,cy=best?best.cy:sh/2;if(Math.hypot(cx-sw/2,cy-sh/2)>Math.min(sw,sh)*.32){cx=sw/2;cy=sh/2}
-    const minR=Math.max(16,best?Math.max(best.bw,best.bh)*.7:18),maxR=Math.min(sw,sh)*.46,profile=[];
-    for(let r=Math.round(minR);r<=maxR;r++){let sum=0,covered=0;const samples=96;for(let a=0;a<samples;a++){const t=a*Math.PI*2/samples,cs=Math.cos(t),sn=Math.sin(t),x1=Math.round(cx+cs*(r-2)),y1=Math.round(cy+sn*(r-2)),x2=Math.round(cx+cs*(r+2)),y2=Math.round(cy+sn*(r+2));if(x1<1||x1>=sw-1||y1<1||y1>=sh-1||x2<1||x2>=sw-1||y2<1||y2>=sh-1)continue;const d=Math.abs(gray[y2*sw+x2]-gray[y1*sw+x1]);sum+=d;if(d>22)covered++}profile.push({r,score:sum/samples,coverage:covered/samples})}
-    const avg=profile.reduce((s,v)=>s+v.score,0)/Math.max(1,profile.length);const peaks=profile.filter((v,i)=>i>1&&i<profile.length-2&&v.coverage>.12&&v.score>avg*1.22&&v.score>=profile[i-1].score&&v.score>=profile[i+1].score);
-    if(peaks.length<3)return null;
-    const outer=peaks.filter(p=>p.r>minR*1.8).sort((a,b)=>b.r-a.r)[0];if(!outer)return null;
-    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadius=outer.r/sw*vw*mapped.scale;
+    const startR=5,maxR=Math.floor(Math.min(sw,sh)*.46),profile=[];
+    for(let r=startR;r<=maxR;r++){let sum=0,covered=0;const samples=120;for(let a=0;a<samples;a++){const t=a*Math.PI*2/samples,cs=Math.cos(t),sn=Math.sin(t),x1=Math.round(cx+cs*(r-2)),y1=Math.round(cy+sn*(r-2)),x2=Math.round(cx+cs*(r+2)),y2=Math.round(cy+sn*(r+2));if(x1<1||x1>=sw-1||y1<1||y1>=sh-1||x2<1||x2>=sw-1||y2<1||y2>=sh-1)continue;const d=Math.abs(gray[y2*sw+x2]-gray[y1*sw+x1]);sum+=d;if(d>18)covered++}profile.push({r,score:sum/samples,coverage:covered/samples})}
+    const smooth=profile.map((v,i)=>{let score=0,coverage=0,n=0;for(let j=Math.max(0,i-1);j<=Math.min(profile.length-1,i+1);j++){score+=profile[j].score;coverage+=profile[j].coverage;n++}return{r:v.r,score:score/n,coverage:coverage/n}});
+    const avg=smooth.reduce((s,v)=>s+v.score,0)/Math.max(1,smooth.length);
+    function evidence(radius,window){let bestHit=null;for(const v of smooth){if(Math.abs(v.r-radius)>window)continue;const strength=v.score*(.55+v.coverage);if(!bestHit||strength>bestHit.strength)bestHit={...v,strength}}return bestHit}
+    let fit=null;
+    /* 10개 점수 원은 거의 같은 간격이다. 일부 선이 흐려도 여러 원의 간격이 맞는 크기를 선택한다. */
+    for(let step=4;step<=maxR/10;step+=.25){let fitScore=0,hits=0;const tolerance=Math.max(2,step*.2);for(let ring=1;ring<=10;ring++){const hit=evidence(step*ring,tolerance);if(!hit)continue;const valid=hit.coverage>.075&&hit.score>avg*1.04;if(valid){hits++;fitScore+=hit.strength*(ring>=8?1.18:1)}}fitScore*=1+hits*.2;if(hits>=4&&(!fit||fitScore>fit.score))fit={step,hits,score:fitScore}}
+    let outerR=fit?fit.step*10:0,rings=fit?fit.hits:0;
+    if(!fit){const peaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.12&&v.score>avg*1.25&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score);if(peaks.length<3)return null;const outer=peaks.sort((a,b)=>b.r-a.r)[0];outerR=outer.r;rings=peaks.length}
+    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadius=outerR/sw*vw*mapped.scale;
     if(screenRadius<45||screenRadius>Math.min(els.overlay.clientWidth,els.overlay.clientHeight)*.49)return null;
-    return{x:mapped.x,y:mapped.y,radius:screenRadius};
+    return{x:mapped.x,y:mapped.y,radius:screenRadius,rings:Math.min(10,rings)};
   }
 
   function canvasPoint(ev){const r=els.overlay.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top}}
@@ -297,10 +303,18 @@
   }
   function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 
-  els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.matchBtn.onclick=startMatch;els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
+  async function toggleFullscreen(){
+    try{
+      if(document.fullscreenElement){await document.exitFullscreen()}
+      else{const root=document.documentElement,request=root.requestFullscreen||root.webkitRequestFullscreen;if(!request){toast('Chrome 메뉴에서 홈 화면에 추가하면 더 크게 볼 수 있습니다.');return}await request.call(root,{navigationUI:'hide'})}
+    }catch(e){console.warn(e);toast('브라우저 메뉴에서 Chrome으로 열고 다시 눌러 주세요.')}
+  }
+  function updateFullscreenButton(){const active=!!document.fullscreenElement;els.fullscreenBtn.textContent=active?'⛶ 전체화면 종료':'⛶ 전체화면';els.fullscreenBtn.setAttribute('aria-label',active?'전체화면 종료':'전체화면 켜기');setTimeout(resize,120)}
+
+  els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.matchBtn.onclick=startMatch;els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
   function showDetectorInfo(){els.fpsPill.textContent='혼합광 감도 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')}
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
-  window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
+  window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
 })();
 </script>
 </body>
