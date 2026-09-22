@@ -38,7 +38,7 @@
     <video id="video" playsinline muted></video>
     <canvas id="overlay" class="overlay"></canvas>
     <div class="camera-msg" id="cameraMsg"><b>카메라를 시작하세요</b><span>표적지가 화면 중앙에 오도록<br>휴대폰을 단단히 고정합니다.</span></div>
-    <div class="hud"><span class="pill live" id="livePill">● OFF</span><span class="pill" id="fpsPill">2프레임 레이저 확인</span></div>
+    <div class="hud"><span class="pill live" id="livePill">● OFF</span><span class="pill" id="fpsPill">레이저 형태 우선 판정</span></div>
     <div class="zoom-controls" aria-label="카메라 확대 축소">
       <button id="zoomOut" type="button" disabled aria-label="축소">−</button>
       <span id="zoomValue">1.0×</span>
@@ -285,8 +285,8 @@
 
     /* 카메라에서 흰색으로 포화된 중심과 빨간 테두리로 보이는 레이저를 전용 감지한다. */
     const whiteCores=[];for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){if(!insideScan(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],commonRise=Math.min(dr,dg,db),lumRise=lum[p]-state.background[p];if(Math.max(r,g,b)>175&&commonRise>4&&lumRise>4){whiteCores.push({x,y,score:commonRise+lumRise*.7});if(whiteCores.length>45)whiteCores.sort((a,b)=>b.score-a.score).length=30}}
-    let coreHalo=null;for(const core of whiteCores){let halo=0,haloStrength=0;for(let oy=-14;oy<=14;oy++)for(let ox=-14;ox<=14;ox++){const d=Math.hypot(ox,oy);if(d<1||d>14)continue;const nx=core.x+ox,ny=core.y+oy;if(nx<1||nx>=sw-1||ny<1||ny>=sh-1)continue;const p=ny*sw+nx,i=p*4,rr=data[i],gg=data[i+1],bb=data[i+2],dr=rr-state.backgroundR[p],dg=gg-state.backgroundG[p],db=bb-state.backgroundB[p],redNow=rr-Math.max(gg,bb),redRise=dr-Math.max(dg,db);if((redNow>8&&dr>4)||(redRise>3&&dr>5)){halo++;haloStrength+=Math.max(redNow,redRise)}}const score=core.score+halo*2+haloStrength*.08;if(halo>=4&&haloStrength>24&&(!coreHalo||score>coreHalo.score))coreHalo={x:core.x,y:core.y,halo,score}}
-    if(coreHalo){if(state.haloCandidate&&Math.hypot(coreHalo.x-state.haloCandidate.x,coreHalo.y-state.haloCandidate.y)<10){state.haloCandidate.x=(state.haloCandidate.x+coreHalo.x)/2;state.haloCandidate.y=(state.haloCandidate.y+coreHalo.y)/2;state.haloCandidate.frames++}else state.haloCandidate={x:coreHalo.x,y:coreHalo.y,frames:1};if(state.haloCandidate.frames>=2&&tryRecordLaser(state.haloCandidate.x,state.haloCandidate.y,sw,sh,vw,vh)){state.pendingLaser=null;state.haloCandidate=null;state.laserBlocked=true;els.fpsPill.textContent='◎ 실제 레이저 확인';setTimeout(showDetectorInfo,700)}return}else state.haloCandidate=null;
+    let coreHalo=null;for(const core of whiteCores){let halo=0,haloStrength=0;for(let oy=-14;oy<=14;oy++)for(let ox=-14;ox<=14;ox++){const d=Math.hypot(ox,oy);if(d<1||d>14)continue;const nx=core.x+ox,ny=core.y+oy;if(nx<1||nx>=sw-1||ny<1||ny>=sh-1)continue;const p=ny*sw+nx,i=p*4,rr=data[i],gg=data[i+1],bb=data[i+2],dr=rr-state.backgroundR[p],dg=gg-state.backgroundG[p],db=bb-state.backgroundB[p],redNow=rr-Math.max(gg,bb),redRise=dr-Math.max(dg,db);if((redNow>8&&dr>4)||(redRise>3&&dr>5)){halo++;haloStrength+=Math.max(redNow,redRise)}}const score=core.score+halo*2+haloStrength*.08;if(halo>=4&&haloStrength>24&&(!coreHalo||score>coreHalo.score))coreHalo={x:core.x,y:core.y,halo,haloStrength,score}}
+    if(coreHalo){if(tryRecordLaser(coreHalo.x,coreHalo.y,sw,sh,vw,vh)){state.pendingLaser=null;state.haloCandidate=null;state.laserBlocked=true;els.fpsPill.textContent='◎ 1프레임 실제 레이저';setTimeout(showDetectorInfo,700)}return}else state.haloCandidate=null;
 
     const points=[];let strongest=null;const color=els.laserColor.value,signalThreshold=Math.max(7,30-state.sensitivity*.22);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
