@@ -8,7 +8,7 @@
   <style>
     :root{--bg:#07111f;--panel:#101d30;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940;font-size:clamp(20px,5.2vw,23px)}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{width:100%;max-width:100%;margin:0;min-height:100%;overflow-x:hidden;background:radial-gradient(circle at 50% -15%,#17375a 0,var(--bg) 45%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;-webkit-text-size-adjust:100%;text-size-adjust:100%}button,input,select{font:inherit}button{cursor:pointer}
-    .app{width:100vw;max-width:none;margin:0;min-height:100svh;padding:max(env(safe-area-inset-top),4px) max(env(safe-area-inset-left),6px) calc(26px + env(safe-area-inset-bottom)) max(env(safe-area-inset-right),6px)}
+    .app{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"header" "setup" "camera" "match" "score" "shots" "footer";width:100vw;max-width:none;margin:0;min-height:100svh;padding:max(env(safe-area-inset-top),4px) max(env(safe-area-inset-left),6px) calc(26px + env(safe-area-inset-bottom)) max(env(safe-area-inset-right),6px)}
     header{grid-area:header;min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:8px}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand-mark{flex:0 0 auto;width:clamp(38px,10vw,46px);height:clamp(38px,10vw,46px);border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 22px #29e7d655}.brand-mark:before{content:"";width:42%;height:42%;border:2px solid var(--red);border-radius:50%;box-shadow:inset 0 0 0 4px var(--bg)}h1{font-size:clamp(1.05rem,5vw,1.35rem);letter-spacing:.08em;margin:0;white-space:nowrap}.sub{font-size:.72rem;color:var(--muted);margin-top:2px}.header-actions{display:flex;align-items:center;gap:7px}.status{font-size:.75rem;color:var(--cyan);display:flex;gap:6px;align-items:center;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}.fullscreen-btn{min-height:44px;border:1px solid #3b5877;border-radius:11px;background:#142941;color:white;padding:8px 11px;font-size:.72rem;font-weight:800;white-space:nowrap}.fullscreen-btn:active{background:var(--cyan);color:#07111f}:fullscreen .app{min-height:100vh}
     .panel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 40px #0005;overflow:hidden}.setup{grid-area:setup;padding:14px 12px;margin-bottom:10px}.grid{display:grid;grid-template-columns:1fr;gap:11px}.field label{display:block;color:var(--muted);font-size:.78rem;margin:0 0 7px 3px;font-weight:700}.field input,.field select{width:100%;min-height:58px;border:1px solid var(--line);border-radius:12px;background:#091426;color:white;padding:12px 14px;outline:none;font-size:1rem}.field input:focus,.field select:focus{border-color:var(--cyan)}
     .camera{grid-area:camera;position:relative;width:100%;height:clamp(440px,68svh,780px);background:#02060c;border-radius:14px;overflow:hidden;border:1px solid var(--line)}video,.overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.overlay{touch-action:none}.camera-msg{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:22px;color:var(--muted);background:radial-gradient(circle,#10243a,#050a12);font-size:1rem;line-height:1.6}.camera-msg b{color:white;font-size:1.25rem;margin-bottom:8px}.hud{position:absolute;left:9px;right:9px;top:9px;display:flex;justify-content:space-between;pointer-events:none}.pill{border:1px solid #ffffff28;background:#06101dcc;backdrop-filter:blur(9px);border-radius:999px;padding:9px 12px;font-size:.78rem}.live{color:var(--red)}
@@ -34,18 +34,6 @@
     <div class="header-actions"><div class="status" id="status"><i class="dot"></i><span>준비</span></div><button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶ 전체화면</button></div>
   </header>
 
-  <div class="side-panel" id="sidePanel">
-
-  <section class="panel setup">
-    <div class="grid">
-      <div class="field"><label>대회명</label><input id="eventName" value="교내 레이저 사격대회" maxlength="80"></div>
-      <div class="field"><label>선수명</label><input id="player" placeholder="선수 이름" maxlength="40"></div>
-      <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
-      <div class="field"><label>레이저 색상</label><select id="laserColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
-      <div class="field"><label>경기 발수</label><select id="maxShots"><option>5</option><option selected>10</option><option>20</option></select></div>
-    </div>
-  </section>
-
   <section class="camera" id="cameraBox">
     <video id="video" playsinline muted></video>
     <canvas id="overlay" class="overlay"></canvas>
@@ -58,6 +46,18 @@
     </div>
     <div class="guide" id="guide">① 카메라 시작 → ② 표적 자동 보정 → ③ 경기 시작</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
+  </section>
+
+  <div class="side-panel" id="sidePanel">
+
+  <section class="panel setup">
+    <div class="grid">
+      <div class="field"><label>대회명</label><input id="eventName" value="교내 레이저 사격대회" maxlength="80"></div>
+      <div class="field"><label>선수명</label><input id="player" placeholder="선수 이름" maxlength="40"></div>
+      <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
+      <div class="field"><label>레이저 색상</label><select id="laserColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
+      <div class="field"><label>경기 발수</label><select id="maxShots"><option>5</option><option selected>10</option><option>20</option></select></div>
+    </div>
   </section>
 
   <div class="controls match-controls">
