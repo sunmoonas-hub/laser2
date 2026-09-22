@@ -38,7 +38,7 @@
     <video id="video" playsinline muted></video>
     <canvas id="overlay" class="overlay"></canvas>
     <div class="camera-msg" id="cameraMsg"><b>카메라를 시작하세요</b><span>표적지가 화면 중앙에 오도록<br>휴대폰을 단단히 고정합니다.</span></div>
-    <div class="hud"><span class="pill live" id="livePill">● OFF</span><span class="pill" id="fpsPill">레이저 감도 86</span></div>
+    <div class="hud"><span class="pill live" id="livePill">● OFF</span><span class="pill" id="fpsPill">고감도 레이저 94</span></div>
     <div class="zoom-controls" aria-label="카메라 확대 축소">
       <button id="zoomOut" type="button" disabled aria-label="축소">−</button>
       <span id="zoomValue">1.0×</span>
@@ -101,7 +101,7 @@
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','eventName','player','firingLane','laserColor','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:86,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,laserBlocked:false,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0};
+  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:94,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,laserBlocked:false,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0};
 
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
@@ -123,7 +123,7 @@
   async function setupCameraZoom(){
     const track=state.videoTrack;if(!track)return;
     let caps={},settings={};try{caps=track.getCapabilities?track.getCapabilities():{};settings=track.getSettings?track.getSettings():{};state.actualFps=Number(settings.frameRate)||0}catch(e){console.warn(e)}
-    const advanced=[];if(Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))advanced.push({focusMode:'continuous'});if(Array.isArray(caps.exposureMode)&&caps.exposureMode.includes('continuous'))advanced.push({exposureMode:'continuous'});if(advanced.length){try{await track.applyConstraints({advanced})}catch(e){console.warn('camera tuning skipped',e)}}
+    const advanced=[];if(Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))advanced.push({focusMode:'continuous'});if(Array.isArray(caps.exposureMode)&&caps.exposureMode.includes('continuous'))advanced.push({exposureMode:'continuous'});if(caps.exposureCompensation&&Number.isFinite(caps.exposureCompensation.min)&&Number.isFinite(caps.exposureCompensation.max)){const exposure=Math.max(caps.exposureCompensation.min,Math.min(caps.exposureCompensation.max,-.7));advanced.push({exposureCompensation:exposure})}if(advanced.length){try{await track.applyConstraints({advanced})}catch(e){console.warn('camera tuning skipped',e)}}
     if(caps.zoom&&Number.isFinite(caps.zoom.min)&&Number.isFinite(caps.zoom.max)&&caps.zoom.max>caps.zoom.min){
       state.zoomMin=Number(caps.zoom.min);state.zoomMax=Number(caps.zoom.max);state.zoomStep=Math.max(.1,Number(caps.zoom.step)||.1);state.zoom=Math.min(state.zoomMax,Math.max(state.zoomMin,Number(settings.zoom)||state.zoomMin));els.zoomOut.disabled=false;els.zoomIn.disabled=false;updateZoomUI();
     }else{state.zoom=1;state.zoomMin=1;state.zoomMax=1;els.zoomOut.disabled=true;els.zoomIn.disabled=true;els.zoomValue.textContent='미지원'}
@@ -184,7 +184,7 @@
     let best=null;const stack=[];
     for(let y=2;y<sh-2;y+=2)for(let x=2;x<sw-2;x+=2){const start=y*sw+x;if(!mask[start]||seen[start])continue;stack.length=0;stack.push(start);seen[start]=1;let area=0,sumX=0,sumY=0,minX=x,maxX=x,minY=y,maxY=y;
       while(stack.length&&area<12000){const p=stack.pop(),px=p%sw,py=(p/sw)|0;area++;sumX+=px;sumY+=py;if(px<minX)minX=px;if(px>maxX)maxX=px;if(py<minY)minY=py;if(py>maxY)maxY=py;const n=[p-1,p+1,p-sw,p+sw];for(const q of n){if(q>0&&q<mask.length&&mask[q]&&!seen[q]){seen[q]=1;stack.push(q)}}}
-      const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh;if(area<25||ratio<.4||ratio>2.5||bw>sw*.58||bh>sh*.72)continue;const cx=sumX/area,cy=sumY/area,dist=Math.hypot(cx-sw/2,cy-sh/2),fill=area/(bw*bh),score=area*(.4+fill)/(1+dist*.025);if(!best||score>best.score)best={cx,cy,bw,bh,score};
+      const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh;if(area<25||ratio<.4||ratio>2.5||bw>sw*.58||bh>sh*.72)continue;const cx=sumX/area,cy=sumY/area,dist=Math.hypot(cx-sw/2,cy-sh/2),fill=area/(bw*bh),score=area*(.4+fill)/(1+dist*.025);if(!best||score>best.score)best={cx,cy,bw,bh,fill,score};
     }
     let cx=best?best.cx:sw/2,cy=best?best.cy:sh/2;if(Math.hypot(cx-sw/2,cy-sh/2)>Math.min(sw,sh)*.32){cx=sw/2;cy=sh/2}
     const startR=5,maxR=Math.floor(Math.min(sw,sh)*.46),profile=[];
@@ -199,6 +199,8 @@
     if(fits.length){const bestQuality=Math.max(...fits.map(v=>v.quality)),bestHits=Math.max(...fits.filter(v=>v.quality>=bestQuality*.82).map(v=>v.hits));fit=fits.filter(v=>v.quality>=bestQuality*.82&&v.hits>=bestHits-1).sort((a,b)=>b.step-a.step)[0]}
     let outerR=fit?fit.step*10:0,rings=fit?fit.hits:0;
     if(!fit){const peaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.12&&v.score>avg*1.25&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score);if(peaks.length<3)return null;const outer=peaks.sort((a,b)=>b.r-a.r)[0];outerR=outer.r;rings=peaks.length}
+    /* 7~10점 검은 영역은 전체 표적 반지름의 약 40%이므로 크기 기준점으로 사용한다. */
+    if(best&&best.fill>.28){const blackAnchor=Math.max(best.bw,best.bh)/.8;if(blackAnchor>=38&&blackAnchor<=maxR*1.08)outerR=Math.max(outerR,blackAnchor)}
     const edge=new Uint8Array(sw*sh);for(let y=1;y<sh-1;y++)for(let x=1;x<sw-1;x++){const p=y*sw+x;edge[p]=Math.min(255,Math.abs(gray[p+1]-gray[p-1])+Math.abs(gray[p+sw]-gray[p-sw]))}
     let ellipse=null;const majorMin=Math.max(38,outerR*.82),majorMax=Math.min(Math.min(sw,sh)*.49,outerR*1.38);
     for(let major=majorMin;major<=majorMax;major+=3)for(let ratio=.58;ratio<=1.001;ratio+=.06)for(let deg=0;deg<180;deg+=15){const minor=major*ratio,a=deg*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);let sum=0,covered=0,n=0;for(let ring=4;ring<=10;ring++){const k=ring/10,ringWeight=ring>=8?1.25:1;for(let j=0;j<48;j++){const t=j*Math.PI*2/48,ex=major*k*Math.cos(t),ey=minor*k*Math.sin(t),x=Math.round(cx+ex*ca-ey*sa),y=Math.round(cy+ex*sa+ey*ca);if(x<2||x>=sw-2||y<2||y>=sh-2)continue;const e=edge[y*sw+x];sum+=Math.min(100,e)*ringWeight;if(e>24)covered+=ringWeight;n+=ringWeight}}const coverage=covered/Math.max(1,n),score=sum/Math.max(1,n)+coverage*34+major*.015;if(coverage>.1&&(!ellipse||score>ellipse.score))ellipse={major,minor,a,score,coverage}}
@@ -281,30 +283,30 @@
     if(motionRatio>.035||exposureShift>11){state.pendingLaser=null;state.laserBlocked=true;state.stableFrames=0;blendBackground(data,lum,total,.14);return}
     state.stableFrames++;if(state.stableFrames<2)return;
 
-    const points=[];let strongest=null;const color=els.laserColor.value,signalThreshold=Math.max(4,27-state.sensitivity*.24);
+    const points=[];let strongest=null;const color=els.laserColor.value,signalThreshold=Math.max(3,24-state.sensitivity*.22);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!insideScan(x,y))continue;
-      const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],lumRise=lum[p]-state.background[p],maxRise=Math.max(dr,dg,db);
+      const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],baseLum=state.background[p],blackSurface=baseLum<125,dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],lumRise=lum[p]-baseLum,maxRise=Math.max(dr,dg,db);
       const currentWarm=r-Math.max(g,b),baseWarm=state.backgroundR[p]-Math.max(state.backgroundG[p],state.backgroundB[p]),warmBoost=currentWarm-baseWarm;
-      const warmMixed=dr>4&&dr>=dg-8&&dr>=db-8,redHalo=currentWarm>8&&warmBoost>2&&dr>4,whitePink=r>180&&dr>7&&dr>=dg-10&&dr>=db-10;
-      const greenMixed=dg>5&&dg>=dr-6&&dg>=db-6;
-      const colorMatch=color==='green'?greenMixed:(warmMixed||redHalo||whitePink);
-      if(!colorMatch||maxRise<signalThreshold||lumRise<2)continue;
-      const colorBoost=color==='green'?dg-Math.max(dr,db):Math.max(warmBoost,dr-Math.max(dg,db)),signal=maxRise+Math.max(0,lumRise)*1.15+Math.max(0,colorBoost)*.65,point={x,y,wt:signal,delta:signal,bright:Math.max(r,g,b),redRise:dr,colorBoost,lumRise};points.push(point);if(!strongest||signal>strongest.wt)strongest=point;
+      const warmMixed=dr>3&&dr>=dg-11&&dr>=db-11,redHalo=currentWarm>6&&warmBoost>1&&dr>3,whitePink=r>165&&dr>5&&dr>=dg-13&&dr>=db-13;
+      const greenMixed=dg>4&&dg>=dr-8&&dg>=db-8;
+      const blackRed=blackSurface&&dr>3&&dr>=dg-15&&dr>=db-15,colorMatch=color==='green'?greenMixed:(warmMixed||redHalo||whitePink||blackRed);
+      if(!colorMatch||maxRise<(blackSurface?Math.max(3,signalThreshold-2):signalThreshold)||lumRise<(blackSurface?0:1))continue;
+      const colorBoost=color==='green'?dg-Math.max(dr,db):Math.max(warmBoost,dr-Math.max(dg,db)),signal=maxRise+Math.max(0,lumRise)*(blackSurface?.8:1.15)+Math.max(0,colorBoost)*.65,point={x,y,wt:signal,delta:signal,bright:Math.max(r,g,b),redRise:dr,colorBoost,lumRise,blackSurface};points.push(point);if(!strongest||signal>strongest.wt)strongest=point;
     }
     if(!points.length){
       state.laserBlocked=false;
-      if(state.pendingLaser){const pending=state.pendingLaser;state.pendingLaser=null;const colorOrWhite=pending.maxColorBoost>=1||(pending.maxBright>=205&&pending.maxRedRise>=9),confirmed=(pending.frames>=2&&pending.frames<=9&&pending.maxSignal>=14&&pending.maxContrast>=6&&colorOrWhite)||(pending.frames===1&&pending.maxSignal>=25&&pending.maxContrast>=10&&colorOrWhite);if(confirmed)tryRecordLaser(pending.x,pending.y,sw,sh,vw,vh)}
+      if(state.pendingLaser){const pending=state.pendingLaser;state.pendingLaser=null;const colorOrWhite=pending.maxColorBoost>=0||(pending.maxBright>=180&&pending.maxRedRise>=5),confirmed=pending.frames<=30&&pending.maxSignal>=16&&pending.maxContrast>=3&&colorOrWhite;if(confirmed)tryRecordLaser(pending.x,pending.y,sw,sh,vw,vh)}
       blendBackground(data,lum,total,.025);return;
     }
-    if(points.length>650){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,total,.16);return}
+    if(points.length>2500){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,total,.16);return}
     let sx=0,sy=0,weight=0,localCount=0,clusterColorBoost=strongest.colorBoost,minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;for(const point of points){if(Math.hypot(point.x-strongest.x,point.y-strongest.y)<=9){sx+=point.x*point.wt;sy+=point.y*point.wt;weight+=point.wt;localCount++;clusterColorBoost=Math.max(clusterColorBoost,point.colorBoost);if(point.x<minX)minX=point.x;if(point.x>maxX)maxX=point.x;if(point.y<minY)minY=point.y;if(point.y>maxY)maxY=point.y}}
     const clusterW=maxX-minX+1,clusterH=maxY-minY+1,shape=clusterW/Math.max(1,clusterH);let surround=0,surroundN=0;for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){const distance=Math.hypot(ox,oy);if(distance<6||distance>10)continue;const nx=strongest.x+ox,ny=strongest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;surround+=lum[ny*sw+nx];surroundN++}const localContrast=strongest.bright-surround/Math.max(1,surroundN);
-    if(localCount>140||shape<.25||shape>4||(localCount<2&&strongest.delta<25)||localContrast<4){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,total,.04);return}
+    if(localCount>260||shape<.12||shape>8||(localCount<2&&strongest.delta<16)||localContrast<1.5){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,total,.04);return}
     if(state.laserBlocked)return;
     const px=weight?sx/weight:strongest.x,py=weight?sy/weight:strongest.y;
-    const instant=strongest.delta>=28&&localContrast>=11&&localCount<=100&&(clusterColorBoost>=1||(strongest.bright>=205&&strongest.redRise>=9));if(instant&&tryRecordLaser(px,py,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;return}
-    if(state.pendingLaser&&Math.hypot(px-state.pendingLaser.x,py-state.pendingLaser.y)<12){const n=state.pendingLaser.frames;state.pendingLaser.x=(state.pendingLaser.x*n+px)/(n+1);state.pendingLaser.y=(state.pendingLaser.y*n+py)/(n+1);state.pendingLaser.frames++;state.pendingLaser.maxSignal=Math.max(state.pendingLaser.maxSignal,strongest.delta);state.pendingLaser.maxContrast=Math.max(state.pendingLaser.maxContrast,localContrast);state.pendingLaser.maxColorBoost=Math.max(state.pendingLaser.maxColorBoost,clusterColorBoost);state.pendingLaser.maxBright=Math.max(state.pendingLaser.maxBright,strongest.bright);state.pendingLaser.maxRedRise=Math.max(state.pendingLaser.maxRedRise,strongest.redRise);if(state.pendingLaser.frames>9){state.pendingLaser=null;state.laserBlocked=true}}
+    const instant=strongest.delta>=(strongest.blackSurface?14:20)&&localContrast>=(strongest.blackSurface?3:5)&&localCount<=220&&(strongest.blackSurface?strongest.redRise>=3:(clusterColorBoost>=0||(strongest.bright>=180&&strongest.redRise>=5)));if(instant&&tryRecordLaser(px,py,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;return}
+    if(state.pendingLaser&&Math.hypot(px-state.pendingLaser.x,py-state.pendingLaser.y)<14){const n=state.pendingLaser.frames;state.pendingLaser.x=(state.pendingLaser.x*n+px)/(n+1);state.pendingLaser.y=(state.pendingLaser.y*n+py)/(n+1);state.pendingLaser.frames++;state.pendingLaser.maxSignal=Math.max(state.pendingLaser.maxSignal,strongest.delta);state.pendingLaser.maxContrast=Math.max(state.pendingLaser.maxContrast,localContrast);state.pendingLaser.maxColorBoost=Math.max(state.pendingLaser.maxColorBoost,clusterColorBoost);state.pendingLaser.maxBright=Math.max(state.pendingLaser.maxBright,strongest.bright);state.pendingLaser.maxRedRise=Math.max(state.pendingLaser.maxRedRise,strongest.redRise);if(state.pendingLaser.frames>=2&&state.pendingLaser.maxSignal>=12&&state.pendingLaser.maxContrast>=2.5&&tryRecordLaser(state.pendingLaser.x,state.pendingLaser.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;return}if(state.pendingLaser.frames>30){state.pendingLaser=null;state.laserBlocked=true}}
     else state.pendingLaser={x:px,y:py,frames:1,maxSignal:strongest.delta,maxContrast:localContrast,maxColorBoost:clusterColorBoost,maxBright:strongest.bright,maxRedRise:strongest.redRise};
   }
 
@@ -328,7 +330,7 @@
   function updateFullscreenButton(){const active=!!document.fullscreenElement;els.fullscreenBtn.textContent=active?'⛶ 전체화면 종료':'⛶ 전체화면';els.fullscreenBtn.setAttribute('aria-label',active?'전체화면 종료':'전체화면 켜기');setTimeout(resize,120)}
 
   els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.matchBtn.onclick=startMatch;els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
-  function showDetectorInfo(){els.fpsPill.textContent='혼합광 감도 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')}
+  function showDetectorInfo(){els.fpsPill.textContent='고감도 레이저 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')}
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
   window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
 })();
