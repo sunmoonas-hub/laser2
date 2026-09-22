@@ -38,7 +38,7 @@
     <video id="video" playsinline muted></video>
     <canvas id="overlay" class="overlay"></canvas>
     <div class="camera-msg" id="cameraMsg"><b>카메라를 시작하세요</b><span>표적지가 화면 중앙에 오도록<br>휴대폰을 단단히 고정합니다.</span></div>
-    <div class="hud"><span class="pill live" id="livePill">● OFF</span><span class="pill" id="fpsPill">고감도 레이저 94</span></div>
+    <div class="hud"><span class="pill live" id="livePill">● OFF</span><span class="pill" id="fpsPill">흰 중심+빨간 고리 감지</span></div>
     <div class="zoom-controls" aria-label="카메라 확대 축소">
       <button id="zoomOut" type="button" disabled aria-label="축소">−</button>
       <span id="zoomValue">1.0×</span>
@@ -282,6 +282,11 @@
     const motionRatio=motionPixels/Math.max(1,motionSamples),exposureShift=Math.abs(meanNow-meanBase)/Math.max(1,motionSamples);state.prevLum.set(lum);
     if(motionRatio>.035||exposureShift>11){state.pendingLaser=null;state.laserBlocked=true;state.stableFrames=0;blendBackground(data,lum,total,.14);return}
     state.stableFrames++;if(state.stableFrames<2)return;
+
+    /* 카메라에서 흰색으로 포화된 중심과 빨간 테두리로 보이는 레이저를 전용 감지한다. */
+    const whiteCores=[];for(let y=y0;y<=y1;y+=2)for(let x=x0;x<=x1;x+=2){if(!insideScan(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],commonRise=Math.min(dr,dg,db),lumRise=lum[p]-state.background[p];if(Math.max(r,g,b)>180&&commonRise>3&&lumRise>3){whiteCores.push({x,y,score:commonRise+lumRise*.7,dr,dg,db});if(whiteCores.length>30)whiteCores.sort((a,b)=>b.score-a.score).length=20}}
+    let coreHalo=null;for(const core of whiteCores){let halo=0,haloStrength=0;for(let oy=-9;oy<=9;oy++)for(let ox=-9;ox<=9;ox++){const d=Math.hypot(ox,oy);if(d<2||d>9)continue;const nx=core.x+ox,ny=core.y+oy;if(nx<1||nx>=sw-1||ny<1||ny>=sh-1)continue;const p=ny*sw+nx,i=p*4,rr=data[i],gg=data[i+1],bb=data[i+2],dr=rr-state.backgroundR[p],dg=gg-state.backgroundG[p],db=bb-state.backgroundB[p],redNow=rr-Math.max(gg,bb),redRise=dr-Math.max(dg,db);if((redNow>7&&dr>3)||(redRise>2&&dr>4)){halo++;haloStrength+=Math.max(redNow,redRise)}}const score=core.score+halo*2+haloStrength*.08;if(halo>=3&&(!coreHalo||score>coreHalo.score))coreHalo={x:core.x,y:core.y,halo,score}}
+    if(coreHalo&&tryRecordLaser(coreHalo.x,coreHalo.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;els.fpsPill.textContent='◎ 흰 중심·빨간 고리 감지';setTimeout(showDetectorInfo,700);return}
 
     const points=[];let strongest=null;const color=els.laserColor.value,signalThreshold=Math.max(3,24-state.sensitivity*.22);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
