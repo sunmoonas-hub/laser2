@@ -374,27 +374,34 @@
     if(state.detectKind!=='laser')detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan);
     if(state.detectKind==='object')return;
 
-    /* 실제 촬영 영상에서 측정한 레이저 점 색: R은 배경보다 150~250 정도 크게 오르고, G는 오히려 배경보다 떨어지며, B는 소폭만 오르는 자홍빛. 3채널이 다 같이 올라야 한다는 기존 가정은 이 색과 맞지 않아 놓치고 있었음 - R(또는 초록 모드는 G)이 배경보다, 그리고 다른 두 채널보다 확실히 튀는 것만으로 1프레임에 즉시 확정한다. */
-    const color=els.laserColor.value;
+    /* 적응형 기준: 카메라·조명마다 레이저 색이 다르게 찍히므로, 고정된 숫자 대신 "그 순간 그 화면 자체의 잡음 수준"을 매 프레임 재서 기준을 스스로 세운다. R(또는 초록 모드는 G)이 배경보다, 그리고 잡음 수준보다 확실히(표준편차 5배 이상) 튀어야 인정한다. */
+    const color=els.laserColor.value, chIdx=color==='green'?1:0;
+    let sN=0,sSum=0,sSum2=0;
+    for(let y=y0;y<=y1;y+=2)for(let x=x0;x<=x1;x+=2){
+      if(!insideScan(x,y))continue;
+      const p=y*sw+x,i=p*4,bg=chIdx===0?state.backgroundR[p]:state.backgroundG[p],d=data[i+chIdx]-bg;
+      sN++;sSum+=d;sSum2+=d*d;
+    }
+    const meanD=sN?sSum/sN:0,stdD=sN?Math.sqrt(Math.max(0,sSum2/sN-meanD*meanD)):0;
+    const adaptFloor=Math.max(15,meanD+5*stdD),adaptMargin=Math.max(12,2*stdD);
     let coreBest=null,peak=null,peakMag=-1e9;
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!insideScan(x,y))continue;
       const p=y*sw+x,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
       const mag0=color==='green'?dg:dr;
       if(mag0>peakMag){peakMag=mag0;peak={dr:Math.round(dr),dg:Math.round(dg),db:Math.round(db)}}
-      const strong=color==='green'?(dg>60&&dg>dr+40&&dg>db+40):(dr>60&&dr>dg+40&&dr>db+30);
+      const strong=color==='green'?(dg>adaptFloor&&dg>dr+adaptMargin&&dg>db+adaptMargin):(dr>adaptFloor&&dr>dg+adaptMargin&&dr>db+adaptMargin*.8);
       if(strong){const mag=mag0;if(!coreBest||mag>coreBest.mag)coreBest={x,y,mag}}
     }
     if(peak&&(state.dbgTick++%5===0)){
-      const need=color==='green'?'dg>60,dg-dr>40,dg-db>40':'dr>60,dr-dg>40,dr-db>30';
-      els.clrPill.textContent=`색상 dr=${peak.dr} dg=${peak.dg} db=${peak.db} (기준 ${need})${coreBest?' ✓':''}`;
+      els.clrPill.textContent=`색상 dr=${peak.dr} dg=${peak.dg} db=${peak.db} (적응 기준 ${Math.round(adaptFloor)}, 편차 ${Math.round(stdD)})${coreBest?' ✓':''}`;
     }
     if(coreBest){
       let near=0;
       for(let oy=-4;oy<=4;oy++)for(let ox=-4;ox<=4;ox++){
         const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
         const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
-        if(color==='green'?(dg>50&&dg>dr+30&&dg>db+30):(dr>50&&dr>dg+30&&dr>db+20))near++;
+        if(color==='green'?(dg>adaptFloor*.8&&dg>dr+adaptMargin*.75&&dg>db+adaptMargin*.75):(dr>adaptFloor*.8&&dr>dg+adaptMargin*.75&&dr>db+adaptMargin*.6))near++;
       }
       if(near>=3){
         state.releaseFrames=0;if(state.laserBlocked)return;
