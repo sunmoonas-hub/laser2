@@ -16,7 +16,7 @@
     .guide{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:max-content;max-width:94%;padding:9px 12px;border-radius:10px;background:#06101dee;color:white;text-align:center;font-size:.75rem;line-height:1.35;pointer-events:none}.flash{position:absolute;inset:0;display:grid;place-items:center;background:#07111faa;opacity:0;pointer-events:none;transition:.15s}.flash.show{opacity:1}.score-pop{font-size:clamp(4.5rem,25vw,7rem);font-weight:900;color:var(--lime);text-shadow:0 0 30px #b7ff3c99}.miss{color:var(--red)}
     .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:11px 0}.btn{min-height:62px;border:0;border-radius:14px;padding:13px 9px;font-size:1rem;font-weight:850;color:#08111d;background:var(--cyan)}.btn.secondary{background:#1b2c43;color:white;border:1px solid #34506f}.btn.danger{background:#ff526a;color:white}.btn:disabled{opacity:.45;cursor:not-allowed}.wide{grid-column:1/-1}
     .scoreboard{grid-area:score;display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:var(--line);margin-bottom:12px}.metric{background:#0e1b2d;padding:14px 6px;text-align:center}.metric small{display:block;color:var(--muted);font-size:.7rem;margin-bottom:5px}.metric strong{font-size:1.5rem}.metric:first-child strong{color:var(--lime);font-size:1.9rem}
-    .shots{grid-area:shots;padding:14px;margin-bottom:12px}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-title h2{font-size:.95rem;margin:0}.shot-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.shot{aspect-ratio:1;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:.72rem;color:var(--muted);background:#091426}.shot.hit{color:#07111f;background:var(--lime);border-color:var(--lime);font-weight:900}.shot.miss{background:var(--red);border-color:var(--red);color:white}.hint{font-size:.76rem;line-height:1.6;color:var(--muted);margin-top:12px}.toggle{display:flex;gap:6px}.toggle button{min-height:38px;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:#091426;color:var(--muted);font-size:.7rem}.toggle button.active{border-color:var(--cyan);color:var(--cyan)}
+    .shots{grid-area:shots;padding:14px;margin-bottom:12px}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-title h2{font-size:.95rem;margin:0}.shot-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.shot{aspect-ratio:1;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:.72rem;color:var(--muted);background:#091426}.shot.hit{color:#07111f;background:var(--lime);border-color:var(--lime);font-weight:900}.shot.miss{background:var(--red);border-color:var(--red);color:white}.shot.obj{box-shadow:inset 0 0 0 2px var(--gold)}.hint{font-size:.76rem;line-height:1.6;color:var(--muted);margin-top:12px}.toggle{display:flex;gap:6px}.toggle button{min-height:38px;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:#091426;color:var(--muted);font-size:.7rem}.toggle button.active{border-color:var(--cyan);color:var(--cyan)}
     .match-controls{grid-area:match}.footer-controls{grid-area:footer}
     .side-panel{display:contents}
     dialog{border:1px solid var(--line);border-radius:20px;padding:0;background:#0c1728;color:white;width:min(92%,560px);box-shadow:0 25px 80px #000b}dialog::backdrop{background:#020712cc}.modal{padding:20px}.modal h3{margin:0 0 15px}.leader-row{display:grid;grid-template-columns:34px 1fr 60px 55px;gap:8px;padding:11px 4px;border-bottom:1px solid #263a53;align-items:center}.rank{color:var(--gold);font-weight:900}.empty{color:var(--muted);text-align:center;padding:30px}.footer-actions{display:flex;gap:8px;margin-top:16px}.footer-actions .btn{flex:1}.toast{position:fixed;z-index:20;left:50%;bottom:28px;transform:translate(-50%,120px);background:#effffb;color:#07111f;padding:11px 16px;border-radius:12px;font-weight:700;box-shadow:0 10px 35px #0009;transition:.25s}.toast.show{transform:translate(-50%,0)}
@@ -56,6 +56,7 @@
       <div class="field"><label>선수명</label><input id="player" placeholder="선수 이름" maxlength="40"></div>
       <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
       <div class="field"><label>레이저 색상</label><select id="laserColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
+      <div class="field"><label>감지 대상</label><select id="detectKind"><option value="both" selected>레이저 + 물체·자국</option><option value="laser">레이저만</option><option value="object">물체·자국만</option></select></div>
       <div class="field"><label>경기 발수</label><select id="maxShots"><option>5</option><option selected>10</option><option>20</option></select></div>
     </div>
   </section>
@@ -98,15 +99,15 @@
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
-  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','eventName','player','firingLane','laserColor','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
+  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0};
+  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null};
 
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
   function uid(){return 'M-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
-  function clearDetectorBackground(){state.background=null;state.backgroundR=null;state.backgroundG=null;state.backgroundB=null;state.prevLum=null;state.pendingLaser=null;state.haloCandidate=null;state.laserBlocked=false;state.releaseFrames=0;state.stableFrames=0}
+  function clearDetectorBackground(){state.background=null;state.backgroundR=null;state.backgroundG=null;state.backgroundB=null;state.prevLum=null;state.pendingLaser=null;state.haloCandidate=null;state.laserBlocked=false;state.releaseFrames=0;state.stableFrames=0;state.objRef=null;state.objTracks=[];state.objKnown=[];state.objBusy=false;state.objBusySince=0}
   function blendBackground(data,lum,total,alpha){if(!state.backgroundR)return;for(let p=0,i=0;p<total;p++,i+=4){state.background[p]=state.background[p]*(1-alpha)+lum[p]*alpha;state.backgroundR[p]=state.backgroundR[p]*(1-alpha)+data[i]*alpha;state.backgroundG[p]=state.backgroundG[p]*(1-alpha)+data[i+1]*alpha;state.backgroundB[p]=state.backgroundB[p]*(1-alpha)+data[i+2]*alpha}}
   function resize(){const r=els.overlay.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);els.overlay.width=Math.round(r.width*d);els.overlay.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);restoreTargetFromVideo();drawOverlay()}
 
@@ -223,13 +224,14 @@
     ctx.save();ctx.lineWidth=1.2;
     if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#29e7d6cc':'#ffffff55';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
     ctx.beginPath();ctx.arc(state.center.x,state.center.y,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
-    state.shots.forEach((s,i)=>{if(s.manual||s.screenX==null)return;let px=s.screenX,py=s.screenY;if(Number.isFinite(s.videoX)&&Number.isFinite(s.videoY)){const g=videoGeometry(),mapped=videoToScreen(s.videoX*g.vw,s.videoY*g.vh);px=mapped.x;py=mapped.y}s.screenX=px;s.screenY=py;ctx.beginPath();ctx.arc(px,py,9,0,Math.PI*2);ctx.fillStyle=s.score?'#b7ff3c':'#ff4d66';ctx.fill();ctx.fillStyle='#07111f';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),px,py)});ctx.restore();
+    state.shots.forEach((s,i)=>{if(s.manual||s.screenX==null)return;let px=s.screenX,py=s.screenY;if(Number.isFinite(s.videoX)&&Number.isFinite(s.videoY)){const g=videoGeometry(),mapped=videoToScreen(s.videoX*g.vw,s.videoY*g.vh);px=mapped.x;py=mapped.y}s.screenX=px;s.screenY=py;ctx.beginPath();if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}else ctx.arc(px,py,9,0,Math.PI*2);ctx.fillStyle=s.score?'#b7ff3c':'#ff4d66';ctx.fill();ctx.fillStyle='#07111f';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),px,py)});ctx.restore();
   }
 
   function startMatch(){
     if(!state.center||!state.radius)return;if(!els.player.value.trim()){toast('선수 이름을 입력해 주세요.');els.player.focus();return}
     state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.detectorReady=false;
-    els.player.disabled=true;els.firingLane.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 2초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();
+    state.detectKind=els.detectKind.value;
+    els.player.disabled=true;els.firingLane.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 2초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();
   }
 
   function finishMatch(){state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');saveMatch()}
@@ -246,19 +248,20 @@
 
   function isServerConfigured(){return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(APPS_SCRIPT_URL)}
 
-  function recordShot(x,y,manualScore=null){
+  function recordShot(x,y,manualScore=null,kind){
     if(!state.running||state.shots.length>=state.maxShots)return;
     const dx=x==null?0:x-state.center.x,dy=y==null?0:y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nr=manualScore==null?Math.hypot(ex/state.radiusX,ey/state.radiusY):0;
     const score=manualScore==null?(nr>1?0:Math.max(1,10-Math.floor(nr*10))):Number(manualScore);
     const xMm=ex/state.radiusX*80,yMm=ey/state.radiusY*80;
     let videoX=null,videoY=null;if(x!=null&&y!=null){const g=videoGeometry();videoX=((x-g.offX)/g.scale)/g.vw;videoY=((y-g.offY)/g.scale)/g.vh}
-    state.shots.push({score,screenX:x,screenY:y,videoX,videoY,xMm:+xMm.toFixed(1),yMm:+yMm.toFixed(1),normalizedRadius:+nr.toFixed(4),manual:manualScore!=null,time:new Date().toLocaleTimeString('ko-KR',{hour12:false})});
+    const k=manualScore!=null?'manual':(kind||'laser');
+    state.shots.push({score,screenX:x,screenY:y,videoX,videoY,xMm:+xMm.toFixed(1),yMm:+yMm.toFixed(1),normalizedRadius:+nr.toFixed(4),manual:manualScore!=null,kind:k,time:new Date().toLocaleTimeString('ko-KR',{hour12:false})});
     state.lastHit=performance.now();showScore(score);updateScore();drawOverlay();els.undoBtn.disabled=false;
     if(state.shots.length>=state.maxShots)setTimeout(finishMatch,650)
   }
 
   function showScore(score){els.scorePop.textContent=score?String(score):'MISS';els.scorePop.classList.toggle('miss',!score);els.flash.classList.add('show');setTimeout(()=>els.flash.classList.remove('show'),420)}
-  function updateScore(){const total=state.shots.reduce((a,s)=>a+s.score,0);els.totalScore.textContent=total;els.shotCount.textContent=state.shots.length;els.shotMax.textContent=state.running?state.maxShots:Number(els.maxShots.value);els.average.textContent=state.shots.length?(total/state.shots.length).toFixed(1):'0.0';els.shotGrid.innerHTML='';const count=state.running?state.maxShots:Number(els.maxShots.value);for(let i=0;i<count;i++){const d=document.createElement('div'),s=state.shots[i];d.className='shot'+(s?(s.score?' hit':' miss'):'');d.textContent=s?s.score:(i+1);els.shotGrid.appendChild(d)}}
+  function updateScore(){const total=state.shots.reduce((a,s)=>a+s.score,0);els.totalScore.textContent=total;els.shotCount.textContent=state.shots.length;els.shotMax.textContent=state.running?state.maxShots:Number(els.maxShots.value);els.average.textContent=state.shots.length?(total/state.shots.length).toFixed(1):'0.0';els.shotGrid.innerHTML='';const count=state.running?state.maxShots:Number(els.maxShots.value);for(let i=0;i<count;i++){const d=document.createElement('div'),s=state.shots[i];d.className='shot'+(s?(s.score?' hit':' miss'):'')+(s&&s.kind==='object'?' obj':'');d.textContent=s?s.score:(i+1);els.shotGrid.appendChild(d)}}
 
   function processFrames(){
     cancelAnimationFrame(state.raf);const token=++state.frameLoopToken;
@@ -266,14 +269,99 @@
     const schedule=()=>{if(token!==state.frameLoopToken)return;if(typeof els.video.requestVideoFrameCallback==='function')els.video.requestVideoFrameCallback(loop);else state.raf=requestAnimationFrame(loop)};schedule();
   }
 
-  function tryRecordLaser(wx,wy,sw,sh,vw,vh){if(performance.now()-state.lastHit<=140)return false;const mapped=videoToScreen(wx/sw*vw,wy/sh*vh),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;if(Math.hypot(ex/state.radiusX,ey/state.radiusY)>1.2)return false;recordShot(mapped.x,mapped.y);return true}
+  /* 기준 사진(경기 시작 순간의 표적 화면)과 비교해 다트·화살·스티커·구멍처럼 새로 생겨서 가만히 있는 것을 찾는다. */
+  function detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan){
+    if(!state.objRef||state.objRef.length!==total*3)return;
+    if(!state.objMask||state.objMask.length!==total){state.objMask=new Uint8Array(total);state.objDil=new Uint8Array(total);state.objTmp=new Uint8Array(total);state.objSeen=new Uint8Array(total);state.objStack=new Int32Array(total)}
+    const R=state.objRef,M=state.objMask,rMax=Math.max(t.rx,t.ry)*1.15;
+    const x0=Math.max(1,Math.floor(t.x-rMax)),x1=Math.min(sw-2,Math.ceil(t.x+rMax)),y0=Math.max(1,Math.floor(t.y-rMax)),y1=Math.min(sh-2,Math.ceil(t.y+rMax));
+    const objThr=Math.max(30,130-state.sensitivity*.95);
+    let sr=0,sg=0,sb=0,cnt=0;
+    for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){
+      if(!insideScan(x,y,1.15))continue;
+      const p=y*sw+x,k=p*3,i=p*4;
+      let a=data[i]-R[k],b=data[i+1]-R[k+1],c=data[i+2]-R[k+2];
+      a=a>40?40:a<-40?-40:a;b=b>40?40:b<-40?-40:b;c=c>40?40:c<-40?-40:c;
+      sr+=a;sg+=b;sb+=c;cnt++;
+    }
+    if(!cnt)return;sr/=cnt;sg/=cnt;sb/=cnt;
+    let changed=0,roiN=0;M.fill(0);
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+      if(!insideScan(x,y,1.15))continue;roiN++;
+      const p=y*sw+x,k=p*3,i=p*4;
+      let a=data[i]-R[k]-sr,b=data[i+1]-R[k+1]-sg,c=data[i+2]-R[k+2]-sb;
+      if(a<0)a=-a;if(b<0)b=-b;if(c<0)c=-c;
+      if(a+b+c>objThr){M[p]=1;changed++}
+    }
+    const frac=changed/Math.max(1,roiN),now=performance.now();
+    if(frac>.10){
+      if(!state.objBusySince)state.objBusySince=now;
+      state.objTracks=[];
+      if(now-state.objBusySince>2500){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,k=p*3,i=p*4;R[k]=data[i];R[k+1]=data[i+1];R[k+2]=data[i+2]}state.objBusySince=0}
+      if(!state.objBusy){state.objBusy=true;els.guide.textContent='화면이 크게 바뀌었어요(손 등) · 표적에서 손을 떼 주세요'}
+      return;
+    }
+    if(state.objBusy){state.objBusy=false;if(state.running)els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.'}
+    state.objBusySince=0;
+    const D=state.objDil,Tm=state.objTmp,seen=state.objSeen,stack=state.objStack;
+    Tm.fill(0);D.fill(0);seen.fill(0);
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x;Tm[p]=M[p]|(x>x0&&M[p-1])|(x>x0+1&&M[p-2])|(x<x1&&M[p+1])|(x<x1-1&&M[p+2])}
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x;D[p]=Tm[p]|(y>y0&&Tm[p-sw])|(y>y0+1&&Tm[p-2*sw])|(y<y1&&Tm[p+sw])|(y<y1-1&&Tm[p+2*sw])}
+    const blobs=[],areaUnit=rMax*rMax,minArea=Math.max(6,Math.round(areaUnit*.0009)),maxArea=Math.round(areaUnit*.35);
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+      const s0=y*sw+x;if(!D[s0]||seen[s0])continue;
+      let sp=0,area=0,sx=0,sy=0,bx0=sw,by0=sh,bx1=0,by1=0;
+      stack[sp++]=s0;seen[s0]=1;
+      while(sp){
+        const p=stack[--sp],px=p%sw,py=(p/sw)|0;
+        if(M[p]){area++;sx+=px;sy+=py}
+        if(px<bx0)bx0=px;if(px>bx1)bx1=px;if(py<by0)by0=py;if(py>by1)by1=py;
+        if(px>x0&&D[p-1]&&!seen[p-1]){seen[p-1]=1;stack[sp++]=p-1}
+        if(px<x1&&D[p+1]&&!seen[p+1]){seen[p+1]=1;stack[sp++]=p+1}
+        if(py>y0&&D[p-sw]&&!seen[p-sw]){seen[p-sw]=1;stack[sp++]=p-sw}
+        if(py<y1&&D[p+sw]&&!seen[p+sw]){seen[p+sw]=1;stack[sp++]=p+sw}
+      }
+      if(area>=minArea&&area<=maxArea)blobs.push({x:sx/area,y:sy/area,area,r:Math.sqrt(area/Math.PI),bx0,by0,bx1,by1});
+    }
+    const used=new Set();
+    for(const b of blobs){
+      let ti=-1,bd=1e9;
+      for(let j=0;j<state.objTracks.length;j++){
+        if(used.has(j))continue;
+        const d=Math.hypot(state.objTracks[j].x-b.x,state.objTracks[j].y-b.y);
+        if(d<Math.max(9,state.objTracks[j].r*1.5,b.r*1.5)&&d<bd){bd=d;ti=j}
+      }
+      if(ti<0){state.objTracks.push({x:b.x,y:b.y,area:b.area,r:b.r,first:now,lastMove:now,last:now,box:b});used.add(state.objTracks.length-1);continue}
+      used.add(ti);
+      const tr=state.objTracks[ti],moved=Math.hypot(tr.x-b.x,tr.y-b.y)>Math.max(3,.25*b.r)||Math.abs(b.area-tr.area)>.4*tr.area;
+      if(moved){tr.lastMove=now;tr.x=b.x;tr.y=b.y;tr.area=b.area;tr.r=b.r}
+      tr.last=now;tr.box=b;
+    }
+    state.objTracks=state.objTracks.filter(tr=>now-tr.last<400);
+    const settleMs=700;
+    for(let j=state.objTracks.length-1;j>=0;j--){
+      const tr=state.objTracks[j];
+      if(now-tr.lastMove<settleMs||now-tr.first<settleMs)continue;
+      const dup=state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-tr.x,k.y-tr.y)<tr.r+12);
+      if(!dup){
+        const mapped=videoToScreen(tr.x/sw*vw,tr.y/sh*vh);
+        recordShot(mapped.x,mapped.y,null,'object');
+        state.objKnown.push({x:tr.x,y:tr.y,r:tr.r,kind:'object'});
+      }
+      const bx=tr.box,m=4;
+      for(let y=Math.max(y0,bx.by0-m);y<=Math.min(y1,bx.by1+m);y++)for(let x=Math.max(x0,bx.bx0-m);x<=Math.min(x1,bx.bx1+m);x++){const p=y*sw+x,k=p*3,i=p*4;R[k]=data[i]-sr;R[k+1]=data[i+1]-sg;R[k+2]=data[i+2]-sb}
+      state.objTracks.splice(j,1);
+    }
+  }
+
+  function tryRecordLaser(wx,wy,sw,sh,vw,vh){if(performance.now()-state.lastHit<=140)return false;if(state.objKnown&&state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-wx,k.y-wy)<(k.r||10)+18))return false;const mapped=videoToScreen(wx/sw*vw,wy/sh*vh),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;if(Math.hypot(ex/state.radiusX,ey/state.radiusY)>1.2)return false;recordShot(mapped.x,mapped.y,null,'laser');return true}
 
   function detectLaser(){
     const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return;
     const sw=480,sh=Math.max(270,Math.round(sw*vh/vw));els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh,lum=new Uint8Array(total);
     for(let p=0,i=0;p<total;p++,i+=4)lum[p]=Math.round(data[i]*.299+data[i+1]*.587+data[i+2]*.114);
     if(!state.background||state.background.length!==total){state.background=new Float32Array(lum);state.backgroundR=new Float32Array(total);state.backgroundG=new Float32Array(total);state.backgroundB=new Float32Array(total);for(let p=0,i=0;p<total;p++,i+=4){state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}state.prevLum=new Uint8Array(lum);state.warmupFrames=0;return}
-    const warmupLimit=Math.max(36,Math.round((state.actualFps||30)*1.2));if(state.warmupFrames<warmupLimit){for(let p=0,i=0;p<total;p++,i+=4){state.background[p]=state.background[p]*.75+lum[p]*.25;state.backgroundR[p]=state.backgroundR[p]*.75+data[i]*.25;state.backgroundG[p]=state.backgroundG[p]*.75+data[i+1]*.25;state.backgroundB[p]=state.backgroundB[p]*.75+data[i+2]*.25}state.prevLum.set(lum);state.warmupFrames++;if(state.warmupFrames===warmupLimit){state.detectorReady=true;els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');toast('레이저 감지가 시작되었습니다.')}return}
+    const warmupLimit=Math.max(36,Math.round((state.actualFps||30)*1.2));if(state.warmupFrames<warmupLimit){for(let p=0,i=0;p<total;p++,i+=4){state.background[p]=state.background[p]*.75+lum[p]*.25;state.backgroundR[p]=state.backgroundR[p]*.75+data[i]*.25;state.backgroundG[p]=state.backgroundG[p]*.75+data[i+1]*.25;state.backgroundB[p]=state.backgroundB[p]*.75+data[i+2]*.25}state.prevLum.set(lum);state.warmupFrames++;if(state.warmupFrames===warmupLimit){state.detectorReady=true;if(state.detectKind!=='laser'){state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}state.objTracks=[];state.objKnown=[];state.objBusySince=0;state.objBusy=false}els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');toast('레이저 감지가 시작되었습니다.')}return}
     const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*1.3,x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
     const insideScan=(x,y,margin=1.3)=>{const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;return Math.hypot(ex/t.rx,ey/t.ry)<=margin};
 
@@ -282,6 +370,8 @@
     const motionRatio=motionPixels/Math.max(1,motionSamples),exposureShift=Math.abs(meanNow-meanBase)/Math.max(1,motionSamples);state.prevLum.set(lum);
     if(motionRatio>.035||exposureShift>11){state.pendingLaser=null;state.laserBlocked=true;state.stableFrames=0;blendBackground(data,lum,total,.14);return}
     state.stableFrames++;if(state.stableFrames<2)return;
+    if(state.detectKind!=='laser')detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan);
+    if(state.detectKind==='object')return;
 
     /* 카메라에서 흰색으로 포화된 중심과 빨간 테두리로 보이는 레이저를 전용 감지한다. */
     const whiteCores=[];for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){if(!insideScan(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],commonRise=Math.min(dr,dg,db),lumRise=lum[p]-state.background[p];if(Math.max(r,g,b)>175&&commonRise>4&&lumRise>4){whiteCores.push({x,y,score:commonRise+lumRise*.7});if(whiteCores.length>45)whiteCores.sort((a,b)=>b.score-a.score).length=30}}
@@ -315,7 +405,7 @@
   }
 
   function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay()}
-  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent='경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'새 선수를 입력하고 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus('준비');updateScore();drawOverlay()}
+  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent='경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'새 선수를 입력하고 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus('준비');updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
