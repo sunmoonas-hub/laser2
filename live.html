@@ -108,11 +108,15 @@
   }
 
   function poll(){
-    const cb = 'liveCb_' + Date.now();
+    const cb = 'liveCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     const script = document.createElement('script');
-    const timer = setTimeout(() => finish(null), 4000);
+    let done = false;
+    const timer = setTimeout(() => finish(null), 9000);
     function finish(state){
-      clearTimeout(timer); delete window[cb]; script.remove();
+      if(done) return; done = true;
+      clearTimeout(timer);
+      window[cb] = function(){};   // 응답이 늦게 와도(타임아웃 뒤) 에러 없이 그냥 무시되도록, 삭제 대신 빈 함수로 남겨둠
+      script.remove();
       if(state){
         const sig = JSON.stringify(state);
         if(sig !== lastSig){ lastSig = sig; render(state); }
