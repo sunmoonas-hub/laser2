@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="theme-color" content="#07111f">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
+<title>LASER MATCH · 실시간 관전</title>
+<style>
+  :root{--bg:#07111f;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% -15%,#17375a 0,var(--bg) 45%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
+  .wrap{max-width:640px;margin:0 auto;padding:max(env(safe-area-inset-top),14px) 16px calc(24px + env(safe-area-inset-bottom))}
+  header{text-align:center;margin-bottom:10px}
+  header h1{font-size:1.3rem;letter-spacing:.06em;margin:0 0 4px}
+  header p{color:var(--muted);font-size:.8rem;margin:0}
+  .idle{text-align:center;color:var(--muted);padding:60px 20px;font-size:1rem;line-height:1.7}
+  .idle b{display:block;color:#fff;font-size:1.3rem;margin-bottom:10px}
+  .who{display:flex;justify-content:space-between;align-items:center;margin:14px 0 10px}
+  .who .name{font-size:1.4rem;font-weight:800}
+  .who .lane{color:var(--muted);font-size:.85rem}
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;border:1px solid #ffffff28;background:#06101dcc;border-radius:999px;padding:6px 12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
+  .status.live .dot{background:#ff4d66;box-shadow:0 0 8px #ff4d66}
+  .status.done .dot{background:var(--lime);box-shadow:0 0 8px var(--lime)}
+  .target-box{position:relative;width:100%;aspect-ratio:1;max-width:520px;margin:14px auto;border-radius:16px;overflow:hidden;background:#0c1728;border:1px solid #29415e}
+  canvas{width:100%;height:100%;display:block}
+  .scoreboard{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:#29415e;border-radius:14px;overflow:hidden;margin:14px 0}
+  .metric{background:#0e1b2d;padding:14px 6px;text-align:center}
+  .metric small{display:block;color:var(--muted);font-size:.7rem;margin-bottom:5px}
+  .metric strong{font-size:1.6rem}
+  .metric:first-child strong{color:var(--lime);font-size:2rem}
+  .updated{text-align:center;color:var(--muted);font-size:.72rem;margin-top:6px}
+  @media(min-width:700px){.wrap{max-width:760px}header h1{font-size:1.6rem}.who .name{font-size:1.8rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎯 LASER MATCH · 실시간 관전</h1>
+    <p>사대에서 쏘는 화면이 자동으로 여기에 반영돼요</p>
+  </header>
+  <div id="idleBox" class="idle"><b>대기 중…</b>아직 경기가 시작되지 않았어요. 잠시만 기다려 주세요.</div>
+  <div id="liveBox" hidden>
+    <div class="who">
+      <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
+      <span class="status" id="statusPill"><i class="dot"></i><span id="statusText">대기</span></span>
+    </div>
+    <div class="target-box"><canvas id="cv" width="600" height="600"></canvas></div>
+    <div class="scoreboard">
+      <div class="metric"><small>총점</small><strong id="total">0</strong></div>
+      <div class="metric"><small>발수</small><strong><span id="cnt">0</span>/<span id="maxS">10</span></strong></div>
+      <div class="metric"><small>평균</small><strong id="avg">0.0</strong></div>
+    </div>
+    <p class="updated" id="updatedAt"></p>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+  // index.html의 APPS_SCRIPT_URL과 반드시 같은 주소를 넣으세요.
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let lastUpdatedAt = 0, lastSig = '';
+
+  function drawTarget(shots){
+    const W = cv.width, H = cv.height, cx = W/2, cy = H/2, R = W*0.46;
+    ctx.clearRect(0,0,W,H);
+    for(let i=10;i>=1;i--){
+      ctx.beginPath();ctx.arc(cx,cy,R*i/10,0,Math.PI*2);
+      ctx.strokeStyle = i===10 ? '#29e7d6cc' : '#ffffff33';
+      ctx.lineWidth = i===10 ? 2.5 : 1.4; ctx.stroke();
+    }
+    ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
+    (shots||[]).forEach((s,i) => {
+      const px = cx + (s.u||0)*R, py = cy + (s.v||0)*R;
+      ctx.beginPath();
+      if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}
+      else ctx.arc(px,py,10,0,Math.PI*2);
+      ctx.fillStyle = s.score ? '#b7ff3c' : '#ff4d66'; ctx.fill();
+      ctx.fillStyle = '#07111f'; ctx.font = 'bold 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(String(i+1), px, py);
+    });
+  }
+
+  function render(state){
+    const shots = Array.isArray(state.shots) ? state.shots : [];
+    if(!state.player && !shots.length){
+      $('idleBox').hidden = false; $('liveBox').hidden = true; return;
+    }
+    $('idleBox').hidden = true; $('liveBox').hidden = false;
+    $('pName').textContent = state.player || '이름 없음';
+    $('pLane').textContent = state.eventName ? `${state.eventName} · ${state.firingLane||1}사로` : `${state.firingLane||1}사로`;
+    const pill = $('statusPill');
+    pill.className = 'status ' + (state.running ? 'live' : 'done');
+    $('statusText').textContent = state.running ? '사격 중' : (shots.length ? '완료' : '대기');
+    const total = shots.reduce((a,s)=>a+(s.score||0),0);
+    $('total').textContent = total;
+    $('cnt').textContent = shots.length;
+    $('maxS').textContent = state.maxShots || 10;
+    $('avg').textContent = shots.length ? (total/shots.length).toFixed(1) : '0.0';
+    drawTarget(shots);
+    if(state.updatedAt){
+      const sec = Math.max(0, Math.round((Date.now()-state.updatedAt)/1000));
+      $('updatedAt').textContent = sec < 3 ? '방금 갱신됨' : `${sec}초 전 갱신`;
+    }
+  }
+
+  function poll(){
+    const cb = 'liveCb_' + Date.now();
+    const script = document.createElement('script');
+    const timer = setTimeout(() => finish(null), 4000);
+    function finish(state){
+      clearTimeout(timer); delete window[cb]; script.remove();
+      if(state){
+        const sig = JSON.stringify(state);
+        if(sig !== lastSig){ lastSig = sig; render(state); }
+      }
+      setTimeout(poll, 1200);
+    }
+    window[cb] = data => finish(data);
+    script.onerror = () => finish(null);
+    script.src = `${APPS_SCRIPT_URL}?action=live&callback=${cb}&t=${Date.now()}`;
+    document.head.appendChild(script);
+  }
+
+  drawTarget([]);
+  poll();
+})();
+</script>
+</body>
+</html>
