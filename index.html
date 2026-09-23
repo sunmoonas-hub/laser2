@@ -55,6 +55,7 @@
     </div>
     <div class="guide" id="guide">① 카메라 시작 → ② 표적 자동 보정 → ③ 경기 시작</div>
     <div class="pill" id="clrPill" style="position:absolute;left:9px;bottom:9px;font-size:.66rem;opacity:.9">–</div>
+    <div class="pill" id="liveStatus" style="position:absolute;left:9px;bottom:34px;font-size:.66rem;opacity:.9">📡 관전 연결 안 됨</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
   </section>
 
@@ -111,7 +112,7 @@
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
-  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','reloadMarkBtn','tvBtn','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
+  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','reloadMarkBtn','tvBtn','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
   const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,reloadMark:null,tvMode:false};
@@ -275,14 +276,21 @@
 
   let lastPush=0;
   function pushLive(force){
-    if(!isServerConfigured())return;
+    if(!isServerConfigured()){els.liveStatus.textContent='📡 관전 URL 미설정';return}
     const now=Date.now();if(!force&&now-lastPush<300)return;lastPush=now;
-    const body=new URLSearchParams({action:'liveUpdate',payload:JSON.stringify({
-      eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),
-      maxShots:state.maxShots||Number(els.maxShots.value),running:state.running,
-      shots:state.shots.map(s=>({score:s.score,u:+((s.xMm||0)/80).toFixed(3),v:+((s.yMm||0)/80).toFixed(3),kind:s.manual?'manual':(s.kind||'laser')}))
-    })});
-    fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body}).catch(()=>{});
+    els.liveStatus.textContent='📡 전송 중…';
+    try{
+      const body=new URLSearchParams({action:'liveUpdate',payload:JSON.stringify({
+        eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),
+        maxShots:state.maxShots||Number(els.maxShots.value),running:state.running,
+        shots:state.shots.map(s=>({score:s.score,u:+((s.xMm||0)/80).toFixed(3),v:+((s.yMm||0)/80).toFixed(3),kind:s.manual?'manual':(s.kind||'laser')}))
+      })});
+      fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body})
+        .then(()=>{els.liveStatus.textContent='📡 전송됨 '+new Date().toLocaleTimeString('ko-KR',{hour12:false})})
+        .catch(err=>{els.liveStatus.textContent='📡 전송 실패: '+((err&&err.message)||err)});
+    }catch(err){
+      els.liveStatus.textContent='📡 전송 준비 오류: '+((err&&err.message)||err);
+    }
   }
 
   function recordShot(x,y,manualScore=null,kind){
