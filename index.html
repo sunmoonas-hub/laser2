@@ -307,7 +307,7 @@
     Tm.fill(0);D.fill(0);seen.fill(0);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x;Tm[p]=M[p]|(x>x0&&M[p-1])|(x>x0+1&&M[p-2])|(x<x1&&M[p+1])|(x<x1-1&&M[p+2])}
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x;D[p]=Tm[p]|(y>y0&&Tm[p-sw])|(y>y0+1&&Tm[p-2*sw])|(y<y1&&Tm[p+sw])|(y<y1-1&&Tm[p+2*sw])}
-    const blobs=[],areaUnit=rMax*rMax,minArea=Math.max(6,Math.round(areaUnit*.0009)),maxArea=Math.round(areaUnit*.35);
+    const blobs=[],areaUnit=rMax*rMax,minArea=Math.max(9,Math.round(areaUnit*.0015)),maxArea=Math.round(areaUnit*.35);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       const s0=y*sw+x;if(!D[s0]||seen[s0])continue;
       let sp=0,area=0,sx=0,sy=0,bx0=sw,by0=sh,bx1=0,by1=0;
@@ -321,7 +321,7 @@
         if(py>y0&&D[p-sw]&&!seen[p-sw]){seen[p-sw]=1;stack[sp++]=p-sw}
         if(py<y1&&D[p+sw]&&!seen[p+sw]){seen[p+sw]=1;stack[sp++]=p+sw}
       }
-      if(area>=minArea&&area<=maxArea)blobs.push({x:sx/area,y:sy/area,area,r:Math.sqrt(area/Math.PI),bx0,by0,bx1,by1});
+      if(area>=minArea&&area<=maxArea){const bw=bx1-bx0+1,bh=by1-by0+1,fill=area/(bw*bh),aspect=bw/bh;if(fill>=.42&&aspect>=1/2.6&&aspect<=2.6)blobs.push({x:sx/area,y:sy/area,area,r:Math.sqrt(area/Math.PI),bx0,by0,bx1,by1})}
     }
     const used=new Set();
     for(const b of blobs){
@@ -385,7 +385,9 @@
       const currentWarm=r-Math.max(g,b),baseWarm=state.backgroundR[p]-Math.max(state.backgroundG[p],state.backgroundB[p]),warmBoost=currentWarm-baseWarm;
       const warmMixed=dr>5&&dr>=dg-8&&dr>=db-8,redHalo=currentWarm>9&&warmBoost>3&&dr>5,whitePink=r>180&&dr>8&&dr>=dg-10&&dr>=db-10;
       const greenMixed=dg>7&&dg>=dr-6&&dg>=db-6;
-      const blackRed=blackSurface&&dr>5&&dr>=dg-10&&dr>=db-10,colorMatch=color==='green'?greenMixed:(warmMixed||redHalo||whitePink||blackRed);
+      const blackRed=blackSurface&&dr>5&&dr>=dg-10&&dr>=db-10;
+      const redDominant=dr>dg+4&&dr>db+4,greenDominant=dg>dr+4&&dg>db+4;   // 밝기만 변한 회색은 걸러내고, 실제로 그 색이 도드라질 때만 인정
+      const colorMatch=color==='green'?(greenDominant&&greenMixed):(redDominant&&(warmMixed||redHalo||whitePink||blackRed));
       if(!colorMatch||maxRise<(blackSurface?Math.max(6,signalThreshold-1):signalThreshold)||lumRise<(blackSurface?1:2))continue;
       const colorBoost=color==='green'?dg-Math.max(dr,db):Math.max(warmBoost,dr-Math.max(dg,db)),signal=maxRise+Math.max(0,lumRise)*(blackSurface?.8:1.15)+Math.max(0,colorBoost)*.65,point={x,y,wt:signal,delta:signal,bright:Math.max(r,g,b),redRise:dr,colorBoost,lumRise,blackSurface};points.push(point);if(!strongest||signal>strongest.wt)strongest=point;
     }
