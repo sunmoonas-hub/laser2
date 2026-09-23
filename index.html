@@ -386,7 +386,8 @@
       const warmMixed=dr>5&&dr>=dg-8&&dr>=db-8,redHalo=currentWarm>9&&warmBoost>3&&dr>5,whitePink=r>180&&dr>8&&dr>=dg-10&&dr>=db-10;
       const greenMixed=dg>7&&dg>=dr-6&&dg>=db-6;
       const blackRed=blackSurface&&dr>5&&dr>=dg-10&&dr>=db-10;
-      const redDominant=dr>dg+4&&dr>db+4,greenDominant=dg>dr+4&&dg>db+4;   // 밝기만 변한 회색은 걸러내고, 실제로 그 색이 도드라질 때만 인정
+      const colorMargin=Math.max(1,5-state.sensitivity/25);   // 감도가 높을수록(기본 98) 거의 통과, 감도를 낮출수록 회색 밝기변화를 더 엄격히 거름
+      const redDominant=dr>dg+colorMargin&&dr>db+colorMargin,greenDominant=dg>dr+colorMargin&&dg>db+colorMargin;
       const colorMatch=color==='green'?(greenDominant&&greenMixed):(redDominant&&(warmMixed||redHalo||whitePink||blackRed));
       if(!colorMatch||maxRise<(blackSurface?Math.max(6,signalThreshold-1):signalThreshold)||lumRise<(blackSurface?1:2))continue;
       const colorBoost=color==='green'?dg-Math.max(dr,db):Math.max(warmBoost,dr-Math.max(dg,db)),signal=maxRise+Math.max(0,lumRise)*(blackSurface?.8:1.15)+Math.max(0,colorBoost)*.65,point={x,y,wt:signal,delta:signal,bright:Math.max(r,g,b),redRise:dr,colorBoost,lumRise,blackSurface};points.push(point);if(!strongest||signal>strongest.wt)strongest=point;
