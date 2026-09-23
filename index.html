@@ -373,18 +373,31 @@
     if(state.detectKind!=='laser')detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan);
     if(state.detectKind==='object')return;
 
-    /* 카메라에서 흰색으로 포화된 중심과 빨간 테두리로 보이는 레이저를 전용 감지한다. */
-    const whiteCores=[];for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){if(!insideScan(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],commonRise=Math.min(dr,dg,db),lumRise=lum[p]-state.background[p];if(Math.max(r,g,b)>175&&commonRise>4&&lumRise>4){whiteCores.push({x,y,score:commonRise+lumRise*.7});if(whiteCores.length>45)whiteCores.sort((a,b)=>b.score-a.score).length=30}}
-    let coreHalo=null;for(const core of whiteCores){let halo=0,haloStrength=0;for(let oy=-14;oy<=14;oy++)for(let ox=-14;ox<=14;ox++){const d=Math.hypot(ox,oy);if(d<1||d>14)continue;const nx=core.x+ox,ny=core.y+oy;if(nx<1||nx>=sw-1||ny<1||ny>=sh-1)continue;const p=ny*sw+nx,i=p*4,rr=data[i],gg=data[i+1],bb=data[i+2],dr=rr-state.backgroundR[p],dg=gg-state.backgroundG[p],db=bb-state.backgroundB[p],redNow=rr-Math.max(gg,bb),redRise=dr-Math.max(dg,db);if((redNow>8&&dr>4)||(redRise>3&&dr>5)){halo++;haloStrength+=Math.max(redNow,redRise)}}const score=core.score+halo*2+haloStrength*.08;if(halo>=3&&haloStrength>18&&(!coreHalo||score>coreHalo.score))coreHalo={x:core.x,y:core.y,halo,haloStrength,score}}
-    if(coreHalo){
-      state.releaseFrames=0;if(state.laserBlocked)return;
-      if(state.haloCandidate&&Math.hypot(coreHalo.x-state.haloCandidate.x,coreHalo.y-state.haloCandidate.y)<10){state.haloCandidate.frames++;state.haloCandidate.x=coreHalo.x;state.haloCandidate.y=coreHalo.y}
-      else state.haloCandidate={x:coreHalo.x,y:coreHalo.y,frames:1};
-      if(state.haloCandidate.frames>=2&&tryRecordLaser(coreHalo.x,coreHalo.y,sw,sh,vw,vh)){state.pendingLaser=null;state.haloCandidate=null;state.laserBlocked=true;state.releaseFrames=0;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
-      return;
-    }else{state.haloCandidate=null;if(state.laserBlocked){state.releaseFrames++;if(state.releaseFrames<2)return;state.laserBlocked=false;state.releaseFrames=0;state.pendingLaser=null}}
+    /* 실제 촬영 영상에서 측정한 레이저 점 색: R은 배경보다 150~250 정도 크게 오르고, G는 오히려 배경보다 떨어지며, B는 소폭만 오르는 자홍빛. 3채널이 다 같이 올라야 한다는 기존 가정은 이 색과 맞지 않아 놓치고 있었음 - R(또는 초록 모드는 G)이 배경보다, 그리고 다른 두 채널보다 확실히 튀는 것만으로 1프레임에 즉시 확정한다. */
+    const color=els.laserColor.value;
+    let coreBest=null;
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+      if(!insideScan(x,y))continue;
+      const p=y*sw+x,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
+      const strong=color==='green'?(dg>60&&dg>dr+40&&dg>db+40):(dr>60&&dr>dg+40&&dr>db+30);
+      if(strong){const mag=color==='green'?dg:dr;if(!coreBest||mag>coreBest.mag)coreBest={x,y,mag}}
+    }
+    if(coreBest){
+      let near=0;
+      for(let oy=-4;oy<=4;oy++)for(let ox=-4;ox<=4;ox++){
+        const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
+        const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
+        if(color==='green'?(dg>50&&dg>dr+30&&dg>db+30):(dr>50&&dr>dg+30&&dr>db+20))near++;
+      }
+      if(near>=3){
+        state.releaseFrames=0;if(state.laserBlocked)return;
+        if(tryRecordLaser(coreBest.x,coreBest.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
+        return;
+      }
+    }
+    if(state.laserBlocked){state.releaseFrames++;if(state.releaseFrames<2)return;state.laserBlocked=false;state.releaseFrames=0;state.pendingLaser=null}
 
-    const points=[];let strongest=null;const color=els.laserColor.value,signalThreshold=Math.max(7,30-state.sensitivity*.22);
+    const points=[];let strongest=null;const signalThreshold=Math.max(7,30-state.sensitivity*.22);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!insideScan(x,y))continue;
       const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],baseLum=state.background[p],blackSurface=baseLum<125,dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],lumRise=lum[p]-baseLum,maxRise=Math.max(dr,dg,db);
