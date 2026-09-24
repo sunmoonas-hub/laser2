@@ -526,12 +526,13 @@
     }
     if(coreBest){
       let near=0;
-      for(let oy=-4;oy<=4;oy++)for(let ox=-4;ox<=4;ox++){
+      for(let oy=-7;oy<=7;oy++)for(let ox=-7;ox<=7;ox++){
         const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
         const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
-        if(color==='green'?(dg>adaptFloor*.8&&dg>dr+adaptMargin*.75&&dg>db+adaptMargin*.75):(dr>adaptFloor*.8&&dr>dg+adaptMargin*.75&&dr>db+adaptMargin*.6))near++;
+        // 손 떨림으로 레이저가 살짝 스치듯 번지면 한 점의 밝기는 약해지므로, 기준을 조금 더 느슨하게 잡는다.
+        if(color==='green'?(dg>adaptFloor*.6&&dg>dr+adaptMargin*.55&&dg>db+adaptMargin*.55):(dr>adaptFloor*.6&&dr>dg+adaptMargin*.55&&dr>db+adaptMargin*.45))near++;
       }
-      if(near>=3){
+      if(near>=2){
         state.releaseFrames=0;if(state.laserBlocked)return;
         if(tryRecordLaser(coreBest.x,coreBest.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
         return;
