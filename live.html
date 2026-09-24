@@ -31,6 +31,15 @@
   .metric strong{font-size:1.6rem}
   .metric:first-child strong{color:var(--lime);font-size:2rem}
   .updated{text-align:center;color:var(--muted);font-size:.72rem;margin-top:6px}
+  .startPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px;margin:14px 0}
+  .startPanel h2{font-size:1rem;margin:0 0 12px}
+  .startPanel .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .startPanel .field label{display:block;color:var(--muted);font-size:.75rem;margin:0 0 6px 2px;font-weight:700}
+  .startPanel .field input,.startPanel .field select{width:100%;min-height:50px;border:1px solid #29415e;border-radius:10px;background:#091426;color:#fff;padding:10px 12px;font-size:.92rem}
+  .startBtn{width:100%;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
+  .startBtn:disabled{opacity:.5}
+  .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
+  @media(max-width:420px){.startPanel .grid{grid-template-columns:1fr}}
   @media(min-width:700px){.wrap{max-width:760px}header h1{font-size:1.6rem}.who .name{font-size:1.8rem}}
 </style>
 </head>
@@ -40,7 +49,20 @@
     <h1>🎯 LASER MATCH · 실시간 관전</h1>
     <p>사대에서 쏘는 화면이 자동으로 여기에 반영돼요</p>
   </header>
-  <div id="idleBox" class="idle"><b>대기 중…</b>아직 경기가 시작되지 않았어요. 잠시만 기다려 주세요.</div>
+  <div id="idleHint" class="idle" style="padding:20px 20px 4px"><b>대기 중…</b>사대 폰의 카메라가 켜지고 표적이 보정되면, 아래에서 경기를 시작할 수 있어요.</div>
+  <section class="startPanel" id="startPanel">
+    <h2>🕹️ 새 경기 시작</h2>
+    <div class="grid">
+      <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
+      <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
+      <div class="field"><label>레이저 색상</label><select id="rColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
+      <div class="field"><label>감지 대상</label><select id="rKind"><option value="both" selected>레이저+물체</option><option value="laser">레이저만</option><option value="object">물체만</option></select></div>
+      <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
+      <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
+    </div>
+    <button class="startBtn" id="rStart">📡 이 설정으로 사대에 경기 시작 명령 보내기</button>
+    <p class="startMsg" id="rMsg"></p>
+  </section>
   <div id="liveBox" hidden>
     <div class="who">
       <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
@@ -86,10 +108,12 @@
 
   function render(state){
     const shots = Array.isArray(state.shots) ? state.shots : [];
-    if(!state.player && !shots.length){
-      $('idleBox').hidden = false; $('liveBox').hidden = true; return;
-    }
-    $('idleBox').hidden = true; $('liveBox').hidden = false;
+    const hasResult = state.player || shots.length;
+    $('idleHint').hidden = !!hasResult;
+    $('liveBox').hidden = !hasResult;
+    $('startPanel').hidden = !!state.running;   // 사격 중엔 폼을 숨겨서 실수로 다시 누르는 걸 방지
+    $('rStart').disabled = !!state.running;
+    if(!hasResult) return;
     $('pName').textContent = state.player || '이름 없음';
     $('pLane').textContent = state.eventName ? `${state.eventName} · ${state.firingLane||1}사로` : `${state.firingLane||1}사로`;
     const pill = $('statusPill');
@@ -128,6 +152,35 @@
     script.src = `${APPS_SCRIPT_URL}?action=live&callback=${cb}&t=${Date.now()}`;
     document.head.appendChild(script);
   }
+
+  function sendRemoteStart(){
+    const btn = $('rStart'), msg = $('rMsg');
+    const cmd = {
+      cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      eventName: $('rEvent').value.trim(),
+      player: $('rPlayer').value.trim(),
+      firingLane: Number($('rLane').value),
+      laserColor: $('rColor').value,
+      detectKind: $('rKind').value,
+      maxShots: Number($('rMax').value)
+    };
+    if(!cmd.player){ msg.textContent = '선수 이름을 입력해 주세요.'; return; }
+    btn.disabled = true; msg.textContent = '📡 명령을 보내는 중…';
+    const cb = 'startCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => finish(null), 8000);
+    function finish(res){
+      clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = false;
+      if(res && res.ok) msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
+      else msg.textContent = '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+    }
+    window[cb] = res => finish(res);
+    script.onerror = () => finish(null);
+    const qs = new URLSearchParams({ action: 'remoteStart', callback: cb, payload: JSON.stringify(cmd) });
+    script.src = `${APPS_SCRIPT_URL}?${qs.toString()}`;
+    document.head.appendChild(script);
+  }
+  $('rStart').addEventListener('click', sendRemoteStart);
 
   drawTarget([]);
   poll();
