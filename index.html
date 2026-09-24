@@ -27,14 +27,6 @@
     @media(max-width:420px){.status{display:none}.fullscreen-btn{padding:7px 9px;font-size:.68rem}}
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
     @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:52px minmax(0,1fr);grid-template-areas:"header header" "camera side";gap:8px;padding:4px 8px 8px}.app>header{min-height:52px}.brand-mark{width:38px;height:38px}h1{font-size:1.08rem}.sub{font-size:.65rem}.camera{height:100%;min-height:0;position:relative;top:auto}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 3px 18px 0;scrollbar-gutter:stable}.setup{margin:0 0 7px;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0 0 7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0 0 7px}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0 0 7px;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
-    body.tv-mode .setup,body.tv-mode .shots .hint,body.tv-mode #cameraBtn,body.tv-mode #calibrateBtn,body.tv-mode #manualBtn,body.tv-mode #undoBtn,body.tv-mode #reloadMarkBtn,body.tv-mode .footer-controls,body.tv-mode .zoom-controls{display:none!important}
-    body.tv-mode{background:#000}
-    body.tv-mode .app{max-width:none}
-    body.tv-mode .camera{height:min(82svh,900px)}
-    body.tv-mode .match-controls{grid-template-columns:1fr 1fr}
-    body.tv-mode .scoreboard{transform:scale(1.35);transform-origin:top center;margin:22px 0 46px}
-    body.tv-mode .shots{transform:scale(1.15);transform-origin:top center}
-    body.tv-mode #tvBtn{opacity:.6;min-height:44px}
   </style>
 </head>
 <body>
@@ -82,8 +74,6 @@
     <button class="btn wide" id="matchBtn" disabled>경기 시작</button>
     <button class="btn secondary" id="manualBtn" disabled>수동 명중 입력</button>
     <button class="btn danger" id="undoBtn" disabled>마지막 발 취소</button>
-    <button class="btn secondary" id="reloadMarkBtn" disabled>리로드 마크 설정</button>
-    <button class="btn secondary" id="tvBtn">TV 모드</button>
   </div>
 
   <section class="panel scoreboard">
@@ -116,11 +106,10 @@
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
-  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','reloadMarkBtn','tvBtn','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
+  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,reloadMark:null,tvMode:false};
-  try{const saved=localStorage.getItem('laserMatchReloadMark');if(saved)state.reloadMark=JSON.parse(saved)}catch(e){}
+  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0};
 
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
@@ -168,7 +157,7 @@
       state.center={x:target.x,y:target.y};state.radiusX=target.radiusX;state.radiusY=target.radiusY;state.radius=Math.max(target.radiusX,target.radiusY);state.targetAngle=target.angle;state.calibrationMode=0;saveTargetToVideo();
       els.guide.textContent='표적 자동 보정 완료 · 경기 시작을 누르세요.';
       els.calibrationInfo.textContent=`자동 보정 완료: 카메라 표적 형태 ${Math.round(target.radiusX)}×${Math.round(target.radiusY)}px · 기울기 ${Math.round(target.angle*180/Math.PI)}°`;
-      els.matchBtn.disabled=false;syncReloadBtn();setStatus('자동 보정 완료');drawOverlay();toast('표적을 자동으로 인식했습니다.');
+      els.matchBtn.disabled=false;setStatus('자동 보정 완료');drawOverlay();toast('표적을 자동으로 인식했습니다.');
     }else{
       state.calibrationMode=1;els.guide.textContent='자동 인식 실패 · 표적 중심을 한 번 눌러 수동 보정하세요.';
       els.calibrationInfo.textContent='자동 인식이 어려운 조명입니다. 표적 중심과 가장 바깥쪽 1점 원을 차례로 눌러 주세요.';
@@ -239,13 +228,7 @@
   els.overlay.addEventListener('pointerdown',ev=>{
     const p=canvasPoint(ev);
     if(state.calibrationMode===1){state.center=p;state.calibrationMode=2;els.guide.textContent='가장 바깥쪽 1점 원의 테두리를 누르세요.';drawOverlay();return}
-    if(state.calibrationMode===2){const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);if(d<40){toast('중심에서 더 먼 바깥 원을 눌러 주세요.');return}state.radius=state.radiusX=state.radiusY=d;state.targetAngle=0;state.calibrationMode=0;saveTargetToVideo();els.guide.textContent='보정 완료 · 경기 시작을 누르세요.';els.calibrationInfo.textContent=`수동 보정 완료: 외곽 반지름 ${Math.round(d)}px`;els.matchBtn.disabled=false;syncReloadBtn();setStatus('보정 완료');drawOverlay();return}
-    if(state.calibrationMode===3){
-      const dx=p.x-state.center.x,dy=p.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
-      state.reloadMark={nx:ex/state.radiusX,ny:ey/state.radiusY,r:.4};
-      try{localStorage.setItem('laserMatchReloadMark',JSON.stringify(state.reloadMark))}catch(e){}
-      state.calibrationMode=0;syncReloadBtn();els.guide.textContent='리로드 마크 설정 완료 · 경기 시작을 누르세요.';toast('🔄 리로드 마크를 설정했어요. 표적에 다시 레이저를 쏘면 됩니다.');drawOverlay();return;
-    }
+    if(state.calibrationMode===2){const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);if(d<40){toast('중심에서 더 먼 바깥 원을 눌러 주세요.');return}state.radius=state.radiusX=state.radiusY=d;state.targetAngle=0;state.calibrationMode=0;saveTargetToVideo();els.guide.textContent='보정 완료 · 경기 시작을 누르세요.';els.calibrationInfo.textContent=`수동 보정 완료: 외곽 반지름 ${Math.round(d)}px`;els.matchBtn.disabled=false;setStatus('보정 완료');drawOverlay();return}
   });
 
   function drawOverlay(){
@@ -254,12 +237,6 @@
     ctx.save();ctx.lineWidth=1.2;
     if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#29e7d6cc':'#ffffff55';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
     ctx.beginPath();ctx.arc(state.center.x,state.center.y,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
-    if(state.reloadMark&&state.radiusX){
-      const ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=state.reloadMark.nx*state.radiusX,ey=state.reloadMark.ny*state.radiusY;
-      const rx=state.center.x+ex*ca-ey*sa,ry=state.center.y+ex*sa+ey*ca,rr=(state.reloadMark.r||.4)*state.radiusX;
-      ctx.save();ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(rx,ry,rr,0,Math.PI*2);ctx.strokeStyle='#ffc940';ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle='#ffc940';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('R',rx,ry);ctx.restore();
-    }
     state.shots.forEach((s,i)=>{if(s.manual||s.screenX==null)return;let px=s.screenX,py=s.screenY;if(Number.isFinite(s.videoX)&&Number.isFinite(s.videoY)){const g=videoGeometry(),mapped=videoToScreen(s.videoX*g.vw,s.videoY*g.vh);px=mapped.x;py=mapped.y}s.screenX=px;s.screenY=py;ctx.beginPath();if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}else ctx.arc(px,py,9,0,Math.PI*2);ctx.fillStyle=s.score?'#b7ff3c':'#ff4d66';ctx.fill();ctx.fillStyle='#07111f';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),px,py)});ctx.restore();
   }
 
@@ -462,13 +439,11 @@
     }
   }
 
-  function triggerReload(){state.shots=[];state.lastHit=performance.now();updateScore();drawOverlay();pushLive(true);toast('🔄 리로드 - 새 라운드 시작');els.guide.textContent='리로드됨 · 계속 사격하세요.'}
   function tryRecordLaser(wx,wy,sw,sh,vw,vh){
     if(performance.now()-state.lastHit<=140)return false;
     if(state.objKnown&&state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-wx,k.y-wy)<(k.r||10)+18))return false;
     const mapped=videoToScreen(wx/sw*vw,wy/sh*vh),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
     const nx=ex/state.radiusX,ny=ey/state.radiusY;
-    if(state.reloadMark&&Math.hypot(nx-state.reloadMark.nx,ny-state.reloadMark.ny)<=(state.reloadMark.r||.4)){state.lastHit=performance.now();triggerReload();return true}
     if(Math.hypot(nx,ny)>1.2)return false;
     recordShot(mapped.x,mapped.y,null,'laser');return true;
   }
@@ -480,18 +455,10 @@
     if(!state.background||state.background.length!==total){state.background=new Float32Array(lum);state.backgroundR=new Float32Array(total);state.backgroundG=new Float32Array(total);state.backgroundB=new Float32Array(total);for(let p=0,i=0;p<total;p++,i+=4){state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}state.prevLum=new Uint8Array(lum);state.warmupFrames=0;return}
     const warmupLimit=Math.max(36,Math.round((state.actualFps||30)*1.2));if(state.warmupFrames<warmupLimit){for(let p=0,i=0;p<total;p++,i+=4){state.background[p]=state.background[p]*.75+lum[p]*.25;state.backgroundR[p]=state.backgroundR[p]*.75+data[i]*.25;state.backgroundG[p]=state.backgroundG[p]*.75+data[i+1]*.25;state.backgroundB[p]=state.backgroundB[p]*.75+data[i+2]*.25}state.prevLum.set(lum);state.warmupFrames++;if(state.warmupFrames===warmupLimit){state.detectorReady=true;if(state.detectKind!=='laser'){state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}state.objTracks=[];state.objKnown=[];state.objBusySince=0;state.objBusy=false}els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');toast('레이저 감지가 시작되었습니다.')}return}
     const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*1.3;
-    let x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
-    if(state.reloadMark){
-      const ca0=Math.cos(t.a),sa0=Math.sin(t.a),mex=state.reloadMark.nx*t.rx,mey=state.reloadMark.ny*t.ry,mr=(state.reloadMark.r||.4)*Math.max(t.rx,t.ry)+8;
-      const mx=t.x+mex*ca0-mey*sa0,my=t.y+mex*sa0+mey*ca0;
-      x0=Math.max(1,Math.min(x0,Math.floor(mx-mr)));x1=Math.min(sw-2,Math.max(x1,Math.ceil(mx+mr)));
-      y0=Math.max(1,Math.min(y0,Math.floor(my-mr)));y1=Math.min(sh-2,Math.max(y1,Math.ceil(my+mr)));
-    }
+    const x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
     const insideScan=(x,y,margin=1.3)=>{
       const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
-      if(Math.hypot(ex/t.rx,ey/t.ry)<=margin)return true;
-      if(state.reloadMark){const nx=ex/t.rx,ny=ey/t.ry;if(Math.hypot(nx-state.reloadMark.nx,ny-state.reloadMark.ny)<=(state.reloadMark.r||.4)+.08)return true}
-      return false;
+      return Math.hypot(ex/t.rx,ey/t.ry)<=margin;
     };
 
     let motionPixels=0,motionSamples=0,meanNow=0,meanBase=0;
@@ -589,18 +556,6 @@
   function updateFullscreenButton(){const active=!!document.fullscreenElement;els.fullscreenBtn.textContent=active?'⛶ 전체화면 종료':'⛶ 전체화면';els.fullscreenBtn.setAttribute('aria-label',active?'전체화면 종료':'전체화면 켜기');setTimeout(resize,120)}
 
   els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.matchBtn.title='라이브 관전 페이지에서 사로를 맞춰 경기 시작 명령을 보내면 자동으로 시작돼요.';els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
-  function syncReloadBtn(){els.reloadMarkBtn.disabled=!(state.center&&state.radius);els.reloadMarkBtn.textContent=state.reloadMark?'리로드 마크 지우기':'리로드 마크 설정'}
-  els.reloadMarkBtn.onclick=()=>{
-    if(!(state.center&&state.radius)){toast('먼저 표적을 보정해 주세요.');return}
-    if(state.reloadMark){state.reloadMark=null;try{localStorage.removeItem('laserMatchReloadMark')}catch(e){}syncReloadBtn();toast('리로드 마크를 지웠어요.');drawOverlay();return}
-    state.calibrationMode=3;els.guide.textContent='표적의 리로드 마크(재시작 지점)를 탭하세요.';toast('표적에 있는 리로드 마크 위치를 화면에서 탭해 주세요.');
-  };
-  els.tvBtn.onclick=()=>{
-    state.tvMode=!state.tvMode;
-    document.body.classList.toggle('tv-mode',state.tvMode);
-    els.tvBtn.textContent=state.tvMode?'TV 모드 끄기':'TV 모드';
-    resize();
-  };
   function showDetectorInfo(){els.fpsPill.textContent='고감도 레이저 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')}
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
   window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
