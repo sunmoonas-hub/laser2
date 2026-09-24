@@ -44,6 +44,8 @@
   .startPanel .field input,.startPanel .field select{width:100%;min-height:50px;border:1px solid #29415e;border-radius:10px;background:#091426;color:#fff;padding:10px 12px;font-size:.92rem}
   .startBtn{width:100%;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
   .startBtn:disabled{opacity:.5}
+  .restartBtn{width:100%;min-height:50px;border:1px solid var(--lime);border-radius:12px;background:transparent;color:var(--lime);font-weight:850;font-size:.92rem;margin-bottom:12px}
+  .busyNote{text-align:center;color:var(--gold);font-size:.78rem;margin-bottom:10px}
   .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
   .hint{font-size:.74rem;line-height:1.6;color:var(--muted);margin:10px 0 0}
   .shotPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px;margin-top:16px}
@@ -89,6 +91,8 @@
     <div class="right">
       <section class="startPanel" id="startPanel">
         <h2>🕹️ 새 경기 시작</h2>
+        <button class="restartBtn" id="restartBtn" hidden>🔁 같은 설정으로 재시작</button>
+        <p class="busyNote" id="busyNote" hidden>⏳ 지금 사격이 진행 중이에요 - 끝나면 새 명령을 보낼 수 있어요.</p>
         <div class="grid">
           <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
           <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
@@ -150,6 +154,14 @@
   function handleState(state){
     lastState = state;
     applyView();
+    syncStartLock();
+  }
+  // 서버 전체(사로 구분 없이)에 사격이 진행 중이면, 새 시작 명령이 밀렸다가 경기가 끝나자마자
+  // 자동으로 실행되는 걸 막기 위해 시작 버튼을 잠가 둔다.
+  function syncStartLock(){
+    const busy = !!(lastState && lastState.running);
+    $('rStart').disabled = busy;
+    $('busyNote').hidden = !busy;
   }
   function applyView(){
     const state = lastState;
@@ -164,6 +176,7 @@
       show('other'); return;
     }
     show('live');
+    $('restartBtn').hidden = !!state.running;   // 완료된 뒤에만 재시작 버튼을 보여줌
     $('pName').textContent = state.player || '이름 없음';
     $('pLane').textContent = state.eventName ? `${state.eventName} · ${lane}사로` : `${lane}사로`;
     const pill = $('statusPill');
@@ -186,6 +199,7 @@
     $('otherLaneBox').hidden = which!=='other';
     $('liveBox').hidden = which!=='live';
     $('shotPanel').hidden = which!=='live';
+    if(which!=='live')$('restartBtn').hidden = true;
   }
   $('watchLane').addEventListener('change', applyView);
 
@@ -211,28 +225,22 @@
     document.head.appendChild(script);
   }
 
-  function sendRemoteStart(){
-    const btn = $('rStart'), msg = $('rMsg');
-    const cmd = {
-      cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-      eventName: $('rEvent').value.trim(),
-      player: $('rPlayer').value.trim(),
-      firingLane: Number($('rLane').value),
-      laserColor: $('rColor').value,
-      detectKind: $('rKind').value,
-      maxShots: Number($('rMax').value)
-    };
-    if(!cmd.player){ msg.textContent = '선수 이름을 입력해 주세요.'; return; }
+  let lastSentCmd = null;
+  // 명령 전송의 공통 로직: cmd에 cmdId만 새로 채워서 서버로 보낸다. onOk(cmd)는 전송이 성공했을 때 호출된다.
+  function sendCmd(cmd, btn, msg, onOk){
+    cmd = Object.assign({}, cmd, { cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) });
     btn.disabled = true; msg.textContent = '📡 명령을 보내는 중…';
     const cb = 'startCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     const script = document.createElement('script');
     const timer = setTimeout(() => finish(null), 8000);
     function finish(res){
-      clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = false;
+      clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
         msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
+        lastSentCmd = cmd;
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
+        if(onOk) onOk();
       } else msg.textContent = '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
     }
     window[cb] = res => finish(res);
@@ -241,7 +249,27 @@
     script.src = `${APPS_SCRIPT_URL}?${qs.toString()}`;
     document.head.appendChild(script);
   }
+  function sendRemoteStart(){
+    const cmd = {
+      eventName: $('rEvent').value.trim(),
+      player: $('rPlayer').value.trim(),
+      firingLane: Number($('rLane').value),
+      laserColor: $('rColor').value,
+      detectKind: $('rKind').value,
+      maxShots: Number($('rMax').value)
+    };
+    if(!cmd.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
+    sendCmd(cmd, $('rStart'), $('rMsg'));
+  }
   $('rStart').addEventListener('click', sendRemoteStart);
+  $('restartBtn').addEventListener('click', () => {
+    const base = lastSentCmd || {
+      eventName: $('rEvent').value.trim(), player: $('rPlayer').value.trim(), firingLane: Number($('rLane').value),
+      laserColor: $('rColor').value, detectKind: $('rKind').value, maxShots: Number($('rMax').value)
+    };
+    if(!base.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
+    sendCmd(base, $('rStart'), $('rMsg'));
+  });
 
   drawTarget([]);
   poll();
