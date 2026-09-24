@@ -280,13 +280,14 @@
     const now=Date.now();if(!force&&now-lastPush<300)return;lastPush=now;
     els.liveStatus.textContent='📡 전송 중…';
     try{
-      const qs=new URLSearchParams({action:'liveUpdate',payload:JSON.stringify({
+      const qs=new URLSearchParams({action:'liveUpdate',t:String(now)+'_'+Math.random().toString(36).slice(2,7),payload:JSON.stringify({
         eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),
         maxShots:state.maxShots||Number(els.maxShots.value),running:state.running,
         shots:state.shots.map(s=>({score:s.score,u:+((s.xMm||0)/80).toFixed(3),v:+((s.yMm||0)/80).toFixed(3),kind:s.manual?'manual':(s.kind||'laser')}))
       })});
-      // POST는 일부 환경에서 리다이렉트 도중 GET으로 바뀌며 본문이 통째로 사라지는 경우가 있어, GET으로 보낸다(리다이렉트에도 안전).
-      fetch(`${APPS_SCRIPT_URL}?${qs.toString()}`,{method:'GET',mode:'no-cors'})
+      // POST는 일부 환경에서 리다이렉트 도중 GET으로 바뀌며 본문이 통째로 사라지는 경우가 있어 GET으로 보내고,
+      // 매번 다른 t값을 붙여 브라우저가 같은 주소라고 캐시된 응답을 재활용하지 않도록 한다.
+      fetch(`${APPS_SCRIPT_URL}?${qs.toString()}`,{method:'GET',mode:'no-cors',cache:'no-store'})
         .then(()=>{els.liveStatus.textContent='📡 전송됨 '+new Date().toLocaleTimeString('ko-KR',{hour12:false})})
         .catch(err=>{els.liveStatus.textContent='📡 전송 실패: '+((err&&err.message)||err)});
     }catch(err){
