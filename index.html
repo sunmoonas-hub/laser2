@@ -284,7 +284,13 @@
       const qs=new URLSearchParams({action:'liveUpdate',callback:cbName,payload:JSON.stringify({
         eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),
         maxShots:state.maxShots||Number(els.maxShots.value),running:state.running,
-        shots:state.shots.map(s=>({score:s.score,u:+((s.xMm||0)/80).toFixed(3),v:+((s.yMm||0)/80).toFixed(3),kind:s.manual?'manual':(s.kind||'laser')}))
+        shots:state.shots.map(s=>{
+          // 관전 페이지는 표적을 항상 똑바로 그리므로, 채점용으로 기울기를 보정한 좌표(xMm/yMm) 대신
+          // 화면에 실제 보이는 그대로의 위치(화면 좌표 기준)를 보낸다.
+          let u=0,v=0;
+          if(s.screenX!=null&&s.screenY!=null&&state.radiusX&&state.radiusY){u=(s.screenX-state.center.x)/state.radiusX;v=(s.screenY-state.center.y)/state.radiusY}
+          return{score:s.score,u:+u.toFixed(3),v:+v.toFixed(3),kind:s.manual?'manual':(s.kind||'laser')};
+        })
       })});
       // 눈에 안 보이는 fetch() 요청만 걸러내는 환경이 있어, 순위표·관전 페이지가 이미 쓰고 있는
       // <script> 태그 삽입(JSONP) 방식으로 통일한다 - 이건 확실히 통과한다.
