@@ -131,7 +131,7 @@
       try{state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280,min:640},height:{ideal:720,min:480},frameRate:{ideal:60,min:30,max:60}}})}
       catch(fastError){console.warn('60fps unavailable, retrying at standard speed',fastError);state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}}})}
       els.video.srcObject=state.stream;await els.video.play();state.videoTrack=state.stream.getVideoTracks()[0];await setupCameraZoom();els.cameraMsg.style.display='none';
-      els.cameraBtn.textContent='카메라 다시 시작';els.calibrateBtn.disabled=false;els.livePill.textContent='● CAMERA';setStatus('카메라 연결');els.guide.textContent='표적을 화면 중앙에 맞추면 자동으로 인식합니다.';resize();processFrames();setTimeout(()=>{if(state.stream&&!state.center&&!state.running)beginCalibration()},900);
+      els.cameraBtn.textContent='카메라 다시 시작';els.calibrateBtn.disabled=false;els.livePill.textContent='● CAMERA';setStatus('카메라 연결');els.guide.textContent='표적을 화면 중앙에 맞추면 자동으로 인식합니다.';resize();processFrames();ensureRemotePolling();setTimeout(()=>{if(state.stream&&!state.center&&!state.running)beginCalibration()},900);
     }catch(e){console.error(e);toast('카메라 권한을 허용해 주세요.');els.guide.textContent='브라우저 설정에서 카메라 권한을 허용한 뒤 다시 시도하세요.'}
   }
 
@@ -299,6 +299,40 @@
       els.liveStatus.textContent='📡 전송 준비 오류: '+((err&&err.message)||err);
     }
   }
+
+  let lastCmdId=null,lastNotifiedCmdId=null,remotePollOn=false;
+  function applyRemoteCmd(cmd){
+    if(cmd.cmdId===lastCmdId)return;   // 이미 그 명령으로 경기를 시작한 뒤라면 더 이상 아무것도 안 함
+    if(cmd.eventName!=null&&cmd.eventName!=='')els.eventName.value=cmd.eventName;
+    if(cmd.player)els.player.value=cmd.player;
+    if(cmd.firingLane)els.firingLane.value=String(cmd.firingLane);
+    if(cmd.laserColor&&cmd.laserColor!==els.laserColor.value){els.laserColor.value=cmd.laserColor;clearDetectorBackground();showDetectorInfo()}
+    if(cmd.detectKind)els.detectKind.value=cmd.detectKind;
+    if(cmd.maxShots){els.maxShots.value=String(cmd.maxShots);updateScore()}
+    if(state.center&&state.radius&&!state.running){
+      startMatch();lastCmdId=cmd.cmdId;toast('📡 원격 명령으로 경기를 시작했어요: '+(cmd.player||''));
+    }else if(!(state.center&&state.radius)&&lastNotifiedCmdId!==cmd.cmdId){
+      lastNotifiedCmdId=cmd.cmdId;toast('📡 원격 시작 명령이 왔어요 - 먼저 카메라 켜고 표적을 보정해 주세요.');
+      // lastCmdId는 갱신하지 않는다 - 표적 보정이 끝나면 다음 폴링에서 이 명령을 다시 확인해 자동으로 시작한다.
+    }
+  }
+  function pollRemoteCmd(){
+    if(!isServerConfigured()){setTimeout(pollRemoteCmd,3000);return}
+    if(state.running){setTimeout(pollRemoteCmd,1500);return}
+    const cbName='cmdCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{cleanup();setTimeout(pollRemoteCmd,1500)},6000);
+    function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
+    window[cbName]=cmd=>{
+      cleanup();
+      if(cmd&&cmd.cmdId)applyRemoteCmd(cmd);
+      setTimeout(pollRemoteCmd,1500);
+    };
+    script.onerror=()=>{cleanup();setTimeout(pollRemoteCmd,1500)};
+    script.src=`${APPS_SCRIPT_URL}?action=remoteCmd&callback=${cbName}&t=${Date.now()}`;
+    document.head.appendChild(script);
+  }
+  function ensureRemotePolling(){if(remotePollOn)return;remotePollOn=true;pollRemoteCmd()}
 
   function recordShot(x,y,manualScore=null,kind){
     if(!state.running||state.shots.length>=state.maxShots)return;
