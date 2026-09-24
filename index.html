@@ -267,7 +267,7 @@
     if(!state.center||!state.radius)return;if(!els.player.value.trim()){toast('선수 이름을 입력해 주세요.');els.player.focus();return}
     state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.detectorReady=false;
     state.detectKind=els.detectKind.value;
-    els.player.disabled=true;els.firingLane.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 2초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();pushLive(true);
+    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 2초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();pushLive(true);
   }
 
   function finishMatch(){state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');pushLive(true);saveMatch()}
