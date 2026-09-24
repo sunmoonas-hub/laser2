@@ -10,20 +10,23 @@
   :root{--bg:#07111f;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
   *{box-sizing:border-box}
   html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% -15%,#17375a 0,var(--bg) 45%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
-  .wrap{max-width:640px;margin:0 auto;padding:max(env(safe-area-inset-top),14px) 16px calc(24px + env(safe-area-inset-bottom))}
-  header{text-align:center;margin-bottom:10px}
+  .wrap{max-width:1080px;margin:0 auto;padding:max(env(safe-area-inset-top),14px) 16px calc(24px + env(safe-area-inset-bottom))}
+  header{text-align:center;margin-bottom:14px}
   header h1{font-size:1.3rem;letter-spacing:.06em;margin:0 0 4px}
   header p{color:var(--muted);font-size:.8rem;margin:0}
-  .idle{text-align:center;color:var(--muted);padding:60px 20px;font-size:1rem;line-height:1.7}
-  .idle b{display:block;color:#fff;font-size:1.3rem;margin-bottom:10px}
+  .layout{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:860px){.layout{grid-template-columns:1.15fr .85fr;align-items:start}}
+  .left,.right{min-width:0}
+  .idle{text-align:center;color:var(--muted);padding:20px 20px 4px;font-size:1rem;line-height:1.7}
+  .idle b{display:block;color:#fff;font-size:1.25rem;margin-bottom:8px}
   .who{display:flex;justify-content:space-between;align-items:center;margin:14px 0 10px}
   .who .name{font-size:1.4rem;font-weight:800}
   .who .lane{color:var(--muted);font-size:.85rem}
-  .status{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;border:1px solid #ffffff28;background:#06101dcc;border-radius:999px;padding:6px 12px}
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;border:1px solid #ffffff28;background:#06101dcc;border-radius:999px;padding:6px 12px;white-space:nowrap}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
   .status.live .dot{background:#ff4d66;box-shadow:0 0 8px #ff4d66}
   .status.done .dot{background:var(--lime);box-shadow:0 0 8px var(--lime)}
-  .target-box{position:relative;width:100%;aspect-ratio:1;max-width:520px;margin:14px auto;border-radius:16px;overflow:hidden;background:#0c1728;border:1px solid #29415e}
+  .target-box{position:relative;width:100%;aspect-ratio:1;max-width:560px;margin:14px auto;border-radius:16px;overflow:hidden;background:#0c1728;border:1px solid #29415e}
   canvas{width:100%;height:100%;display:block}
   .scoreboard{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:#29415e;border-radius:14px;overflow:hidden;margin:14px 0}
   .metric{background:#0e1b2d;padding:14px 6px;text-align:center}
@@ -31,7 +34,10 @@
   .metric strong{font-size:1.6rem}
   .metric:first-child strong{color:var(--lime);font-size:2rem}
   .updated{text-align:center;color:var(--muted);font-size:.72rem;margin-top:6px}
-  .startPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px;margin:14px 0}
+  .watchRow{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;font-size:.82rem;color:var(--muted)}
+  .watchRow select{background:#091426;color:#fff;border:1px solid #29415e;border-radius:8px;padding:6px 10px;font-size:.85rem}
+  .otherLane{text-align:center;color:var(--muted);padding:40px 16px;font-size:.9rem;line-height:1.7}
+  .startPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px}
   .startPanel h2{font-size:1rem;margin:0 0 12px}
   .startPanel .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
   .startPanel .field label{display:block;color:var(--muted);font-size:.75rem;margin:0 0 6px 2px;font-weight:700}
@@ -39,8 +45,8 @@
   .startBtn{width:100%;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
   .startBtn:disabled{opacity:.5}
   .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
+  .hint{font-size:.74rem;line-height:1.6;color:var(--muted);margin:10px 0 0}
   @media(max-width:420px){.startPanel .grid{grid-template-columns:1fr}}
-  @media(min-width:700px){.wrap{max-width:760px}header h1{font-size:1.6rem}.who .name{font-size:1.8rem}}
 </style>
 </head>
 <body>
@@ -49,32 +55,46 @@
     <h1>🎯 LASER MATCH · 실시간 관전</h1>
     <p>사대에서 쏘는 화면이 자동으로 여기에 반영돼요</p>
   </header>
-  <div id="idleHint" class="idle" style="padding:20px 20px 4px"><b>대기 중…</b>사대 폰의 카메라가 켜지고 표적이 보정되면, 아래에서 경기를 시작할 수 있어요.</div>
-  <section class="startPanel" id="startPanel">
-    <h2>🕹️ 새 경기 시작</h2>
-    <div class="grid">
-      <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
-      <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
-      <div class="field"><label>레이저 색상</label><select id="rColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
-      <div class="field"><label>감지 대상</label><select id="rKind"><option value="both" selected>레이저+물체</option><option value="laser">레이저만</option><option value="object">물체만</option></select></div>
-      <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
-      <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
+  <div class="layout">
+    <div class="left">
+      <div class="watchRow">지금 보는 사로
+        <select id="watchLane">
+          <option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option>
+          <option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option>
+        </select>
+      </div>
+      <div id="idleHint" class="idle"><b>대기 중…</b>선택한 사로에서 아직 경기가 시작되지 않았어요.</div>
+      <div id="otherLaneBox" class="otherLane" hidden></div>
+      <div id="liveBox" hidden>
+        <div class="who">
+          <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
+          <span class="status" id="statusPill"><i class="dot"></i><span id="statusText">대기</span></span>
+        </div>
+        <div class="target-box"><canvas id="cv" width="600" height="600"></canvas></div>
+        <div class="scoreboard">
+          <div class="metric"><small>총점</small><strong id="total">0</strong></div>
+          <div class="metric"><small>발수</small><strong><span id="cnt">0</span>/<span id="maxS">10</span></strong></div>
+          <div class="metric"><small>평균</small><strong id="avg">0.0</strong></div>
+        </div>
+        <p class="updated" id="updatedAt"></p>
+      </div>
     </div>
-    <button class="startBtn" id="rStart">📡 이 설정으로 사대에 경기 시작 명령 보내기</button>
-    <p class="startMsg" id="rMsg"></p>
-  </section>
-  <div id="liveBox" hidden>
-    <div class="who">
-      <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
-      <span class="status" id="statusPill"><i class="dot"></i><span id="statusText">대기</span></span>
+    <div class="right">
+      <section class="startPanel" id="startPanel">
+        <h2>🕹️ 새 경기 시작</h2>
+        <div class="grid">
+          <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
+          <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
+          <div class="field"><label>레이저 색상</label><select id="rColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
+          <div class="field"><label>감지 대상</label><select id="rKind"><option value="both" selected>레이저+물체</option><option value="laser">레이저만</option><option value="object">물체만</option></select></div>
+          <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
+          <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
+        </div>
+        <button class="startBtn" id="rStart">📡 이 설정으로 사대에 경기 시작 명령 보내기</button>
+        <p class="startMsg" id="rMsg"></p>
+        <p class="hint">사대 폰의 카메라가 켜지고 표적이 보정되어 있어야 자동으로 시작돼요. 아직이면 명령을 기억해 뒀다가 보정이 끝나는 즉시 시작해요.<br>여기서 고른 "사로"가 왼쪽 화면에서 보는 사로와 같아야 실시간으로 연결돼요.</p>
+      </section>
     </div>
-    <div class="target-box"><canvas id="cv" width="600" height="600"></canvas></div>
-    <div class="scoreboard">
-      <div class="metric"><small>총점</small><strong id="total">0</strong></div>
-      <div class="metric"><small>발수</small><strong><span id="cnt">0</span>/<span id="maxS">10</span></strong></div>
-      <div class="metric"><small>평균</small><strong id="avg">0.0</strong></div>
-    </div>
-    <p class="updated" id="updatedAt"></p>
   </div>
 </div>
 <script>
@@ -84,7 +104,7 @@
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d');
-  let lastUpdatedAt = 0, lastSig = '';
+  let lastSig = '', lastState = null;
 
   function drawTarget(shots){
     const W = cv.width, H = cv.height, cx = W/2, cy = H/2, R = W*0.46;
@@ -106,16 +126,26 @@
     });
   }
 
-  function render(state){
+  // 서버 상태가 새로 올 때마다 호출됨. "지금 보는 사로"와 실제 사로가 같을 때만 화면을 갱신한다.
+  function handleState(state){
+    lastState = state;
+    applyView();
+  }
+  function applyView(){
+    const state = lastState;
+    const watch = Number($('watchLane').value) || 1;
+    if(!state){ show('idle'); return; }
     const shots = Array.isArray(state.shots) ? state.shots : [];
-    const hasResult = state.player || shots.length;
-    $('idleHint').hidden = !!hasResult;
-    $('liveBox').hidden = !hasResult;
-    $('startPanel').hidden = !!state.running;   // 사격 중엔 폼을 숨겨서 실수로 다시 누르는 걸 방지
-    $('rStart').disabled = !!state.running;
-    if(!hasResult) return;
+    const hasResult = !!(state.player || shots.length);
+    if(!hasResult){ show('idle'); return; }
+    const lane = state.firingLane || 1;
+    if(lane !== watch){
+      $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">다른 사로에서 진행 중</b>${lane}사로에서 "${state.player||''}" 선수가 ${state.running?'사격 중':'경기를 마쳤어요'}.<br>${watch}사로를 보려면 위에서 사로를 바꿔서 기다려 주세요.`;
+      show('other'); return;
+    }
+    show('live');
     $('pName').textContent = state.player || '이름 없음';
-    $('pLane').textContent = state.eventName ? `${state.eventName} · ${state.firingLane||1}사로` : `${state.firingLane||1}사로`;
+    $('pLane').textContent = state.eventName ? `${state.eventName} · ${lane}사로` : `${lane}사로`;
     const pill = $('statusPill');
     pill.className = 'status ' + (state.running ? 'live' : 'done');
     $('statusText').textContent = state.running ? '사격 중' : (shots.length ? '완료' : '대기');
@@ -130,6 +160,12 @@
       $('updatedAt').textContent = sec < 3 ? '방금 갱신됨' : `${sec}초 전 갱신`;
     }
   }
+  function show(which){
+    $('idleHint').hidden = which!=='idle';
+    $('otherLaneBox').hidden = which!=='other';
+    $('liveBox').hidden = which!=='live';
+  }
+  $('watchLane').addEventListener('change', applyView);
 
   function poll(){
     const cb = 'liveCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
@@ -143,7 +179,7 @@
       script.remove();
       if(state){
         const sig = JSON.stringify(state);
-        if(sig !== lastSig){ lastSig = sig; render(state); }
+        if(sig !== lastSig){ lastSig = sig; handleState(state); }
       }
       setTimeout(poll, 1200);
     }
@@ -171,8 +207,11 @@
     const timer = setTimeout(() => finish(null), 8000);
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = false;
-      if(res && res.ok) msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
-      else msg.textContent = '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+      if(res && res.ok){
+        msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
+        $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
+        applyView();
+      } else msg.textContent = '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
     }
     window[cb] = res => finish(res);
     script.onerror = () => finish(null);
