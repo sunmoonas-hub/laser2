@@ -46,6 +46,13 @@
   .startBtn:disabled{opacity:.5}
   .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
   .hint{font-size:.74rem;line-height:1.6;color:var(--muted);margin:10px 0 0}
+  .shotList{list-style:none;margin:0;padding:0;max-height:340px;overflow-y:auto;border-top:1px solid #29415e}
+  .shotList li{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid #1c2c40;font-size:.85rem}
+  .shotList .n{color:var(--muted);width:26px;flex:none;font-weight:700}
+  .shotList .sc{width:34px;flex:none;font-weight:800;text-align:center}
+  .shotList .sc.miss{color:var(--red)}
+  .shotList .dir{color:var(--muted);flex:1;font-size:.78rem}
+  .shotList .k{flex:none;font-size:.68rem;padding:2px 7px;border-radius:99px;background:#0e1b2d;border:1px solid #29415e;color:var(--muted)}
   @media(max-width:420px){.startPanel .grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -77,6 +84,7 @@
           <div class="metric"><small>평균</small><strong id="avg">0.0</strong></div>
         </div>
         <p class="updated" id="updatedAt"></p>
+        <ul class="shotList" id="shotList"></ul>
       </div>
     </div>
     <div class="right">
@@ -105,6 +113,20 @@
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d');
   let lastSig = '', lastState = null;
+
+  const D8=['오른쪽','오른쪽 아래','아래','왼쪽 아래','왼쪽','왼쪽 위','위','오른쪽 위'];
+  const KIND={laser:'레이저',object:'물체',manual:'수동'};
+  function dirOf(u,v){
+    if(Math.hypot(u,v)<0.06)return '정중앙';
+    return D8[(Math.round(Math.atan2(v,u)/(Math.PI/4))+8)%8];
+  }
+  function renderShotList(shots){
+    const rows=(shots||[]).map((s,i)=>{
+      const miss=!s.score;
+      return `<li><span class="n">#${i+1}</span><span class="sc${miss?' miss':''}">${miss?'MISS':s.score}</span><span class="dir">${dirOf(s.u||0,s.v||0)}</span><span class="k">${KIND[s.kind]||'레이저'}</span></li>`;
+    });
+    $('shotList').innerHTML=rows.reverse().join('');
+  }
 
   function drawTarget(shots){
     const W = cv.width, H = cv.height, cx = W/2, cy = H/2, R = W*0.46;
@@ -155,6 +177,7 @@
     $('maxS').textContent = state.maxShots || 10;
     $('avg').textContent = shots.length ? (total/shots.length).toFixed(1) : '0.0';
     drawTarget(shots);
+    renderShotList(shots);
     if(state.updatedAt){
       const sec = Math.max(0, Math.round((Date.now()-state.updatedAt)/1000));
       $('updatedAt').textContent = sec < 3 ? '방금 갱신됨' : `${sec}초 전 갱신`;
