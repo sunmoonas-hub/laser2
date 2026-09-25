@@ -511,7 +511,7 @@
       sN++;sSum+=d;sSum2+=d*d;
     }
     const meanD=sN?sSum/sN:0,stdD=sN?Math.sqrt(Math.max(0,sSum2/sN-meanD*meanD)):0;
-    const adaptFloor=Math.max(8,meanD+2.8*stdD),adaptMargin=Math.max(6,1.1*stdD);
+    const adaptFloor=Math.max(7,meanD+2.2*stdD),adaptMargin=Math.max(7.5,.85*stdD);
     let coreBest=null,peak=null,peakMag=-1e9;
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!insideScan(x,y))continue;
@@ -530,7 +530,7 @@
         const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
         const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
         // 손 떨림으로 레이저가 살짝 스치듯 번지면 한 점의 밝기는 약해지므로, 기준을 조금 더 느슨하게 잡는다.
-        if(color==='green'?(dg>adaptFloor*.5&&dg>dr+adaptMargin*.45&&dg>db+adaptMargin*.45):(dr>adaptFloor*.5&&dr>dg+adaptMargin*.45&&dr>db+adaptMargin*.38))near++;
+        if(color==='green'?(dg>adaptFloor*.4&&dg>dr+adaptMargin*.35&&dg>db+adaptMargin*.35):(dr>adaptFloor*.4&&dr>dg+adaptMargin*.35&&dr>db+adaptMargin*.3))near++;
       }
       if(near>=2){
         state.releaseFrames=0;if(state.laserBlocked)return;
