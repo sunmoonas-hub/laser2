@@ -50,11 +50,15 @@
   .hint{font-size:.74rem;line-height:1.6;color:var(--muted);margin:10px 0 0}
   .shotPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px;margin-top:16px}
   .shotPanel h2{font-size:1rem;margin:0 0 12px}
-  .shotGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-  .shotGrid .chip{aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;background:#0e1b2d;border:1px solid #29415e;color:#fff}
-  .shotGrid .chip.hit{background:var(--lime);color:#07111f;border-color:var(--lime)}
-  .shotGrid .chip.miss{background:var(--red);color:#fff;border-color:var(--red)}
-  .shotEmpty{color:var(--muted);font-size:.82rem;text-align:center;padding:8px 0}
+  .latestWrap{text-align:center;padding:14px 0 6px}
+  .latestScore{font-size:4.4rem;font-weight:900;color:var(--lime);line-height:1;display:inline-block}
+  .latestScore.miss{color:var(--red)}
+  .latestScore.flash{animation:scorePop .5s ease}
+  @keyframes scorePop{0%{transform:scale(1.4)}100%{transform:scale(1)}}
+  .latestMeta{color:var(--muted);font-size:.85rem;margin-top:8px}
+  .undoBtnLive{width:100%;min-height:48px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:800;font-size:.88rem;margin-top:16px}
+  .undoBtnLive:disabled{opacity:.4}
+  .undoMsg{text-align:center;color:var(--muted);font-size:.76rem;margin-top:8px;min-height:1.1em}
   @media(max-width:420px){.startPanel .grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -106,8 +110,13 @@
         <p class="hint">사대 폰의 카메라가 켜지고 표적이 보정되어 있어야 자동으로 시작돼요. 아직이면 명령을 기억해 뒀다가 보정이 끝나는 즉시 시작해요.<br>여기서 고른 "사로"가 왼쪽 화면에서 보는 사로와 같아야 실시간으로 연결돼요.</p>
       </section>
       <section class="shotPanel" id="shotPanel" hidden>
-        <h2>🎯 탄착 기록</h2>
-        <div class="shotGrid" id="shotList"></div>
+        <h2>🎯 방금 획득한 점수</h2>
+        <div class="latestWrap">
+          <div class="latestScore" id="latestScore">–</div>
+          <div class="latestMeta" id="latestMeta">첫 발을 기다리는 중…</div>
+        </div>
+        <button class="undoBtnLive" id="undoBtnLive">↩️ 마지막 발 취소</button>
+        <p class="undoMsg" id="undoMsg"></p>
       </section>
     </div>
   </div>
@@ -121,13 +130,23 @@
   const cv = $('cv'), ctx = cv.getContext('2d');
   let lastSig = '', lastState = null;
 
-  function renderShotList(shots){
-    if(!shots||!shots.length){ $('shotList').innerHTML='<div class="shotEmpty">아직 기록된 발이 없어요.</div>'; return; }
-    const rows=shots.map((s,i)=>{
-      const miss=!s.score;
-      return `<div class="chip ${miss?'miss':'hit'}" title="#${i+1}">${miss?'0':s.score}</div>`;
-    });
-    $('shotList').innerHTML=rows.reverse().join('');
+  let lastShotCount = -1;
+  function renderLatest(shots){
+    const n = (shots||[]).length;
+    const el = $('latestScore');
+    if(!n){
+      el.textContent = '–'; el.classList.remove('miss');
+      $('latestMeta').textContent = '첫 발을 기다리는 중…';
+      lastShotCount = 0; return;
+    }
+    const s = shots[n-1], miss = !s.score;
+    el.textContent = miss ? 'MISS' : s.score;
+    el.classList.toggle('miss', miss);
+    $('latestMeta').textContent = `${n}번째 발`;
+    if(n !== lastShotCount){
+      el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+      lastShotCount = n;
+    }
   }
 
   function drawTarget(shots){
@@ -188,7 +207,8 @@
     $('maxS').textContent = state.maxShots || 10;
     $('avg').textContent = shots.length ? (total/shots.length).toFixed(1) : '0.0';
     drawTarget(shots);
-    renderShotList(shots);
+    renderLatest(shots);
+    $('undoBtnLive').disabled = !shots.length;
     if(state.updatedAt){
       const sec = Math.max(0, Math.round((Date.now()-state.updatedAt)/1000));
       $('updatedAt').textContent = sec < 3 ? '방금 갱신됨' : `${sec}초 전 갱신`;
@@ -269,6 +289,23 @@
     };
     if(!base.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
     sendCmd(base, $('rStart'), $('rMsg'));
+  });
+
+  $('undoBtnLive').addEventListener('click', () => {
+    const btn = $('undoBtnLive'), msg = $('undoMsg');
+    btn.disabled = true; msg.textContent = '📡 취소 신호를 보내는 중…';
+    const cb = 'undoCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => finish(null), 8000);
+    function finish(res){
+      clearTimeout(timer); window[cb] = function(){}; script.remove();
+      btn.disabled = !(lastState && lastState.shots && lastState.shots.length);
+      msg.textContent = (res && res.ok) ? '✅ 취소 신호를 보냈어요 - 사대에 곧 반영돼요.' : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+    }
+    window[cb] = res => finish(res);
+    script.onerror = () => finish(null);
+    script.src = `${APPS_SCRIPT_URL}?action=remoteUndo&callback=${cb}&t=${Date.now()}`;
+    document.head.appendChild(script);
   });
 
   drawTarget([]);
