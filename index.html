@@ -305,17 +305,20 @@
       if(lastNotifiedCmdId!==cmd.cmdId){lastNotifiedCmdId=cmd.cmdId;toast(`📡 ${cmd.firingLane}사로 시작 명령이 왔어요 - 사로를 ${cmd.firingLane}로 바꾸면 연결돼요.`)}
       return;
     }
+    // 사로는 맞아도 아직 표적 보정 전이면, 이 명령은 그냥 소비(무시)하고 끝낸다 - 나중에 보정이 끝나도 자동으로 시작되지 않는다.
+    // 보정을 마친 뒤엔 라이브에서 "경기 시작"을 다시 눌러야 한다.
+    if(!(state.center&&state.radius)){
+      lastCmdId=cmd.cmdId;
+      toast(`📡 ${cmd.firingLane}사로 명령을 받았지만 아직 표적 보정 전이에요 - 보정 후 라이브에서 다시 눌러주세요.`);
+      return;
+    }
+    if(state.running)return;   // 이미 사격 중이면 무시
     if(cmd.eventName!=null&&cmd.eventName!=='')els.eventName.value=cmd.eventName;
     if(cmd.player)els.player.value=cmd.player;
     if(cmd.laserColor&&cmd.laserColor!==els.laserColor.value){els.laserColor.value=cmd.laserColor;clearDetectorBackground();showDetectorInfo()}
     if(cmd.detectKind)els.detectKind.value=cmd.detectKind;
     if(cmd.maxShots){els.maxShots.value=String(cmd.maxShots);updateScore()}
-    if(state.center&&state.radius&&!state.running){
-      startMatch();lastCmdId=cmd.cmdId;toast(`📡 ${cmd.firingLane}사로 연결됨 - 경기를 시작했어요: `+(cmd.player||''));
-    }else if(!(state.center&&state.radius)&&lastNotifiedCmdId!==cmd.cmdId+'_cal'){
-      lastNotifiedCmdId=cmd.cmdId+'_cal';toast('📡 사로가 연결됐어요 - 표적을 보정하면 자동으로 시작돼요.');
-      // lastCmdId는 갱신하지 않는다 - 표적 보정이 끝나면 다음 폴링에서 이 명령을 다시 확인해 자동으로 시작한다.
-    }
+    startMatch();lastCmdId=cmd.cmdId;toast(`📡 ${cmd.firingLane}사로 연결됨 - 경기를 시작했어요: `+(cmd.player||''));
   }
   function pollRemoteCmd(){
     if(!isServerConfigured()){setTimeout(pollRemoteCmd,3000);return}
