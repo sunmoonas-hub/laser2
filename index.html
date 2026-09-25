@@ -33,7 +33,7 @@
 <main class="app">
   <header>
     <div class="brand"><div class="brand-mark"></div><div><h1>LASER MATCH</h1><div class="sub">모바일 자동채점 시스템</div></div></div>
-    <div class="header-actions"><div class="status" id="status"><i class="dot"></i><span>준비</span></div><button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기" style="display:none">⛶ 전체화면</button></div>
+    <div class="header-actions"><div class="status" id="status"><i class="dot"></i><span>준비</span></div><button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶ 전체화면</button></div>
   </header>
 
   <section class="camera" id="cameraBox">
@@ -511,7 +511,7 @@
       sN++;sSum+=d;sSum2+=d*d;
     }
     const meanD=sN?sSum/sN:0,stdD=sN?Math.sqrt(Math.max(0,sSum2/sN-meanD*meanD)):0;
-    const adaptFloor=Math.max(11,meanD+3.6*stdD),adaptMargin=Math.max(9,1.5*stdD);
+    const adaptFloor=Math.max(8,meanD+2.8*stdD),adaptMargin=Math.max(6,1.1*stdD);
     let coreBest=null,peak=null,peakMag=-1e9;
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!insideScan(x,y))continue;
@@ -530,7 +530,7 @@
         const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
         const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
         // 손 떨림으로 레이저가 살짝 스치듯 번지면 한 점의 밝기는 약해지므로, 기준을 조금 더 느슨하게 잡는다.
-        if(color==='green'?(dg>adaptFloor*.6&&dg>dr+adaptMargin*.55&&dg>db+adaptMargin*.55):(dr>adaptFloor*.6&&dr>dg+adaptMargin*.55&&dr>db+adaptMargin*.45))near++;
+        if(color==='green'?(dg>adaptFloor*.5&&dg>dr+adaptMargin*.45&&dg>db+adaptMargin*.45):(dr>adaptFloor*.5&&dr>dg+adaptMargin*.45&&dr>db+adaptMargin*.38))near++;
       }
       if(near>=2){
         state.releaseFrames=0;if(state.laserBlocked)return;
