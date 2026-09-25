@@ -157,7 +157,7 @@
   }
 
   function drawTarget(shots){
-    const W = cv.width, H = cv.height, cx = W/2, cy = H/2, R = W*0.46;
+    const W = cv.width, H = cv.height, cx = W/2, cy = H/2, R = W*0.28;
     ctx.clearRect(0,0,W,H);
     for(let i=10;i>=1;i--){
       ctx.beginPath();ctx.arc(cx,cy,R*i/10,0,Math.PI*2);
