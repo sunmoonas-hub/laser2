@@ -33,7 +33,7 @@
 <main class="app">
   <header>
     <div class="brand"><div class="brand-mark"></div><div><h1>LASER MATCH</h1><div class="sub">모바일 자동채점 시스템</div></div></div>
-    <div class="header-actions"><div class="status" id="status"><i class="dot"></i><span>준비</span></div><button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶ 전체화면</button></div>
+    <div class="header-actions"><div class="status" id="status"><i class="dot"></i><span>준비</span></div><button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기" style="display:none">⛶ 전체화면</button></div>
   </header>
 
   <section class="camera" id="cameraBox">
@@ -58,7 +58,8 @@
     <div class="grid">
       <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
     </div>
-    <p class="hint" style="margin-top:10px">선수명·레이저 색상·감지 대상·발수·대회명은 이제 실시간 관전 페이지(live.html)에서 설정해요. 여기서는 사로만 맞추면, 그 사로로 온 시작 명령과 자동으로 연결돼요.</p>
+    <p class="hint" style="margin-top:10px">선수명·레이저 색상·감지 대상·발수·대회명·발 취소는 이제 실시간 관전 페이지(live.html)에서 해요. 여기서는 사로만 맞추면, 그 사로로 온 시작 명령과 자동으로 연결돼요.</p>
+    <p class="hint" id="calibrationInfo">표적 보정 전입니다. 표적 전체가 화면에 보이도록 휴대폰을 정면으로 고정하세요.</p>
     <div class="field" style="display:none">
       <input id="eventName" value="교내 레이저 사격대회" maxlength="80">
       <input id="player" placeholder="선수 이름" maxlength="40">
@@ -72,8 +73,6 @@
     <button class="btn" id="cameraBtn">카메라 시작</button>
     <button class="btn secondary" id="calibrateBtn" disabled>표적 자동 보정</button>
     <button class="btn wide" id="matchBtn" disabled>경기 시작</button>
-    <button class="btn secondary" id="manualBtn" disabled>수동 명중 입력</button>
-    <button class="btn danger" id="undoBtn" disabled>마지막 발 취소</button>
   </div>
 
   <section class="panel scoreboard">
@@ -82,15 +81,14 @@
     <div class="metric"><small>평균</small><strong id="average">0.0</strong></div>
   </section>
 
-  <section class="panel shots">
-    <div class="section-title"><h2>탄착 기록</h2><div class="toggle"><button id="sensitivityDown">감도−</button><button id="sensitivityUp">감도＋</button></div></div>
+  <div style="display:none">
+    <button id="manualBtn">수동 명중 입력</button>
+    <button id="undoBtn">마지막 발 취소</button>
     <div class="shot-grid" id="shotGrid"></div>
-    <div class="hint" id="calibrationInfo">표적 보정 전입니다. 표적 전체가 화면에 보이도록 휴대폰을 정면으로 고정하세요.</div>
-  </section>
-
-  <div class="controls footer-controls">
-    <button class="btn secondary" id="leaderBtn">순위표</button>
-    <button class="btn secondary" id="resetBtn">새 경기</button>
+    <button id="sensitivityDown">감도−</button>
+    <button id="sensitivityUp">감도＋</button>
+    <button id="leaderBtn">순위표</button>
+    <button id="resetBtn">새 경기</button>
   </div>
   </div>
 </main>
@@ -331,7 +329,28 @@
     script.src=`${APPS_SCRIPT_URL}?action=remoteCmd&callback=${cbName}&t=${Date.now()}`;
     document.head.appendChild(script);
   }
-  function ensureRemotePolling(){if(remotePollOn)return;remotePollOn=true;pollRemoteCmd()}
+  function ensureRemotePolling(){if(remotePollOn)return;remotePollOn=true;pollRemoteCmd();pollRemoteUndo()}
+
+  let lastUndoId=null,undoPollOn=false;
+  function pollRemoteUndo(){
+    if(!isServerConfigured()){setTimeout(pollRemoteUndo,3000);return}
+    const cbName='undoCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{cleanup();setTimeout(pollRemoteUndo,800)},6000);
+    function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
+    window[cbName]=res=>{
+      cleanup();
+      if(lastUndoId===null){lastUndoId=(res&&res.undoId)||'';}   // 처음 연결 시 지금 값을 기준으로 삼아, 과거 신호는 무시한다
+      else if(res&&res.undoId&&res.undoId!==lastUndoId){
+        lastUndoId=res.undoId;
+        if(state.shots.length){undo();toast('📡 라이브에서 마지막 발을 취소했어요.')}
+      }
+      setTimeout(pollRemoteUndo,800);
+    };
+    script.onerror=()=>{cleanup();setTimeout(pollRemoteUndo,800)};
+    script.src=`${APPS_SCRIPT_URL}?action=undoCmd&callback=${cbName}&t=${Date.now()}`;
+    document.head.appendChild(script);
+  }
 
   function recordShot(x,y,manualScore=null,kind){
     if(!state.running||state.shots.length>=state.maxShots)return;
