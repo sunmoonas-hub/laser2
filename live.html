@@ -98,7 +98,7 @@
     <div class="right">
       <section class="startPanel" id="startPanel">
         <h2>🕹️ 새 경기 시작</h2>
-        <button class="restartBtn" id="restartBtn" hidden>🔁 같은 설정으로 재시작</button>
+        <button class="restartBtn" id="restartBtn">🔁 같은 설정으로 재시작</button>
         <p class="busyNote" id="busyNote" hidden>⏳ 지금 사격이 진행 중이에요 - 끝나면 새 명령을 보낼 수 있어요.<br><a href="#" id="forceUnlockBtn" style="color:var(--gold)">그래도 지금 보내기</a></p>
         <div class="grid">
           <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
@@ -201,7 +201,6 @@
       show('other'); return;
     }
     show('live');
-    $('restartBtn').hidden = !!state.running;   // 완료된 뒤에만 재시작 버튼을 보여줌
     $('pName').textContent = state.player || '이름 없음';
     $('pLane').textContent = state.eventName ? `${state.eventName} · ${lane}사로` : `${lane}사로`;
     const pill = $('statusPill');
@@ -225,7 +224,6 @@
     $('otherLaneBox').hidden = which!=='other';
     $('liveBox').hidden = which!=='live';
     $('shotPanel').hidden = which!=='live';
-    if(which!=='live')$('restartBtn').hidden = true;
   }
   $('watchLane').addEventListener('change', applyView);
   $('forceUnlockBtn').addEventListener('click', (e) => { e.preventDefault(); forceUnlock = true; syncStartLock(); });
