@@ -42,8 +42,10 @@
   .startPanel .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
   .startPanel .field label{display:block;color:var(--muted);font-size:.75rem;margin:0 0 6px 2px;font-weight:700}
   .startPanel .field input,.startPanel .field select{width:100%;min-height:50px;border:1px solid #29415e;border-radius:10px;background:#091426;color:#fff;padding:10px 12px;font-size:.92rem}
-  .startBtn{width:100%;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
+  .startRow{display:flex;gap:10px}
+  .startBtn{flex:1;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
   .startBtn:disabled{opacity:.5}
+  .endBtn{flex:none;min-width:110px;min-height:54px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:850;font-size:.92rem}
   .restartBtn{width:100%;min-height:50px;border:1px solid var(--lime);border-radius:12px;background:transparent;color:var(--lime);font-weight:850;font-size:.92rem;margin-bottom:12px}
   .busyNote{text-align:center;color:var(--gold);font-size:.78rem;margin-bottom:10px}
   .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
@@ -108,7 +110,10 @@
           <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
           <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
         </div>
-        <button class="startBtn" id="rStart">🕹️ 경기 시작</button>
+        <div class="startRow">
+          <button class="startBtn" id="rStart">🕹️ 경기 시작</button>
+          <button class="endBtn" id="rEnd">🛑 경기 종료</button>
+        </div>
         <p class="startMsg" id="rMsg"></p>
       </section>
       <section class="shotPanel" id="shotPanel" hidden>
@@ -310,6 +315,22 @@
     window[cb] = res => finish(res);
     script.onerror = () => finish(null);
     script.src = `${APPS_SCRIPT_URL}?action=remoteUndo&callback=${cb}&t=${Date.now()}`;
+    document.head.appendChild(script);
+  });
+
+  $('rEnd').addEventListener('click', () => {
+    const btn = $('rEnd'), msg = $('rMsg');
+    btn.disabled = true; msg.textContent = '📡 종료 신호를 보내는 중…';
+    const cb = 'endCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => finish(null), 8000);
+    function finish(res){
+      clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = false;
+      msg.textContent = (res && res.ok) ? '✅ 경기를 종료했어요 - 탄착군·점수가 초기화돼요.' : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+    }
+    window[cb] = res => finish(res);
+    script.onerror = () => finish(null);
+    script.src = `${APPS_SCRIPT_URL}?action=remoteEnd&callback=${cb}&t=${Date.now()}`;
     document.head.appendChild(script);
   });
 
