@@ -147,14 +147,19 @@
     if(!state.stream||els.video.readyState<2||state.autoCalibrating)return;state.autoCalibrating=true;
     state.running=false;state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetAngle=0;state.targetVideo=null;state.shots=[];state.calibrationMode=0;clearDetectorBackground();updateScore();drawOverlay();
     els.calibrateBtn.disabled=true;els.matchBtn.disabled=true;els.guide.textContent='표적의 동심원과 중심을 분석하고 있습니다…';setStatus('자동 보정 중','#ffc940');
-    await new Promise(resolve=>setTimeout(resolve,350));
-    const target=detectTarget();
+    // 카메라 초점·노출이 막 켜진 직후엔 아직 안 안정된 경우가 많아, 한 번에 실패로 끝내지 않고
+    // 짧은 간격을 두고 몇 번 더 시도해서 그사이 안정된 화면으로 다시 인식을 시도한다.
+    let target=null;
+    for(let attempt=0;attempt<4&&!target;attempt++){
+      await new Promise(resolve=>setTimeout(resolve,attempt===0?350:450));
+      target=detectTarget();
+    }
     els.calibrateBtn.disabled=false;state.autoCalibrating=false;
     if(target){
       state.center={x:target.x,y:target.y};state.radiusX=target.radiusX;state.radiusY=target.radiusY;state.radius=Math.max(target.radiusX,target.radiusY);state.targetAngle=target.angle;state.calibrationMode=0;saveTargetToVideo();
-      els.guide.textContent='표적 자동 보정 완료 · 경기 시작을 누르세요.';
+      els.guide.textContent='표적 자동 보정 완료 · 라이브 페이지에서 경기 시작을 누르세요.';
       els.calibrationInfo.textContent=`자동 보정 완료: 카메라 표적 형태 ${Math.round(target.radiusX)}×${Math.round(target.radiusY)}px · 기울기 ${Math.round(target.angle*180/Math.PI)}°`;
-      els.matchBtn.disabled=false;setStatus('자동 보정 완료');drawOverlay();toast('표적을 자동으로 인식했습니다.');
+      els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';setStatus('경기 시작 대기 중');drawOverlay();toast('표적을 자동으로 인식했습니다. 라이브 페이지에서 경기를 시작하세요.');
     }else{
       state.calibrationMode=1;els.guide.textContent='자동 인식 실패 · 표적 중심을 한 번 눌러 수동 보정하세요.';
       els.calibrationInfo.textContent='자동 인식이 어려운 조명입니다. 표적 중심과 가장 바깥쪽 1점 원을 차례로 눌러 주세요.';
@@ -225,7 +230,7 @@
   els.overlay.addEventListener('pointerdown',ev=>{
     const p=canvasPoint(ev);
     if(state.calibrationMode===1){state.center=p;state.calibrationMode=2;els.guide.textContent='가장 바깥쪽 1점 원의 테두리를 누르세요.';drawOverlay();return}
-    if(state.calibrationMode===2){const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);if(d<40){toast('중심에서 더 먼 바깥 원을 눌러 주세요.');return}state.radius=state.radiusX=state.radiusY=d;state.targetAngle=0;state.calibrationMode=0;saveTargetToVideo();els.guide.textContent='보정 완료 · 경기 시작을 누르세요.';els.calibrationInfo.textContent=`수동 보정 완료: 외곽 반지름 ${Math.round(d)}px`;els.matchBtn.disabled=false;setStatus('보정 완료');drawOverlay();return}
+    if(state.calibrationMode===2){const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);if(d<40){toast('중심에서 더 먼 바깥 원을 눌러 주세요.');return}state.radius=state.radiusX=state.radiusY=d;state.targetAngle=0;state.calibrationMode=0;saveTargetToVideo();els.guide.textContent='보정 완료 · 라이브 페이지에서 경기 시작을 누르세요.';els.calibrationInfo.textContent=`수동 보정 완료: 외곽 반지름 ${Math.round(d)}px`;els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';setStatus('경기 시작 대기 중');drawOverlay();return}
   });
 
   function drawOverlay(){
@@ -328,7 +333,28 @@
     script.src=`${APPS_SCRIPT_URL}?action=remoteCmd&callback=${cbName}&t=${Date.now()}`;
     document.head.appendChild(script);
   }
-  function ensureRemotePolling(){if(remotePollOn)return;remotePollOn=true;pollRemoteCmd();pollRemoteUndo()}
+  function ensureRemotePolling(){if(remotePollOn)return;remotePollOn=true;pollRemoteCmd();pollRemoteUndo();pollRemoteEnd()}
+
+  let lastEndId=null;
+  function pollRemoteEnd(){
+    if(!isServerConfigured()){setTimeout(pollRemoteEnd,3000);return}
+    const cbName='endCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{cleanup();setTimeout(pollRemoteEnd,900)},6000);
+    function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
+    window[cbName]=res=>{
+      cleanup();
+      if(lastEndId===null){lastEndId=(res&&res.endId)||'';}   // 처음 연결 시 지금 값을 기준으로 삼아, 과거 신호는 무시한다
+      else if(res&&res.endId&&res.endId!==lastEndId){
+        lastEndId=res.endId;
+        reset();pushLive(true);toast('📡 라이브에서 경기를 종료했어요 - 탄착군·점수가 초기화됐어요.');
+      }
+      setTimeout(pollRemoteEnd,900);
+    };
+    script.onerror=()=>{cleanup();setTimeout(pollRemoteEnd,900)};
+    script.src=`${APPS_SCRIPT_URL}?action=endCmd&callback=${cbName}&t=${Date.now()}`;
+    document.head.appendChild(script);
+  }
 
   let lastUndoId=null,undoPollOn=false;
   function pollRemoteUndo(){
@@ -577,7 +603,7 @@
   }
 
   function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
-  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent='경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'새 선수를 입력하고 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus('준비');updateScore();drawOverlay()}
+  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
