@@ -50,12 +50,15 @@
   .hint{font-size:.74rem;line-height:1.6;color:var(--muted);margin:10px 0 0}
   .shotPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px;margin-top:16px}
   .shotPanel h2{font-size:1rem;margin:0 0 12px}
-  .latestWrap{text-align:center;padding:14px 0 6px}
-  .latestScore{font-size:4.4rem;font-weight:900;color:var(--lime);line-height:1;display:inline-block}
-  .latestScore.miss{color:var(--red)}
-  .latestScore.flash{animation:scorePop .5s ease}
-  @keyframes scorePop{0%{transform:scale(1.4)}100%{transform:scale(1)}}
-  .latestMeta{color:var(--muted);font-size:.85rem;margin-top:8px}
+  .scoreGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;padding:6px 0 4px}
+  .scoreGrid .slot{aspect-ratio:1;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0e1b2d;border:1px solid #29415e;color:var(--muted)}
+  .scoreGrid .slot .num{font-size:.62rem;opacity:.75;font-weight:700}
+  .scoreGrid .slot .val{font-size:1.3rem;font-weight:900;line-height:1.1}
+  .scoreGrid .slot.hit{background:var(--lime);border-color:var(--lime);color:#07111f}
+  .scoreGrid .slot.miss{background:var(--red);border-color:var(--red);color:#fff}
+  .scoreGrid .slot.flash{animation:scorePop .5s ease}
+  @keyframes scorePop{0%{transform:scale(1.35)}100%{transform:scale(1)}}
+  @media(max-width:380px){.scoreGrid{grid-template-columns:repeat(5,1fr)}}
   .undoBtnLive{width:100%;min-height:48px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:800;font-size:.88rem;margin-top:16px}
   .undoBtnLive:disabled{opacity:.4}
   .undoMsg{text-align:center;color:var(--muted);font-size:.76rem;margin-top:8px;min-height:1.1em}
@@ -96,7 +99,7 @@
       <section class="startPanel" id="startPanel">
         <h2>🕹️ 새 경기 시작</h2>
         <button class="restartBtn" id="restartBtn" hidden>🔁 같은 설정으로 재시작</button>
-        <p class="busyNote" id="busyNote" hidden>⏳ 지금 사격이 진행 중이에요 - 끝나면 새 명령을 보낼 수 있어요.</p>
+        <p class="busyNote" id="busyNote" hidden>⏳ 지금 사격이 진행 중이에요 - 끝나면 새 명령을 보낼 수 있어요.<br><a href="#" id="forceUnlockBtn" style="color:var(--gold)">그래도 지금 보내기</a></p>
         <div class="grid">
           <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
           <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
@@ -105,15 +108,12 @@
           <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
           <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
         </div>
-        <button class="startBtn" id="rStart">📡 이 설정으로 사대에 경기 시작 명령 보내기</button>
+        <button class="startBtn" id="rStart">🕹️ 경기 시작</button>
         <p class="startMsg" id="rMsg"></p>
       </section>
       <section class="shotPanel" id="shotPanel" hidden>
-        <h2>🎯 방금 획득한 점수</h2>
-        <div class="latestWrap">
-          <div class="latestScore" id="latestScore">–</div>
-          <div class="latestMeta" id="latestMeta">첫 발을 기다리는 중…</div>
-        </div>
+        <h2>🎯 획득 점수</h2>
+        <div class="scoreGrid" id="scoreGrid"></div>
         <button class="undoBtnLive" id="undoBtnLive">↩️ 마지막 발 취소</button>
         <p class="undoMsg" id="undoMsg"></p>
       </section>
@@ -130,21 +130,24 @@
   let lastSig = '', lastState = null;
 
   let lastShotCount = -1;
-  function renderLatest(shots){
-    const n = (shots||[]).length;
-    const el = $('latestScore');
-    if(!n){
-      el.textContent = '–'; el.classList.remove('miss');
-      $('latestMeta').textContent = '첫 발을 기다리는 중…';
-      lastShotCount = 0; return;
+  function renderScores(shots, maxShots){
+    shots = shots || []; maxShots = maxShots || 10;
+    const html = [];
+    for(let i=0;i<maxShots;i++){
+      const s = shots[i];
+      if(s){
+        const miss = !s.score;
+        html.push(`<div class="slot ${miss?'miss':'hit'}"><span class="num">${i+1}발</span><span class="val">${miss?'0':s.score}</span></div>`);
+      } else {
+        html.push(`<div class="slot"><span class="num">${i+1}발</span><span class="val">–</span></div>`);
+      }
     }
-    const s = shots[n-1], miss = !s.score;
-    el.textContent = miss ? 'MISS' : s.score;
-    el.classList.toggle('miss', miss);
-    $('latestMeta').textContent = `${n}번째 발`;
-    if(n !== lastShotCount){
-      el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
-      lastShotCount = n;
+    $('scoreGrid').innerHTML = html.join('');
+    if(shots.length !== lastShotCount){
+      lastShotCount = shots.length;
+      const slots = $('scoreGrid').children;
+      const idx = shots.length - 1;
+      if(idx >= 0 && slots[idx]) slots[idx].classList.add('flash');
     }
   }
 
@@ -174,12 +177,16 @@
     applyView();
     syncStartLock();
   }
+  let forceUnlock = false;
   // 서버 전체(사로 구분 없이)에 사격이 진행 중이면, 새 시작 명령이 밀렸다가 경기가 끝나자마자
   // 자동으로 실행되는 걸 막기 위해 시작 버튼을 잠가 둔다.
+  // 단, 연결이 끊기거나 페이지를 닫는 바람에 "진행 중"으로 멈춰버린 죽은 기록이면 60초 뒤 자동으로 풀어준다.
   function syncStartLock(){
-    const busy = !!(lastState && lastState.running);
+    const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
+    const busy = !!(lastState && lastState.running && !stale) && !forceUnlock;
     $('rStart').disabled = busy;
     $('busyNote').hidden = !busy;
+    $('forceUnlockBtn').hidden = !busy;
   }
   function applyView(){
     const state = lastState;
@@ -206,7 +213,7 @@
     $('maxS').textContent = state.maxShots || 10;
     $('avg').textContent = shots.length ? (total/shots.length).toFixed(1) : '0.0';
     drawTarget(shots);
-    renderLatest(shots);
+    renderScores(shots, state.maxShots);
     $('undoBtnLive').disabled = !shots.length;
     if(state.updatedAt){
       const sec = Math.max(0, Math.round((Date.now()-state.updatedAt)/1000));
@@ -221,6 +228,7 @@
     if(which!=='live')$('restartBtn').hidden = true;
   }
   $('watchLane').addEventListener('change', applyView);
+  $('forceUnlockBtn').addEventListener('click', (e) => { e.preventDefault(); forceUnlock = true; syncStartLock(); });
 
   function poll(){
     const cb = 'liveCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
@@ -256,7 +264,7 @@
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
         msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
-        lastSentCmd = cmd;
+        lastSentCmd = cmd; forceUnlock = false;   // 새로 보낸 이 경기는 다시 정상적으로 잠금이 걸리게 초기화
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
         if(onOk) onOk();
