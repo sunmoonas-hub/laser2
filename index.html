@@ -232,7 +232,7 @@
 
   /* 현재 표적의 검은 중앙부를 기준으로 중심을 조금씩 따라간다. 새 표적을 만들어내지 않고,
      최초 동심원 보정값에서 벗어나지 않는 작은 이동만 허용한다. */
-  function trackTargetCenter(data,sw,sh,t){
+  function trackTargetCenter(data,sw,sh,t,roi){
     if(!state.targetVideo)return;
     const x0=Math.max(1,Math.floor(t.x-t.rx*.48)),x1=Math.min(sw-2,Math.ceil(t.x+t.rx*.48)),y0=Math.max(1,Math.floor(t.y-t.ry*.48)),y1=Math.min(sh-2,Math.ceil(t.y+t.ry*.48));
     let mean=0,n=0;for(let y=y0;y<=y1;y+=2)for(let x=x0;x<=x1;x+=2){const dx=(x-t.x)/(t.rx*.48),dy=(y-t.y)/(t.ry*.48);if(dx*dx+dy*dy>1)continue;const i=(y*sw+x)*4;mean+=(data[i]+data[i+1]*2+data[i+2])*.25;n++}if(!n)return;mean/=n;
@@ -241,7 +241,7 @@
     if(!wSum||count<20)return;const cx=sx/wSum,cy=sy/wSum,dx=cx-t.x,dy=cy-t.y;
     if(Math.hypot(dx/Math.max(1,t.rx),dy/Math.max(1,t.ry))>.10)return;
     const stepX=Math.max(-1,Math.min(1,dx)),stepY=Math.max(-1,Math.min(1,dy));if(Math.hypot(stepX,stepY)<.2)return;
-    state.targetVideo.x+=stepX/sw;state.targetVideo.y+=stepY/sh;restoreTargetFromVideo();drawOverlay();
+    state.targetVideo.x+=roi?stepX/sw*roi.sWidth/roi.vw:stepX/sw;state.targetVideo.y+=roi?stepY/sh*roi.sHeight/roi.vh:stepY/sh;restoreTargetFromVideo();drawOverlay();
   }
 
   function detectTarget(){
@@ -581,10 +581,11 @@
     }
   }
 
-  function tryRecordLaser(wx,wy,sw,sh,vw,vh){
+  function tryRecordLaser(wx,wy,sw,sh,vw,vh,roi){
     if(performance.now()-state.lastHit<=140)return false;
     if(state.objKnown&&state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-wx,k.y-wy)<(k.r||10)+18))return false;
-    const mapped=videoToScreen(wx/sw*vw,wy/sh*vh),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
+    const videoX=roi?roi.sx+wx/sw*roi.sWidth:wx/sw*vw,videoY=roi?roi.sy+wy/sh*roi.sHeight:wy/sh*vh;
+    const mapped=videoToScreen(videoX,videoY),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
     const nx=ex/state.radiusX,ny=ey/state.radiusY;
     /* 표적 아래쪽 미스는 종이 여백까지 포함해 더 넓게 받는다. 휴대폰 화면의 아래 방향은
        보정된 표적 좌표에서도 ny>0이므로, 아래쪽만 추가 여유를 주고 다른 방향은 제한한다. */
@@ -600,20 +601,27 @@
    */
   function detectLaserV2(){
     const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return;
-    const sw=480,sh=Math.max(270,Math.round(sw*vh/vw));
-    els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);
+    /* 전체 카메라를 480px로 줄이지 않고, 보정된 표적과 아래쪽 미스 영역만 원본 영상에서 직접 자른다.
+       같은 계산량으로 표적의 실제 픽셀을 더 많이 보존해 1~2px짜리 짧은 레이저가 축소 중 사라지는 것을 줄인다. */
+    const tv=state.targetVideo;if(!tv)return;
+    const vcx=tv.x*vw,vcy=tv.y*vh,vrx=(tv.rx||tv.r)*vw,vry=(tv.ry||tv.r)*vw,baseScan=state.paperMultiple?state.paperMultiple+.12:1.68;
+    const halfW=vrx*(baseScan+.55),topH=vry*(baseScan+.28),bottomH=vry*(baseScan+.7);
+    let sx=Math.max(0,vcx-halfW),sy=Math.max(0,vcy-topH),ex=Math.min(vw,vcx+halfW),ey=Math.min(vh,vcy+bottomH);
+    const sWidth=Math.max(64,ex-sx),sHeight=Math.max(64,ey-sy),sw=720,sh=Math.max(320,Math.round(sw*sHeight/sWidth)),roi={sx,sy,sWidth,sHeight,vw,vh};
+    els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,sx,sy,sWidth,sHeight,0,0,sw,sh);
     const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh;
-    const t=screenTargetToWork(sw,sh),baseScan=state.paperMultiple?state.paperMultiple+.12:1.68,scanR=Math.max(t.rx,t.ry)*(baseScan+.5);
+    const t={x:(vcx-sx)/sWidth*sw,y:(vcy-sy)/sHeight*sh,rx:vrx/sWidth*sw,ry:vry/sHeight*sh,a:state.targetAngle},scanR=Math.max(t.rx,t.ry)*(baseScan+.5);
     const x0=Math.max(2,Math.floor(t.x-scanR)),x1=Math.min(sw-3,Math.ceil(t.x+scanR)),y0=Math.max(2,Math.floor(t.y-scanR)),y1=Math.min(sh-3,Math.ceil(t.y+scanR));
     const inside=(x,y,margin=baseScan)=>{const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nx=ex/t.rx,ny=ey/t.ry,extra=ny>0?.48:.12;return Math.hypot(nx,ny)<=margin+extra};
     let V=state.pulseV2;
     if(!V||V.total!==total){
-      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warm:0,ready:false,armedAt:0,candidate:null,latched:false,clear:0,trackTick:0};
+      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warm:0,ready:false,armedAt:0,candidate:null,latched:false,clear:0,trackTick:0,frames:0,fpsAt:performance.now(),detectorFps:0};
       for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]=V.prevR[p]=data[i];V.bgG[p]=V.prevG[p]=data[i+1];V.bgB[p]=V.prevB[p]=data[i+2]}
       return;
     }
     const copyPrevious=()=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.prevR[p]=data[i];V.prevG[p]=data[i+1];V.prevB[p]=data[i+2]}};
     const learn=(a)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]+=a*(data[i]-V.bgR[p]);V.bgG[p]+=a*(data[i+1]-V.bgG[p]);V.bgB[p]+=a*(data[i+2]-V.bgB[p])}};
+    V.frames++;const fpsNow=performance.now();if(fpsNow-V.fpsAt>=1000){V.detectorFps=V.frames*1000/(fpsNow-V.fpsAt);V.frames=0;V.fpsAt=fpsNow}
     const warmFrames=state.laserLearning?Math.max(36,Math.round((state.actualFps||30)*1.2)):Math.max(42,Math.round((state.actualFps||30)*1.4));
     if(V.warm<warmFrames){learn(.18);copyPrevious();V.warm++;return}
     if(!V.ready){V.ready=true;V.armedAt=performance.now()+(state.laserLearning?0:700);state.detectorReady=true;if(state.laserLearning){els.learnBtn.textContent='레이저 학습 0/3';els.guide.textContent='이제 표적에 레이저를 1발씩 천천히 3발 쏘세요.';setStatus('레이저 3발 학습','#ffc940')}else{els.matchBtn.textContent='경기 진행 중';els.guide.textContent='학습된 레이저 펄스 감지 대기 중';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66')}copyPrevious();return}
@@ -668,14 +676,14 @@
       V.clear=0;
       if(!V.latched){
         if(V.candidate&&Math.hypot(cx-V.candidate.x,cy-V.candidate.y)<14){V.candidate.x=(V.candidate.x*V.candidate.n+cx)/(V.candidate.n+1);V.candidate.y=(V.candidate.y*V.candidate.n+cy)/(V.candidate.n+1);V.candidate.n++;V.candidate.strong=V.candidate.strong||strong}else V.candidate={x:cx,y:cy,n:1,strong};
-        if(V.candidate.strong||V.candidate.n>=2){if(state.laserLearning){acceptLaserLearningSample(feature);V.latched=true;V.candidate=null}else if(tryRecordLaser(V.candidate.x,V.candidate.y,sw,sh,vw,vh)){V.latched=true;V.candidate=null;els.fpsPill.textContent='◎ 학습 레이저';setTimeout(showDetectorInfo,600)}}
+        if(V.candidate.strong||V.candidate.n>=2){if(state.laserLearning){acceptLaserLearningSample(feature);V.latched=true;V.candidate=null}else if(tryRecordLaser(V.candidate.x,V.candidate.y,sw,sh,vw,vh,roi)){V.latched=true;V.candidate=null;els.fpsPill.textContent='◎ 학습 레이저';setTimeout(showDetectorInfo,600)}}
       }
     }else{
       V.candidate=null;V.clear++;if(V.clear>=(state.laserLearning?5:2))V.latched=false;
       if(motionRatio<.035&&exposureShift<8)learn(.018);
-      if(!state.laserLearning&&motionRatio<.025&&++V.trackTick%15===0)trackTargetCenter(data,sw,sh,t);
+      if(!state.laserLearning&&motionRatio<.025&&++V.trackTick%15===0)trackTargetCenter(data,sw,sh,t,roi);
     }
-    if(state.dbgTick++%6===0)els.clrPill.textContent=`펄스 ${best?Math.round(best.score):0} · 흔들림 ${Math.round(motionRatio*100)}%${valid?' ✓':''}`;
+    if(state.dbgTick++%6===0)els.clrPill.textContent=`원본 ROI ${sw}px · ${Math.round(V.detectorFps||0)}fps · 신호 ${best?Math.round(best.score):0} · 흔들림 ${Math.round(motionRatio*100)}%${valid?' ✓':''}`;
     copyPrevious();
   }
 
