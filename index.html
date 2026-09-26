@@ -25,6 +25,7 @@
     .camera{grid-area:camera;position:relative;width:100%;height:clamp(440px,68svh,780px);background:#02060c;border-radius:14px;overflow:hidden;border:1px solid var(--line)}video,.overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.overlay{touch-action:none}.camera-msg{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:22px;color:var(--muted);background:radial-gradient(circle,#10243a,#050a12);font-size:1rem;line-height:1.6}.camera-msg b{color:white;font-size:1.25rem;margin-bottom:8px}.hud{position:absolute;left:9px;right:9px;top:9px;display:flex;justify-content:space-between;pointer-events:none}.pill{border:1px solid #ffffff28;background:#06101dcc;backdrop-filter:blur(9px);border-radius:999px;padding:9px 12px;font-size:.78rem}.live{color:var(--red)}
     .zoom-controls{position:absolute;z-index:5;right:10px;top:56px;display:grid;grid-template-columns:46px 58px 46px;align-items:center;border:1px solid #ffffff32;border-radius:14px;overflow:hidden;background:#06101de8;backdrop-filter:blur(10px)}.zoom-controls button{width:46px;height:46px;border:0;background:#142941;color:white;font-size:1.45rem;font-weight:800}.zoom-controls button:active{background:var(--cyan);color:#07111f}.zoom-controls button:disabled{opacity:.35}.zoom-controls span{font-size:.72rem;text-align:center;color:var(--cyan);font-weight:800}
     .guide{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:max-content;max-width:94%;padding:9px 12px;border-radius:10px;background:#06101dee;color:white;text-align:center;font-size:.75rem;line-height:1.35;pointer-events:none}.flash{position:absolute;inset:0;display:grid;place-items:center;background:#07111faa;opacity:0;pointer-events:none;transition:.15s}.flash.show{opacity:1}.score-pop{font-size:clamp(4.5rem,25vw,7rem);font-weight:900;color:var(--lime);text-shadow:0 0 30px #b7ff3c99}.miss{color:var(--red)}
+    .match-countdown{position:absolute;z-index:8;inset:0;display:grid;place-items:center;background:#0008;color:#fff;font-size:clamp(6rem,30vw,13rem);font-weight:1000;line-height:1;text-align:center;text-shadow:0 5px 0 #000,0 0 32px #fff8;pointer-events:none}.match-countdown[hidden]{display:none}.match-countdown.go{font-size:clamp(2.6rem,13vw,6rem);color:#36f06f;background:#000a;text-shadow:0 4px 0 #063,0 0 34px #20e66d}
     .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:11px 0}.btn{min-height:62px;border:0;border-radius:14px;padding:13px 9px;font-size:1rem;font-weight:850;color:#08111d;background:var(--cyan)}.btn.secondary{background:#1b2c43;color:white;border:1px solid #34506f}.btn.danger{background:#ff526a;color:white}.btn:disabled{opacity:.45;cursor:not-allowed}.wide{grid-column:1/-1}
     #matchBtn{pointer-events:none}
     .scoreboard{grid-area:score;display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:var(--line);margin-bottom:12px}.metric{background:#0e1b2d;padding:14px 6px;text-align:center}.metric small{display:block;color:var(--muted);font-size:.7rem;margin-bottom:5px}.metric strong{font-size:1.5rem}.metric:first-child strong{color:var(--lime);font-size:1.9rem}
@@ -76,6 +77,7 @@
       <button id="zoomIn" type="button" disabled aria-label="확대">＋</button>
     </div>
     <div class="guide" id="guide">① 카메라 → ② 표적 보정 → ③ 레이저 3발 학습 → ④ 경기</div>
+    <div class="match-countdown" id="matchCountdown" hidden>5</div>
     <div class="pill" id="clrPill" style="position:absolute;left:9px;bottom:9px;font-size:.66rem;opacity:.9">–</div>
     <div class="pill" id="liveStatus" style="position:absolute;left:9px;bottom:34px;font-size:.66rem;opacity:.9">📡 관전 연결 안 됨</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
@@ -85,7 +87,7 @@
 
   <section class="panel setup">
     <div class="mini-brand">
-      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH</h1></div>
+      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH <small style="font-size:.55em;color:#ffd441">v25</small></h1></div>
       <div class="status" id="status"><i class="dot"></i><span>준비</span></div>
       <button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶</button>
     </div>
@@ -138,10 +140,10 @@
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
-  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','learnBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
+  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','learnBtn','matchBtn','manualBtn','undoBtn','guide','matchCountdown','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,videoTrack:null,running:false,laserLearning:false,laserSamples:[],laserProfile:null,learningBest:null,learningNextAllowed:0,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'laser',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null};
+  const state = {stream:null,videoTrack:null,running:false,laserLearning:false,learningArmed:false,learningCaptureUntil:0,learningCaptureBest:null,laserSamples:[],laserProfile:null,learningBest:null,learningNextAllowed:0,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,matchArmAt:0,countdownTimer:0,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'laser',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null};
 
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
@@ -156,6 +158,7 @@
       // 카메라를 다시 시작하면 예전 보정값을 확실히 비운다 - 그래야 매번 새로 보정해야 하고,
       // 낡은(어쩌면 지금 화면과 안 맞는) 보정 상태 때문에 미리 와있던 원격 명령이 갑자기 실행되는 일이 없다.
       state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetVideo=null;state.paperMultiple=null;state.running=false;lastCmdId=null;lastNotifiedCmdId=null;
+      clearInterval(state.countdownTimer);state.countdownTimer=0;state.matchArmAt=0;els.matchCountdown.hidden=true;
       document.body.classList.remove('match-live');
       els.learnBtn.disabled=true;els.matchBtn.disabled=true;els.matchBtn.textContent='경기 시작';
       try{state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280,min:640},height:{ideal:720,min:480},frameRate:{ideal:60,min:30,max:60}}})}
@@ -300,43 +303,62 @@
 
   function beginLaserLearning(){
     if(!state.stream||!state.center||!state.radius||state.laserLearning)return;
-    state.running=false;state.laserLearning=true;state.laserSamples=[];state.laserProfile=null;state.learningBest=null;state.shots=[];state.learningNextAllowed=performance.now()+2200;state.lastHit=0;clearDetectorBackground();state.detectorReady=false;updateScore();drawOverlay();
+    state.running=false;state.laserLearning=true;state.learningArmed=false;state.learningCaptureUntil=0;state.learningCaptureBest=null;state.laserSamples=[];state.laserProfile=null;state.learningBest=null;state.shots=[];state.learningNextAllowed=Infinity;state.lastHit=0;clearDetectorBackground();state.detectorReady=false;updateScore();drawOverlay();
     els.learnBtn.disabled=true;els.matchBtn.disabled=true;els.learnBtn.textContent='기준 화면 준비 중';els.livePill.textContent='● LEARN';
-    els.guide.textContent='2초 후 레이저를 1발 쏜 다음 라이브에서 「방금 쏜 학습탄 저장」을 누르세요';setStatus('레이저 학습 준비','#ffc940');pushLive(true);
+    els.guide.textContent='기준 화면 준비 중 · 라이브의 「학습탄 1발 감지 준비」 버튼을 기다리세요';setStatus('레이저 학습 준비','#ffc940');pushLive(true);
   }
 
   function confirmLaserLearningSample(){
-    if(!state.laserLearning)return false;const sample=state.learningBest,now=performance.now();
-    if(!sample||now-sample.seenAt>1800){toast('최근 레이저 신호가 없습니다. 다시 한 발 쏜 직후 저장을 눌러 주세요.');els.guide.textContent='학습탄 저장 실패 · 레이저를 다시 쏜 직후 라이브 저장 버튼을 누르세요';return false}
-    state.learningBest=null;acceptLaserLearningSample(sample);return true;
+    if(!state.laserLearning||!state.learningArmed)return false;
+    state.learningBest=null;state.learningCaptureBest=null;state.learningArmed=false;state.learningCaptureUntil=performance.now()+6000;state.learningNextAllowed=performance.now()+250;VResetLatch();
+    els.guide.textContent='● 감지 시작됨 · 지금 레이저를 한 발 쏘세요';els.livePill.textContent='● SHOOT NOW';toast('감지 시작됨 · 지금 한 발 쏘세요');pushLive(true);return true;
   }
+
+  function VResetLatch(){if(state.pulseV2){state.pulseV2.latched=false;state.pulseV2.clear=0;state.pulseV2.candidate=null}}
 
   function acceptLaserLearningSample(f){
     state.laserSamples.push(f);const count=state.laserSamples.length;
-    state.learningNextAllowed=performance.now()+850;
+    state.learningNextAllowed=performance.now()+850;state.learningCaptureUntil=0;state.learningArmed=false;els.livePill.textContent='● LEARN';
     els.learnBtn.textContent=`레이저 학습 ${count}/3`;els.guide.textContent=count<3?`학습 ${count}/3 완료 · 레이저가 사라진 뒤 다음 발을 쏘세요`:'레이저 특성을 계산하고 있습니다…';
-    toast(`레이저 학습 ${count}/3`);if(count<3){pushLive(true);return}
+    toast(`레이저 학습 ${count}/3`);if(count<3){pushLive(true);setTimeout(()=>{if(state.laserLearning&&state.laserSamples.length===count){state.learningArmed=true;els.guide.textContent=`학습 ${count}/3 완료 · 라이브에서 감지 준비를 누른 뒤 다음 발을 쏘세요.`;pushLive(true)}},900);return}
     const a=state.laserSamples,smallest=k=>Math.min(...a.map(v=>v[k])),largest=k=>Math.max(...a.map(v=>v[k]));
     /* 학습값을 그대로 하한선으로 쓰면 검은 중앙에서 학습한 광점보다 회색 외곽의 광점이 약하게 찍힐 때
        놓칠 수 있다. 학습은 색·크기·형태의 기준으로 사용하고 밝기 하한은 충분한 여유를 둔다. */
-    state.laserProfile={scoreFloor:Math.max(6,smallest('score')*.22),contrastFloor:Math.max(1.6,smallest('contrast')*.25),drFloor:Math.max(2.5,smallest('dr')*.18),sizeMax:Math.min(240,Math.max(22,largest('n')*3.2)),widthMax:Math.min(32,Math.max(14,largest('bw')*2.2)),learnedAt:Date.now()};
-    state.laserLearning=false;clearDetectorBackground();els.learnBtn.disabled=false;els.learnBtn.textContent='레이저 다시 학습';els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';els.livePill.textContent='● READY';els.guide.textContent='레이저 학습 완료 · 라이브 페이지에서 경기를 시작하세요.';setStatus('레이저 학습 완료','var(--lime)');toast('레이저 특성 3발 학습이 완료되었습니다.');pushLive(true);
+    // 학습은 약한 신호도 받아 주지만, 경기에서는 학습탄 세 발 중 가장 약한 값의
+    // 약 절반 이상을 요구한다. 카메라 노출 변화가 학습값의 20%만 넘어도 탄착으로
+    // 확정되던 이전 설정을 제거한다.
+    state.laserProfile={scoreFloor:Math.max(12,smallest('score')*.5),contrastFloor:Math.max(3,smallest('contrast')*.45),drFloor:Math.max(4,smallest('dr')*.4),sizeMax:Math.min(180,Math.max(20,largest('n')*2.6)),widthMax:Math.min(26,Math.max(12,largest('bw')*1.9)),learnedAt:Date.now()};
+    state.laserLearning=false;state.learningArmed=false;clearDetectorBackground();els.learnBtn.disabled=false;els.learnBtn.textContent='레이저 다시 학습';els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';els.livePill.textContent='● READY';els.guide.textContent='레이저 학습 완료 · 라이브 페이지에서 경기를 시작하세요.';setStatus('레이저 학습 완료','var(--lime)');toast('레이저 특성 3발 학습이 완료되었습니다.');pushLive(true);
   }
 
   function startMatch(){
     if(!state.center||!state.radius)return;if(!state.laserProfile){toast('먼저 레이저 3발 학습을 완료해 주세요.');return}if(!els.player.value.trim()){toast('선수 이름을 입력해 주세요.');els.player.focus();return}
-    state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.warmupStart=performance.now();state.detectorReady=false;
+    state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.matchArmAt=performance.now()+5000;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.warmupStart=performance.now();state.detectorReady=false;
     state.detectKind=els.detectKind.value;
     // 표적지 모서리 탭(선택 단계)을 건너뛴 채로 남아있으면, 사격 중 화면을 잘못 건드렸을 때
     // 그 자리가 표적지 경계로 저장돼 스캔 범위가 잘못 좁아질 수 있어 여기서 확실히 종료한다.
     if(state.calibrationMode===3)state.calibrationMode=0;
-    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 2초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();pushLive(true);
+    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='카메라 안정화 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 5초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('노출·초점 안정화','#ffc940');updateScore();drawOverlay();pushLive(true);
     document.body.classList.add('match-live');setTimeout(resize,60);
+    startMatchCountdown();
     // 전체화면은 사람이 직접 탭했을 때만 브라우저가 허용해 주는 경우가 많아, 원격 명령으로 시작된 경우엔 실패할 수 있다(무해하게 무시).
     try{const root=document.documentElement,req=root.requestFullscreen||root.webkitRequestFullscreen;if(req&&!document.fullscreenElement)req.call(root,{navigationUI:'hide'}).catch(()=>{})}catch(e){}
   }
 
-  function finishMatch(){state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
+  function startMatchCountdown(){
+    clearInterval(state.countdownTimer);els.matchCountdown.hidden=false;els.matchCountdown.classList.remove('go');
+    const tick=()=>{const left=Math.ceil((state.matchArmAt-performance.now())/1000);if(left>0)els.matchCountdown.textContent=String(Math.min(5,left));else els.matchCountdown.textContent='준비 완료'};
+    tick();state.countdownTimer=setInterval(tick,100);
+  }
+
+  function activateMatchDetection(){
+    if(state.detectorReady)return;state.detectorReady=true;clearInterval(state.countdownTimer);state.countdownTimer=0;
+    els.matchCountdown.hidden=false;els.matchCountdown.classList.add('go');els.matchCountdown.textContent='사격 시작';
+    els.matchBtn.textContent='경기 진행 중';els.guide.textContent='학습된 레이저 펄스 감지 대기 중';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');
+    setTimeout(()=>{if(state.running&&state.detectorReady)els.matchCountdown.hidden=true},1100);
+  }
+
+  function finishMatch(){state.running=false;clearInterval(state.countdownTimer);state.countdownTimer=0;els.matchCountdown.hidden=true;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
   async function saveMatch(){
     const payload={matchId:state.matchId,eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),maxShots:state.maxShots,totalScore:state.shots.reduce((a,s)=>a+s.score,0),device:navigator.userAgent,shots:state.shots};
     localStorage.setItem('laserMatchLast',JSON.stringify(payload));
@@ -360,7 +382,7 @@
       const qs=new URLSearchParams({action:'liveUpdate',callback:cbName,payload:JSON.stringify({
         eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),
         maxShots:state.maxShots||Number(els.maxShots.value),running:state.running,
-        learning:state.laserLearning,learningReady:!!state.laserProfile,learningCount:state.laserSamples.length,
+        learning:state.laserLearning,learningArmed:state.learningArmed,learningCaptureActive:state.laserLearning&&state.learningCaptureUntil>performance.now(),learningReady:!!state.laserProfile,learningCount:state.laserSamples.length,
         learningShots:state.laserSamples.map((s,i)=>({u:+(s.u||0).toFixed(3),v:+(s.v||0).toFixed(3),kind:'learning',no:i+1})),
         shots:state.shots.map(s=>{
           // 관전 페이지는 표적을 항상 똑바로 그리므로, 채점용으로 기울기를 보정한 좌표(xMm/yMm) 대신
@@ -404,7 +426,7 @@
     if(state.running)return;   // 이미 사격 중이면 무시
     // 학습탄 저장은 경기 시작 명령이 아니므로, 보정 직후의 경기 시작 안전 대기와 관계없이 즉시 처리한다.
     if(cmd.mode==='confirmLearn'){
-      const ok=confirmLaserLearningSample();lastCmdId=cmd.cmdId;if(ok)toast(`📡 학습탄 ${state.laserSamples.length}/3을 저장했습니다.`);return;
+      const ok=confirmLaserLearningSample();lastCmdId=cmd.cmdId;if(ok)toast('📡 카메라 감지 시작 · 지금 한 발 쏘세요.');return;
     }
     // 보정이 끝난 직후(3초 이내)에는 어떤 명령이 와도 시작하지 않는다 - 보정 결과를 눈으로 확인할 최소한의 시간을 보장해서,
     // "카메라를 켜자마자/보정하자마자 바로 경기가 시작돼버린다"는 상황 자체가 구조적으로 생기지 않게 한다.
@@ -617,7 +639,9 @@
     const vcx=tv.x*vw,vcy=tv.y*vh,vrx=(tv.rx||tv.r)*vw,vry=(tv.ry||tv.r)*vw,baseScan=state.paperMultiple?state.paperMultiple+.12:1.68;
     const halfW=vrx*(baseScan+.55),topH=vry*(baseScan+.28),bottomH=vry*(baseScan+.7);
     let sx=Math.max(0,vcx-halfW),sy=Math.max(0,vcy-topH),ex=Math.min(vw,vcx+halfW),ey=Math.min(vh,vcy+bottomH);
-    const sWidth=Math.max(64,ex-sx),sHeight=Math.max(64,ey-sy),sw=720,sh=Math.max(320,Math.round(sw*sHeight/sWidth)),roi={sx,sy,sWidth,sHeight,vw,vh};
+    // 1프레임짜리 학습 레이저를 놓치지 않도록 학습 중에는 계산량을 절반 이하로 줄인다.
+    // 경기에서는 좌표 정밀도를 위해 720px를 유지한다.
+    const sWidth=Math.max(64,ex-sx),sHeight=Math.max(64,ey-sy),sw=state.laserLearning?480:720,sh=Math.max(260,Math.round(sw*sHeight/sWidth)),roi={sx,sy,sWidth,sHeight,vw,vh};
     els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,sx,sy,sWidth,sHeight,0,0,sw,sh);
     const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh;
     const t={x:(vcx-sx)/sWidth*sw,y:(vcy-sy)/sHeight*sh,rx:vrx/sWidth*sw,ry:vry/sHeight*sh,a:state.targetAngle},scanR=Math.max(t.rx,t.ry)*(baseScan+.5);
@@ -625,20 +649,73 @@
     const inside=(x,y,margin=baseScan)=>{const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nx=ex/t.rx,ny=ey/t.ry,extra=ny>0?.48:.12;return Math.hypot(nx,ny)<=margin+extra};
     let V=state.pulseV2;
     if(!V||V.total!==total){
-      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warm:0,ready:false,armedAt:0,candidate:null,latched:false,clear:0,trackTick:0,frames:0,fpsAt:performance.now(),detectorFps:0};
+      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warm:0,warmUntil:state.laserLearning?performance.now()+1200:(state.matchArmAt||performance.now()+5000),ready:false,armedAt:0,candidate:null,latched:false,clear:0,trackTick:0,frames:0,fpsAt:performance.now(),detectorFps:0};
       for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]=V.prevR[p]=data[i];V.bgG[p]=V.prevG[p]=data[i+1];V.bgB[p]=V.prevB[p]=data[i+2]}
       return;
     }
     const copyPrevious=()=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.prevR[p]=data[i];V.prevG[p]=data[i+1];V.prevB[p]=data[i+2]}};
     const learn=(a)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]+=a*(data[i]-V.bgR[p]);V.bgG[p]+=a*(data[i+1]-V.bgG[p]);V.bgB[p]+=a*(data[i+2]-V.bgB[p])}};
     V.frames++;const fpsNow=performance.now();if(fpsNow-V.fpsAt>=1000){V.detectorFps=V.frames*1000/(fpsNow-V.fpsAt);V.frames=0;V.fpsAt=fpsNow}
-    const warmFrames=state.laserLearning?Math.max(36,Math.round((state.actualFps||30)*1.2)):Math.max(42,Math.round((state.actualFps||30)*1.4));
-    if(V.warm<warmFrames){learn(.18);copyPrevious();V.warm++;return}
-    if(!V.ready){V.ready=true;V.armedAt=performance.now()+(state.laserLearning?0:700);state.detectorReady=true;if(state.laserLearning){els.learnBtn.textContent='레이저 학습 0/3';els.guide.textContent='이제 표적에 레이저를 1발씩 천천히 3발 쏘세요.';setStatus('레이저 3발 학습','#ffc940')}else{els.matchBtn.textContent='경기 진행 중';els.guide.textContent='학습된 레이저 펄스 감지 대기 중';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66')}copyPrevious();return}
+    // 경기의 5초 카운트다운 전체를 배경 안정화에 사용하고, 0이 된 순간에만 감지기를 무장한다.
+    if(performance.now()<V.warmUntil){learn(state.laserLearning?.18:.28);copyPrevious();V.warm++;return}
+    if(!V.ready){V.ready=true;V.armedAt=performance.now();if(state.laserLearning){state.detectorReady=true;state.learningArmed=true;state.learningNextAllowed=performance.now();els.learnBtn.textContent=`레이저 학습 ${state.laserSamples.length}/3`;els.guide.textContent='라이브에서 「학습탄 1발 감지 준비」를 누른 뒤 레이저를 쏘세요.';setStatus('학습 감지 준비 가능','#ffc940');pushLive(true)}else activateMatchDetection();copyPrevious();return}
 
     let motion=0,samples=0,shift=0;
     for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!inside(x,y))continue;const p=y*sw+x,i=p*4,now=(data[i]+data[i+1]*2+data[i+2])*.25,old=(V.prevR[p]+V.prevG[p]*2+V.prevB[p])*.25,base=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25;samples++;if(Math.abs(now-old)>20)motion++;shift+=now-base}
     const motionRatio=motion/Math.max(1,samples),exposureShift=Math.abs(shift/Math.max(1,samples));
+    if(state.laserLearning&&state.learningCaptureUntil&&performance.now()>state.learningCaptureUntil){
+      const captured=state.learningCaptureBest;state.learningCaptureUntil=0;state.learningCaptureBest=null;
+      if(captured){acceptLaserLearningSample(captured);copyPrevious();return}
+      state.learningArmed=true;els.livePill.textContent='● LEARN';els.guide.textContent='광점을 찾지 못했습니다 · 감지 준비를 다시 누른 뒤 한 발 쏘세요';pushLive(true)
+    }
+    /* 1프레임 광점 전용 고속 검출기. 배경색이나 흰 중심/테두리 모양을 먼저 요구하지 않고
+       직전 프레임보다 갑자기 밝아진 작은 색 광점 군집을 찾는다. 전체 노출 변화와 흔들림은
+       motionRatio/exposureShift로 제외한다. 이 경로가 실제 영상의 짧은 레이저를 담당한다. */
+    let flashPeak=null;
+    const learningCaptureOpen=state.laserLearning&&state.learningCaptureUntil>performance.now();
+    /* 학습 전용: 사용자가 4초 감지창을 직접 열었으므로 색상 형태를 미리 가정하지 않는다.
+       ROI 전체에서 직전 카메라 프레임보다 가장 크게 상승한 작은 지점을 계속 보관한다.
+       이 경로는 아래의 무거운 경기용 형태 분석을 건너뛰어 프레임 누락을 줄인다. */
+    if(learningCaptureOpen&&performance.now()>=state.learningNextAllowed){
+      let peak=null;
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+        const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25;
+        if(rise<3||lum<.4)continue;const score=rise+Math.max(0,lum)*.7;
+        if(!peak||score>peak.score)peak={x,y,score,rise,lum,pr,pg,pb};
+      }
+      if(peak&&motionRatio<.18&&exposureShift<18){
+        let n=0,wt=0,pxs=0,pys=0,minX=999,maxX=0,minY=999,maxY=0;
+        const neighborRise=Math.max(2,peak.rise*.08);
+        for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){
+          if(Math.hypot(ox,oy)>10)continue;const x=peak.x+ox,y=peak.y+oy;if(x<x0||x>x1||y<y0||y>y1)continue;const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25;
+          if(rise>=neighborRise&&lum>0){const w=rise+Math.max(0,lum);n++;wt+=w;pxs+=x*w;pys+=y*w;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+        }
+        const bw=maxX-minX+1,bh=maxY-minY+1;
+        if(n>=1&&n<=300&&bw<=32&&bh<=32){const cx=wt?pxs/wt:peak.x,cy=wt?pys/wt:peak.y,candidate={score:peak.score,contrast:peak.lum,dr:peak.pr,dg:peak.pg,db:peak.pb,onset:peak.rise,lumRise:peak.lum,n,bw,bh,redN:n,whiteN:0,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)};if(!state.learningCaptureBest||candidate.score>state.learningCaptureBest.score)state.learningCaptureBest=candidate;els.clrPill.textContent=`학습 스캔 · 최고상승 ${Math.round(state.learningCaptureBest.onset)} · ${n}px`}
+      }
+      copyPrevious();return;
+    }
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+      if(!learningCaptureOpen&&!inside(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],pr=r-V.prevR[p],pg=g-V.prevG[p],pb=b-V.prevB[p],onset=Math.max(pr,pg,pb),lumStep=(pr+pg*2+pb)*.25,colorStep=els.laserColor.value==='green'?pg:pr;
+      const colorLike=els.laserColor.value==='green'?(pg>=pr-2&&pg>=pb-2):(pr>=pg-2&&pr>=pb-2);
+      if(onset<(learningCaptureOpen?6:10)||lumStep<(learningCaptureOpen?1.2:2.5)||colorStep<(learningCaptureOpen?4:7)||!colorLike)continue;
+      const score=onset+Math.max(0,colorStep-Math.max(els.laserColor.value==='green'?pr:pg,pb))*1.4+Math.max(0,lumStep);
+      if(!flashPeak||score>flashPeak.score)flashPeak={x,y,score,onset,lumStep,colorStep};
+    }
+    if(flashPeak&&motionRatio<.08&&exposureShift<10){
+      let fn=0,fw=0,fsx=0,fsy=0,fminX=999,fmaxX=0,fminY=999,fmaxY=0,whiteN=0;
+      for(let oy=-9;oy<=9;oy++)for(let ox=-9;ox<=9;ox++){
+        if(Math.hypot(ox,oy)>9)continue;const x=flashPeak.x+ox,y=flashPeak.y+oy;if(x<x0||x>x1||y<y0||y>y1||(!learningCaptureOpen&&!inside(x,y)))continue;const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25,col=els.laserColor.value==='green'?pg:pr,colorLike=els.laserColor.value==='green'?(pg>=pr-3&&pg>=pb-3):(pr>=pg-3&&pr>=pb-3);
+        if(rise>=(learningCaptureOpen?4:6)&&lum>=(learningCaptureOpen?.8:1.5)&&col>=(learningCaptureOpen?3:4)&&colorLike){const w=Math.max(1,rise+lum);fn++;fw+=w;fsx+=x*w;fsy+=y*w;if(pr>=5&&pg>=4&&pb>=4)whiteN++;fminX=Math.min(fminX,x);fmaxX=Math.max(fmaxX,x);fminY=Math.min(fminY,y);fmaxY=Math.max(fmaxY,y)}
+      }
+      const fbw=fmaxX-fminX+1,fbh=fmaxY-fminY+1,fastPulse=fn>=(learningCaptureOpen?2:3)&&fn<=260&&fbw<=28&&fbh<=28&&flashPeak.onset>=(learningCaptureOpen?7:20)&&flashPeak.colorStep>=(learningCaptureOpen?5:12);
+      const captureOpen=!state.laserLearning||(state.learningCaptureUntil>performance.now());
+      if(fastPulse&&captureOpen&&performance.now()>=state.learningNextAllowed&&!V.latched){
+        const fcx=fw?fsx/fw:flashPeak.x,fcy=fw?fsy/fw:flashPeak.y,fastFeature={score:flashPeak.score,contrast:flashPeak.lumStep,dr:els.laserColor.value==='green'?0:flashPeak.colorStep,dg:els.laserColor.value==='green'?flashPeak.colorStep:0,db:0,onset:flashPeak.onset,lumRise:flashPeak.lumStep,n:fn,bw:fbw,bh:fbh,redN:fn,whiteN,u:(fcx-t.x)/Math.max(1,t.rx),v:(fcy-t.y)/Math.max(1,t.ry)};
+        if(state.laserLearning){if(!state.learningCaptureBest||fastFeature.score>state.learningCaptureBest.score)state.learningCaptureBest=fastFeature;els.guide.textContent='광점 후보 포착 · 가장 강한 신호를 선택 중입니다';els.clrPill.textContent=`학습 후보 · 상승 ${Math.round(flashPeak.onset)} · 크기 ${fn}px`}
+        if(P&&state.detectorReady&&tryRecordLaser(fcx,fcy,sw,sh,vw,vh,roi)){V.latched=true;els.fpsPill.textContent='◎ 실제 레이저';els.clrPill.textContent=`레이저 포착 · 상승 ${Math.round(flashPeak.onset)} · 크기 ${fn}px`;copyPrevious();return}
+      }
+    }
     if(state.detectKind!=='laser'){
       const lum=new Uint8Array(total);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;lum[p]=(data[i]*.299+data[i+1]*.587+data[i+2]*.114+.5)|0}
       if(!state.background||state.background.length!==total){state.background=new Float32Array(total);state.backgroundR=new Float32Array(total);state.backgroundG=new Float32Array(total);state.backgroundB=new Float32Array(total);for(let p=0,i=0;p<total;p++,i+=4){state.background[p]=lum[p];state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}}
@@ -669,31 +746,35 @@
       const bestP=best.y*sw+best.x,bestSurface=(V.bgR[bestP]+V.bgG[bestP]*2+V.bgB[bestP])*.25,bestBright=bestSurface>128;
       const maxN=P?P.sizeMax:150,maxW=P?P.widthMax:18,compact=n>=1&&n<=maxN&&bw<=maxW&&bh<=maxW&&bw/Math.max(1,bh)>.18&&bw/Math.max(1,bh)<5.5;
       const needContrast=(state.laserLearning?3:(P?P.contrastFloor:5))*(bestBright?.74:1),needDr=(state.laserLearning?4:(P?P.drFloor:7))*(bestBright?.7:1);
-      valid=compact&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
-      /* 학습탄은 두 형태를 모두 받는다.
-         1) 흰 중심과 빨간 테두리가 같이 잡힌 약한 펄스
-         2) 흰 중심은 작지만 빨간 상승량이 강한 펄스
-         화면 흔들림·노출 변화 제한은 아래에서 별도로 유지한다. */
-      const learningPulse=(best.score>=16&&contrast>=4&&best.dr>=5&&((redN>=1&&whiteN>=1)||redN>=2))||(best.dr>=14&&contrast>=6&&redN>=1);
-      const learnedShape=P&&redN>=1&&(whiteN>=1||best.dr>=Math.max(10,P.drFloor*2.2))&&best.onset>=1.2;
-      strong=valid&&(state.laserLearning?learningPulse:(P?learnedShape&&(best.score>=P.scoreFloor&&contrast>=needContrast):(best.score>=34&&contrast>=8)||(redN>=2&&whiteN>=1)||(best.dr>=28&&contrast>=10)));
-      if(motionRatio>.16||exposureShift>17||(motionRatio>.065&&!strong))valid=false;
+      const matchScore=P?Math.max(14,P.scoreFloor):14,matchContrast=P?Math.max(3.5,P.contrastFloor):3.5,matchDr=P?Math.max(4.5,P.drFloor):4.5;
+      const profileGate=state.laserLearning||!P||(best.score>=matchScore&&contrast>=matchContrast*(bestBright?.74:1)&&(best.dr>=matchDr*(bestBright?.7:1)||whiteN>=1&&best.lumRise>=4));
+      const colorRise=green?best.dg:best.dr;
+      const pulseCompact=n>=2&&n<=220&&bw>=1&&bh>=1&&bw<=26&&bh<=26&&bw/Math.max(1,bh)>.16&&bw/Math.max(1,bh)<6;
+      /* 실제 영상에서 레이저는 대부분 단 1프레임만 보였다. 연속 프레임 대신
+         ① 직전 프레임 대비 급상승, ② 흰 중심 또는 강한 색 중심, ③ 빨강/초록 테두리,
+         ④ 화면 전체 노출·흔들림이 아님을 한꺼번에 확인한다. */
+      const temporalPulse=pulseCompact&&best.score>=16&&best.onset>=10&&best.lumRise>=4&&colorRise>=6&&contrast>=3&&redN>=1&&(whiteN>=1||colorRise>=14)&&motionRatio<.05&&exposureShift<8;
+      const normalShape=compact&&profileGate&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
+      valid=state.laserLearning?false:(P?temporalPulse:normalShape);
+      const rawFeature={score:best.score,contrast,dr:best.dr,dg:best.dg,db:best.db,onset:best.onset,lumRise:best.lumRise,n,bw,bh,redN,whiteN,u:((wt?sx/wt:best.x)-t.x)/Math.max(1,t.rx),v:((wt?sy/wt:best.y)-t.y)/Math.max(1,t.ry)};
+      strong=valid&&temporalPulse;
+      if(motionRatio>.08||exposureShift>10)valid=false;
       if(!state.laserLearning&&performance.now()<V.armedAt)valid=false;
       if(state.laserLearning&&(performance.now()<state.learningNextAllowed||motionRatio>.055||exposureShift>10||!strong))valid=false;
-      if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature={score:best.score,contrast,dr:best.dr,n,bw,bh,redN,whiteN,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)}}
+      if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature=rawFeature}
     }
       if(valid){
       V.clear=0;
       if(!V.latched){
         if(V.candidate&&Math.hypot(cx-V.candidate.x,cy-V.candidate.y)<14){V.candidate.x=(V.candidate.x*V.candidate.n+cx)/(V.candidate.n+1);V.candidate.y=(V.candidate.y*V.candidate.n+cy)/(V.candidate.n+1);V.candidate.n++;V.candidate.strong=V.candidate.strong||strong}else V.candidate={x:cx,y:cy,n:1,strong};
-        if(V.candidate.strong||V.candidate.n>=2){if(state.laserLearning){if(!state.learningBest||feature.score>=state.learningBest.score||performance.now()-state.learningBest.seenAt>700)state.learningBest={...feature,seenAt:performance.now()};V.latched=true;V.candidate=null;els.guide.textContent='레이저 신호 포착 · 라이브에서 「방금 쏜 학습탄 저장」을 누르세요'}else if(tryRecordLaser(V.candidate.x,V.candidate.y,sw,sh,vw,vh,roi)){V.latched=true;V.candidate=null;els.fpsPill.textContent='◎ 학습 레이저';setTimeout(showDetectorInfo,600)}}
+        if(V.candidate.strong||V.candidate.n>=2){if(state.laserLearning){if(!state.learningBest||feature.score>=state.learningBest.score||performance.now()-state.learningBest.seenAt>5500)state.learningBest={...feature,seenAt:performance.now()};V.latched=true;V.candidate=null;els.guide.textContent='학습 후보 확인 중 · 감지 시간이 끝날 때까지 기다리세요'}else if(tryRecordLaser(V.candidate.x,V.candidate.y,sw,sh,vw,vh,roi)){V.latched=true;V.candidate=null;els.fpsPill.textContent='◎ 학습 레이저';setTimeout(showDetectorInfo,600)}}
       }
     }else{
       V.candidate=null;V.clear++;if(V.clear>=(state.laserLearning?5:2))V.latched=false;
       if(motionRatio<.035&&exposureShift<8)learn(.018);
       /* 경기 중에는 ROI와 배경 좌표가 어긋나지 않도록 최초 보정 위치를 고정한다. */
     }
-    if(state.dbgTick++%6===0)els.clrPill.textContent=`원본 ROI ${sw}px · ${Math.round(V.detectorFps||0)}fps · 신호 ${best?Math.round(best.score):0} · 흔들림 ${Math.round(motionRatio*100)}%${valid?' ✓':''}`;
+    if(state.dbgTick++%6===0)els.clrPill.textContent=`ROI ${sw}px · ${Math.round(V.detectorFps||0)}fps · 신호 ${best?Math.round(best.score):0} · 순간상승 ${best?Math.round(best.onset):0} · 흔들림 ${Math.round(motionRatio*100)}%${valid?' ✓':''}`;
     copyPrevious();
   }
 
