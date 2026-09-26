@@ -27,6 +27,8 @@
     @media(max-width:420px){.status{display:none}.fullscreen-btn{padding:7px 9px;font-size:.68rem}}
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
     @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:52px minmax(0,1fr);grid-template-areas:"header header" "camera side";gap:8px;padding:4px 8px 8px}.app>header{min-height:52px}.brand-mark{width:38px;height:38px}h1{font-size:1.08rem}.sub{font-size:.65rem}.camera{height:100%;min-height:0;position:relative;top:auto}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 3px 18px 0;scrollbar-gutter:stable}.setup{margin:0 0 7px;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0 0 7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0 0 7px}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0 0 7px;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
+    body.match-live header{display:none}
+    body.match-live .app{padding-top:max(env(safe-area-inset-top),4px)}
   </style>
 </head>
 <body>
@@ -255,9 +257,12 @@
     state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.warmupStart=performance.now();state.detectorReady=false;
     state.detectKind=els.detectKind.value;
     els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 2초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();pushLive(true);
+    document.body.classList.add('match-live');setTimeout(resize,60);
+    // 전체화면은 사람이 직접 탭했을 때만 브라우저가 허용해 주는 경우가 많아, 원격 명령으로 시작된 경우엔 실패할 수 있다(무해하게 무시).
+    try{const root=document.documentElement,req=root.requestFullscreen||root.webkitRequestFullscreen;if(req&&!document.fullscreenElement)req.call(root,{navigationUI:'hide'}).catch(()=>{})}catch(e){}
   }
 
-  function finishMatch(){state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');pushLive(true);saveMatch()}
+  function finishMatch(){state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
   async function saveMatch(){
     const payload={matchId:state.matchId,eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),maxShots:state.maxShots,totalScore:state.shots.reduce((a,s)=>a+s.score,0),device:navigator.userAgent,shots:state.shots};
     localStorage.setItem('laserMatchLast',JSON.stringify(payload));
@@ -614,7 +619,7 @@
   }
 
   function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
-  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');updateScore();drawOverlay()}
+  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
