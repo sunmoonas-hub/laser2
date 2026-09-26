@@ -227,7 +227,7 @@
     // 서버의 학습 상태 수신이 늦어져도 버튼이 사라지지 않도록 항상 표시한다.
     // 경기 중에만 잠그고, 그 외에는 사용자가 직접 학습탄 저장 명령을 보낼 수 있다.
     $('rSaveLearn').hidden = false;
-    $('rSaveLearn').disabled = !!(lastState&&lastState.running&&!lastState.learning);
+    $('rSaveLearn').disabled = !!(lastState&&((lastState.running&&!lastState.learning)||(lastState.learning&&!lastState.learningArmed)));
     $('busyNote').hidden = !busy;
     $('forceUnlockBtn').hidden = !busy;
   }
@@ -237,7 +237,7 @@
     if(!state){ show('idle'); return; }
     const shots = Array.isArray(state.shots) ? state.shots : [];
     const learningShots=Array.isArray(state.learningShots)?state.learningShots:[];
-    const learning=!!state.learning,learningReady=!!state.learningReady;
+    const learning=!!state.learning,learningArmed=!!state.learningArmed,learningReady=!!state.learningReady;
     const hasResult = !!(learning||learningReady||state.player||shots.length);
     if(!hasResult){ show('idle'); return; }
     const lane = state.firingLane || 1;
@@ -251,7 +251,7 @@
     const pill = $('statusPill');
     pill.className = 'status ' + (state.running||learning ? 'live' : 'done');
     $('statusText').textContent = learning?`학습 ${state.learningCount||0}/3`:(learningReady&&!state.running&&!shots.length?'학습 완료':(state.running?'사격 중':(shots.length?'완료':'대기')));
-    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?((state.learningCount||0)?`레이저 학습 ${state.learningCount}/3 저장 완료 · 다음 발을 쏜 뒤 저장 버튼을 누르세요`:'레이저를 1발 쏜 직후 「방금 쏜 학습탄 저장」을 누르세요'):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
+    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?(!learningArmed?'기준 화면 준비 중 · 아직 레이저를 쏘지 마세요':((state.learningCount||0)?`발사 가능 · 학습 ${state.learningCount}/3 완료, 다음 발을 쏜 뒤 저장하세요`:'발사 가능 · 레이저를 1발 쏜 직후 저장 버튼을 누르세요')):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
     $('cnt').textContent = learning||learningReady&&!state.running&&!shots.length ? (state.learningCount||0) : shots.length;
