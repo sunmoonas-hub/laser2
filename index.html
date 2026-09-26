@@ -639,7 +639,9 @@
     const vcx=tv.x*vw,vcy=tv.y*vh,vrx=(tv.rx||tv.r)*vw,vry=(tv.ry||tv.r)*vw,baseScan=state.paperMultiple?state.paperMultiple+.12:1.68;
     const halfW=vrx*(baseScan+.55),topH=vry*(baseScan+.28),bottomH=vry*(baseScan+.7);
     let sx=Math.max(0,vcx-halfW),sy=Math.max(0,vcy-topH),ex=Math.min(vw,vcx+halfW),ey=Math.min(vh,vcy+bottomH);
-    const sWidth=Math.max(64,ex-sx),sHeight=Math.max(64,ey-sy),sw=720,sh=Math.max(320,Math.round(sw*sHeight/sWidth)),roi={sx,sy,sWidth,sHeight,vw,vh};
+    // 1프레임짜리 학습 레이저를 놓치지 않도록 학습 중에는 계산량을 절반 이하로 줄인다.
+    // 경기에서는 좌표 정밀도를 위해 720px를 유지한다.
+    const sWidth=Math.max(64,ex-sx),sHeight=Math.max(64,ey-sy),sw=state.laserLearning?480:720,sh=Math.max(260,Math.round(sw*sHeight/sWidth)),roi={sx,sy,sWidth,sHeight,vw,vh};
     els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,sx,sy,sWidth,sHeight,0,0,sw,sh);
     const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh;
     const t={x:(vcx-sx)/sWidth*sw,y:(vcy-sy)/sHeight*sh,rx:vrx/sWidth*sw,ry:vry/sHeight*sh,a:state.targetAngle},scanR=Math.max(t.rx,t.ry)*(baseScan+.5);
@@ -671,6 +673,28 @@
        motionRatio/exposureShift로 제외한다. 이 경로가 실제 영상의 짧은 레이저를 담당한다. */
     let flashPeak=null;
     const learningCaptureOpen=state.laserLearning&&state.learningCaptureUntil>performance.now();
+    /* 학습 전용: 사용자가 4초 감지창을 직접 열었으므로 색상 형태를 미리 가정하지 않는다.
+       ROI 전체에서 직전 카메라 프레임보다 가장 크게 상승한 작은 지점을 계속 보관한다.
+       이 경로는 아래의 무거운 경기용 형태 분석을 건너뛰어 프레임 누락을 줄인다. */
+    if(learningCaptureOpen&&performance.now()>=state.learningNextAllowed){
+      let peak=null;
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+        const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25;
+        if(rise<3||lum<.4)continue;const score=rise+Math.max(0,lum)*.7;
+        if(!peak||score>peak.score)peak={x,y,score,rise,lum,pr,pg,pb};
+      }
+      if(peak&&motionRatio<.18&&exposureShift<18){
+        let n=0,wt=0,pxs=0,pys=0,minX=999,maxX=0,minY=999,maxY=0;
+        const neighborRise=Math.max(2,peak.rise*.08);
+        for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){
+          if(Math.hypot(ox,oy)>10)continue;const x=peak.x+ox,y=peak.y+oy;if(x<x0||x>x1||y<y0||y>y1)continue;const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25;
+          if(rise>=neighborRise&&lum>0){const w=rise+Math.max(0,lum);n++;wt+=w;pxs+=x*w;pys+=y*w;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+        }
+        const bw=maxX-minX+1,bh=maxY-minY+1;
+        if(n>=1&&n<=300&&bw<=32&&bh<=32){const cx=wt?pxs/wt:peak.x,cy=wt?pys/wt:peak.y,candidate={score:peak.score,contrast:peak.lum,dr:peak.pr,dg:peak.pg,db:peak.pb,onset:peak.rise,lumRise:peak.lum,n,bw,bh,redN:n,whiteN:0,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)};if(!state.learningCaptureBest||candidate.score>state.learningCaptureBest.score)state.learningCaptureBest=candidate;els.clrPill.textContent=`학습 스캔 · 최고상승 ${Math.round(state.learningCaptureBest.onset)} · ${n}px`}
+      }
+      copyPrevious();return;
+    }
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!learningCaptureOpen&&!inside(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],pr=r-V.prevR[p],pg=g-V.prevG[p],pb=b-V.prevB[p],onset=Math.max(pr,pg,pb),lumStep=(pr+pg*2+pb)*.25,colorStep=els.laserColor.value==='green'?pg:pr;
       const colorLike=els.laserColor.value==='green'?(pg>=pr-2&&pg>=pb-2):(pr>=pg-2&&pr>=pb-2);
