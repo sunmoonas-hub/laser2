@@ -586,7 +586,9 @@
     if(state.objKnown&&state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-wx,k.y-wy)<(k.r||10)+18))return false;
     const mapped=videoToScreen(wx/sw*vw,wy/sh*vh),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
     const nx=ex/state.radiusX,ny=ey/state.radiusY;
-    if(Math.hypot(nx,ny)>(state.paperMultiple||1.5))return false;
+    /* 표적 아래쪽 미스는 종이 여백까지 포함해 더 넓게 받는다. 휴대폰 화면의 아래 방향은
+       보정된 표적 좌표에서도 ny>0이므로, 아래쪽만 추가 여유를 주고 다른 방향은 제한한다. */
+    const distance=Math.hypot(nx,ny),baseLimit=state.paperMultiple||1.55,limit=baseLimit+(ny>0?.52:.18);if(distance>limit)return false;
     recordShot(mapped.x,mapped.y,null,'laser');return true;
   }
 
@@ -601,9 +603,9 @@
     const sw=480,sh=Math.max(270,Math.round(sw*vh/vw));
     els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);
     const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh;
-    const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*(state.paperMultiple?state.paperMultiple+.08:1.55);
+    const t=screenTargetToWork(sw,sh),baseScan=state.paperMultiple?state.paperMultiple+.12:1.68,scanR=Math.max(t.rx,t.ry)*(baseScan+.5);
     const x0=Math.max(2,Math.floor(t.x-scanR)),x1=Math.min(sw-3,Math.ceil(t.x+scanR)),y0=Math.max(2,Math.floor(t.y-scanR)),y1=Math.min(sh-3,Math.ceil(t.y+scanR));
-    const inside=(x,y,margin=state.paperMultiple?state.paperMultiple+.08:1.55)=>{const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;return Math.hypot(ex/t.rx,ey/t.ry)<=margin};
+    const inside=(x,y,margin=baseScan)=>{const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nx=ex/t.rx,ny=ey/t.ry,extra=ny>0?.48:.12;return Math.hypot(nx,ny)<=margin+extra};
     let V=state.pulseV2;
     if(!V||V.total!==total){
       V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warm:0,ready:false,candidate:null,latched:false,clear:0,trackTick:0};
@@ -629,10 +631,10 @@
     let best=null;
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!inside(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-V.bgR[p],dg=g-V.bgG[p],db=b-V.bgB[p],pr=r-V.prevR[p],pg=g-V.prevG[p],pb=b-V.prevB[p];
-      const lumRise=(dr+dg*2+db)*.25,onset=Math.max(pr,pg,pb),warmRise=(r-Math.max(g,b))-(V.bgR[p]-Math.max(V.bgG[p],V.bgB[p]));
+      const lumRise=(dr+dg*2+db)*.25,onset=Math.max(pr,pg,pb),warmRise=(r-Math.max(g,b))-(V.bgR[p]-Math.max(V.bgG[p],V.bgB[p])),surfaceLum=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25,brightSurface=surfaceLum>128,localMin=baseMin*(brightSurface?.55:1);
       let colored,whiteCore,score;
-      if(green){colored=dg>baseMin&&dg>=dr+(P?0:1)&&dg>=db+(P?0:1);whiteCore=g>(P?155:175)&&lumRise>(P?5:9)&&dg>(P?3:7)&&dr>(P?2:4)&&db>(P?2:4);score=dg+Math.max(0,dg-Math.max(dr,db))*1.7+Math.max(0,lumRise)+Math.max(0,onset)*.3}
-      else{colored=dr>baseMin&&dr>=dg-(P?5:2)&&dr>=db-(P?5:2)&&warmRise>(P?.35:1.2);whiteCore=r>(P?155:175)&&lumRise>(P?5:9)&&dr>(P?3:7)&&dg>(P?2:4)&&db>(P?2:4);score=dr+Math.max(0,warmRise)*1.8+Math.max(0,lumRise)+Math.max(0,onset)*.3}
+      if(green){colored=dg>localMin&&dg>=dr+(P?0:1)&&dg>=db+(P?0:1);whiteCore=(brightSurface?lumRise>(P?3:5):g>(P?155:175)&&lumRise>(P?5:9))&&dg>(P?2:7)&&dr>(P?1:4)&&db>(P?1:4);score=dg+Math.max(0,dg-Math.max(dr,db))*1.7+Math.max(0,lumRise)*(brightSurface?1.5:1)+Math.max(0,onset)*.3}
+      else{colored=dr>localMin&&dr>=dg-(P?6:2)&&dr>=db-(P?6:2)&&warmRise>(P?(brightSurface?.12:.35):1.2);whiteCore=(brightSurface?lumRise>(P?3:5):r>(P?155:175)&&lumRise>(P?5:9))&&dr>(P?2:7)&&dg>(P?1:4)&&db>(P?1:4);score=dr+Math.max(0,warmRise)*1.8+Math.max(0,lumRise)*(brightSurface?1.5:1)+Math.max(0,onset)*.3}
       if(!(colored||whiteCore)||onset<(P?.5:2)&&lumRise<(P?7:15))continue;
       if(!best||score>best.score)best={x,y,score,dr,dg,db,lumRise,colored,whiteCore};
     }
@@ -642,12 +644,13 @@
       for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){
         const d=Math.hypot(ox,oy),x=best.x+ox,y=best.y+oy;if(x<x0||x>x1||y<y0||y>y1)continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-V.bgR[p],dg=g-V.bgG[p],db=b-V.bgB[p],lr=(dr+dg*2+db)*.25,warm=(r-Math.max(g,b))-(V.bgR[p]-Math.max(V.bgG[p],V.bgB[p]));
         if(d>=7&&d<=10){sur+=(r+g*2+b)*.25;surN++;continue}
-        if(d>7)continue;const red=green?(dg>baseMin*(P?.38:.55)&&dg>=dr-(P?4:0)&&dg>=db-(P?4:0)):(dr>baseMin*(P?.38:.55)&&warm>(P?.12:.5)&&dr>=dg-(P?9:5)&&dr>=db-(P?9:5)),white=Math.max(r,g,b)>(P?155:180)&&lr>(P?4:7)&&dr>(P?2:4)&&dg>(P?1:3)&&db>(P?1:3);
+        if(d>7)continue;const surface=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25,bright=surface>128,nearMin=baseMin*(bright?.52:1),red=green?(dg>nearMin*(P?.38:.55)&&dg>=dr-(P?5:0)&&dg>=db-(P?5:0)):(dr>nearMin*(P?.38:.55)&&warm>(P?(bright?.08:.12):.5)&&dr>=dg-(P?10:5)&&dr>=db-(P?10:5)),white=(bright?lr>(P?2.5:4):Math.max(r,g,b)>(P?155:180)&&lr>(P?4:7))&&dr>(P?1.5:4)&&dg>(P?.8:3)&&db>(P?.8:3);
         if(red||white){const w=Math.max(1,lr+Math.max(dr,dg,db));n++;if(red)redN++;if(white)whiteN++;sx+=x*w;sy+=y*w;wt+=w;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
       }
       const bw=maxX-minX+1,bh=maxY-minY+1,centerLum=(data[(best.y*sw+best.x)*4]+data[(best.y*sw+best.x)*4+1]*2+data[(best.y*sw+best.x)*4+2])*.25,contrast=centerLum-sur/Math.max(1,surN);
+      const bestP=best.y*sw+best.x,bestSurface=(V.bgR[bestP]+V.bgG[bestP]*2+V.bgB[bestP])*.25,bestBright=bestSurface>128;
       const maxN=P?P.sizeMax:150,maxW=P?P.widthMax:18,compact=n>=1&&n<=maxN&&bw<=maxW&&bh<=maxW&&bw/Math.max(1,bh)>.18&&bw/Math.max(1,bh)<5.5;
-      const needContrast=state.laserLearning?3:(P?P.contrastFloor:5),needDr=state.laserLearning?4:(P?P.drFloor:7);
+      const needContrast=(state.laserLearning?3:(P?P.contrastFloor:5))*(bestBright?.62:1),needDr=(state.laserLearning?4:(P?P.drFloor:7))*(bestBright?.58:1);
       valid=compact&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
       /* 학습탄은 두 형태를 모두 받는다.
          1) 흰 중심과 빨간 테두리가 같이 잡힌 약한 펄스
