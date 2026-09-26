@@ -661,6 +661,30 @@
     let motion=0,samples=0,shift=0;
     for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!inside(x,y))continue;const p=y*sw+x,i=p*4,now=(data[i]+data[i+1]*2+data[i+2])*.25,old=(V.prevR[p]+V.prevG[p]*2+V.prevB[p])*.25,base=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25;samples++;if(Math.abs(now-old)>20)motion++;shift+=now-base}
     const motionRatio=motion/Math.max(1,samples),exposureShift=Math.abs(shift/Math.max(1,samples));
+    /* 1프레임 광점 전용 고속 검출기. 배경색이나 흰 중심/테두리 모양을 먼저 요구하지 않고
+       직전 프레임보다 갑자기 밝아진 작은 색 광점 군집을 찾는다. 전체 노출 변화와 흔들림은
+       motionRatio/exposureShift로 제외한다. 이 경로가 실제 영상의 짧은 레이저를 담당한다. */
+    let flashPeak=null;
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+      if(!inside(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],pr=r-V.prevR[p],pg=g-V.prevG[p],pb=b-V.prevB[p],onset=Math.max(pr,pg,pb),lumStep=(pr+pg*2+pb)*.25,colorStep=els.laserColor.value==='green'?pg:pr;
+      const colorLike=els.laserColor.value==='green'?(pg>=pr-2&&pg>=pb-2):(pr>=pg-2&&pr>=pb-2);
+      if(onset<10||lumStep<2.5||colorStep<7||!colorLike)continue;
+      const score=onset+Math.max(0,colorStep-Math.max(els.laserColor.value==='green'?pr:pg,pb))*1.4+Math.max(0,lumStep);
+      if(!flashPeak||score>flashPeak.score)flashPeak={x,y,score,onset,lumStep,colorStep};
+    }
+    if(flashPeak&&motionRatio<.08&&exposureShift<10){
+      let fn=0,fw=0,fsx=0,fsy=0,fminX=999,fmaxX=0,fminY=999,fmaxY=0,whiteN=0;
+      for(let oy=-9;oy<=9;oy++)for(let ox=-9;ox<=9;ox++){
+        if(Math.hypot(ox,oy)>9)continue;const x=flashPeak.x+ox,y=flashPeak.y+oy;if(x<x0||x>x1||y<y0||y>y1||!inside(x,y))continue;const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25,col=els.laserColor.value==='green'?pg:pr,colorLike=els.laserColor.value==='green'?(pg>=pr-3&&pg>=pb-3):(pr>=pg-3&&pr>=pb-3);
+        if(rise>=6&&lum>=1.5&&col>=4&&colorLike){const w=Math.max(1,rise+lum);fn++;fw+=w;fsx+=x*w;fsy+=y*w;if(pr>=5&&pg>=4&&pb>=4)whiteN++;fminX=Math.min(fminX,x);fmaxX=Math.max(fmaxX,x);fminY=Math.min(fminY,y);fmaxY=Math.max(fmaxY,y)}
+      }
+      const fbw=fmaxX-fminX+1,fbh=fmaxY-fminY+1,fastPulse=fn>=3&&fn<=240&&fbw<=24&&fbh<=24&&flashPeak.onset>=12&&flashPeak.colorStep>=8;
+      if(fastPulse&&performance.now()>=state.learningNextAllowed&&!V.latched){
+        const fcx=fw?fsx/fw:flashPeak.x,fcy=fw?fsy/fw:flashPeak.y,fastFeature={score:flashPeak.score,contrast:flashPeak.lumStep,dr:els.laserColor.value==='green'?0:flashPeak.colorStep,dg:els.laserColor.value==='green'?flashPeak.colorStep:0,db:0,onset:flashPeak.onset,lumRise:flashPeak.lumStep,n:fn,bw:fbw,bh:fbh,redN:fn,whiteN,u:(fcx-t.x)/Math.max(1,t.rx),v:(fcy-t.y)/Math.max(1,t.ry)};
+        if(state.laserLearning){state.learningBest={...fastFeature,seenAt:performance.now()};V.latched=true;els.guide.textContent='레이저 광점 포착 완료 · 지금 라이브에서 학습탄 저장을 누르세요';els.clrPill.textContent=`레이저 포착 · 상승 ${Math.round(flashPeak.onset)} · 크기 ${fn}px`;copyPrevious();return}
+        if(P&&state.detectorReady&&tryRecordLaser(fcx,fcy,sw,sh,vw,vh,roi)){V.latched=true;els.fpsPill.textContent='◎ 실제 레이저';els.clrPill.textContent=`레이저 포착 · 상승 ${Math.round(flashPeak.onset)} · 크기 ${fn}px`;copyPrevious();return}
+      }
+    }
     if(state.detectKind!=='laser'){
       const lum=new Uint8Array(total);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;lum[p]=(data[i]*.299+data[i+1]*.587+data[i+2]*.114+.5)|0}
       if(!state.background||state.background.length!==total){state.background=new Float32Array(total);state.backgroundR=new Float32Array(total);state.backgroundG=new Float32Array(total);state.backgroundB=new Float32Array(total);for(let p=0,i=0;p<total;p++,i+=4){state.background[p]=lum[p];state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}}
