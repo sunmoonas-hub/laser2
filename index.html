@@ -641,8 +641,8 @@
   async function toggleFullscreen(){
     try{
       if(document.fullscreenElement){await document.exitFullscreen()}
-      else{const root=document.documentElement,request=root.requestFullscreen||root.webkitRequestFullscreen;if(!request){toast('Chrome 메뉴에서 홈 화면에 추가하면 더 크게 볼 수 있습니다.');return}await request.call(root,{navigationUI:'hide'})}
-    }catch(e){console.warn(e);toast('브라우저 메뉴에서 Chrome으로 열고 다시 눌러 주세요.')}
+      else{const root=document.documentElement,request=root.requestFullscreen||root.webkitRequestFullscreen;if(!request)return;await request.call(root,{navigationUI:'hide'})}
+    }catch(e){console.warn(e)}
   }
   function updateFullscreenButton(){const active=!!document.fullscreenElement;els.fullscreenBtn.textContent=active?'⛶ 전체화면 종료':'⛶ 전체화면';els.fullscreenBtn.setAttribute('aria-label',active?'전체화면 종료':'전체화면 켜기');setTimeout(resize,120)}
 
