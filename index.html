@@ -300,22 +300,21 @@
 
   function beginLaserLearning(){
     if(!state.stream||!state.center||!state.radius||state.laserLearning)return;
-    state.running=false;state.laserLearning=true;state.laserSamples=[];state.laserProfile=null;state.learningNextAllowed=performance.now()+2200;state.lastHit=0;clearDetectorBackground();state.detectorReady=false;
+    state.running=false;state.laserLearning=true;state.laserSamples=[];state.laserProfile=null;state.shots=[];state.learningNextAllowed=performance.now()+2200;state.lastHit=0;clearDetectorBackground();state.detectorReady=false;updateScore();drawOverlay();
     els.learnBtn.disabled=true;els.matchBtn.disabled=true;els.learnBtn.textContent='기준 화면 준비 중';els.livePill.textContent='● LEARN';
-    els.guide.textContent='2초 동안 레이저를 쏘지 마세요 · 그다음 표적에 3발을 천천히 쏘세요';setStatus('레이저 학습 준비','#ffc940');
+    els.guide.textContent='2초 동안 레이저를 쏘지 마세요 · 그다음 표적에 3발을 천천히 쏘세요';setStatus('레이저 학습 준비','#ffc940');pushLive(true);
   }
 
   function acceptLaserLearningSample(f){
     state.laserSamples.push(f);const count=state.laserSamples.length;
     state.learningNextAllowed=performance.now()+850;
     els.learnBtn.textContent=`레이저 학습 ${count}/3`;els.guide.textContent=count<3?`학습 ${count}/3 완료 · 레이저가 사라진 뒤 다음 발을 쏘세요`:'레이저 특성을 계산하고 있습니다…';
-    toast(`레이저 학습 ${count}/3`);
-    if(count<3)return;
+    toast(`레이저 학습 ${count}/3`);if(count<3){pushLive(true);return}
     const a=state.laserSamples,smallest=k=>Math.min(...a.map(v=>v[k])),largest=k=>Math.max(...a.map(v=>v[k]));
     /* 학습값을 그대로 하한선으로 쓰면 검은 중앙에서 학습한 광점보다 회색 외곽의 광점이 약하게 찍힐 때
        놓칠 수 있다. 학습은 색·크기·형태의 기준으로 사용하고 밝기 하한은 충분한 여유를 둔다. */
     state.laserProfile={scoreFloor:Math.max(6,smallest('score')*.22),contrastFloor:Math.max(1.6,smallest('contrast')*.25),drFloor:Math.max(2.5,smallest('dr')*.18),sizeMax:Math.min(240,Math.max(22,largest('n')*3.2)),widthMax:Math.min(32,Math.max(14,largest('bw')*2.2)),learnedAt:Date.now()};
-    state.laserLearning=false;clearDetectorBackground();els.learnBtn.disabled=false;els.learnBtn.textContent='레이저 다시 학습';els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';els.livePill.textContent='● READY';els.guide.textContent='레이저 학습 완료 · 라이브 페이지에서 경기를 시작하세요.';setStatus('레이저 학습 완료','var(--lime)');toast('레이저 특성 3발 학습이 완료되었습니다.');
+    state.laserLearning=false;clearDetectorBackground();els.learnBtn.disabled=false;els.learnBtn.textContent='레이저 다시 학습';els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';els.livePill.textContent='● READY';els.guide.textContent='레이저 학습 완료 · 라이브 페이지에서 경기를 시작하세요.';setStatus('레이저 학습 완료','var(--lime)');toast('레이저 특성 3발 학습이 완료되었습니다.');pushLive(true);
   }
 
   function startMatch(){
@@ -355,6 +354,8 @@
       const qs=new URLSearchParams({action:'liveUpdate',callback:cbName,payload:JSON.stringify({
         eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),
         maxShots:state.maxShots||Number(els.maxShots.value),running:state.running,
+        learning:state.laserLearning,learningReady:!!state.laserProfile,learningCount:state.laserSamples.length,
+        learningShots:state.laserSamples.map((s,i)=>({u:+(s.u||0).toFixed(3),v:+(s.v||0).toFixed(3),kind:'learning',no:i+1})),
         shots:state.shots.map(s=>{
           // 관전 페이지는 표적을 항상 똑바로 그리므로, 채점용으로 기울기를 보정한 좌표(xMm/yMm) 대신
           // 화면에 실제 보이는 그대로의 위치(화면 좌표 기준)를 보낸다.
@@ -651,7 +652,7 @@
       strong=valid&&(state.laserLearning?(best.score>=28&&contrast>=7&&best.dr>=10&&(redN>=2||redN>=1&&whiteN>=1)):(P?((best.score>=P.scoreFloor&&contrast>=P.contrastFloor)||(redN>=1&&whiteN>=1)):(best.score>=34&&contrast>=8)||(redN>=2&&whiteN>=1)||(best.dr>=28&&contrast>=10)));
       if(motionRatio>.16||exposureShift>17||(motionRatio>.065&&!strong))valid=false;
       if(state.laserLearning&&(performance.now()<state.learningNextAllowed||motionRatio>.035||exposureShift>7||!strong))valid=false;
-      if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature={score:best.score,contrast,dr:best.dr,n,bw,bh,redN,whiteN}}
+      if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature={score:best.score,contrast,dr:best.dr,n,bw,bh,redN,whiteN,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)}}
     }
     if(valid){
       V.clear=0;
