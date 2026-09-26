@@ -177,7 +177,7 @@
     }
     els.calibrateBtn.disabled=false;state.autoCalibrating=false;
     if(target){
-      state.center={x:target.x,y:target.y};state.radiusX=target.radiusX;state.radiusY=target.radiusY;state.radius=Math.max(target.radiusX,target.radiusY);state.targetAngle=target.angle;state.calibrationMode=0;saveTargetToVideo();
+      state.center={x:target.x,y:target.y};state.radiusX=target.radiusX;state.radiusY=target.radiusY;state.radius=Math.max(target.radiusX,target.radiusY);state.targetAngle=target.angle;state.calibrationMode=0;state.calibratedAt=performance.now();saveTargetToVideo();
       els.guide.textContent='표적 자동 보정 완료 · 라이브 페이지에서 경기 시작을 누르세요.';
       els.calibrationInfo.textContent=`자동 보정 완료: 카메라 표적 형태 ${Math.round(target.radiusX)}×${Math.round(target.radiusY)}px · 기울기 ${Math.round(target.angle*180/Math.PI)}°`;
       els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';setStatus('경기 시작 대기 중');drawOverlay();toast('표적을 자동으로 인식했습니다. 라이브 페이지에서 경기를 시작하세요.');
@@ -336,6 +336,13 @@
       return;
     }
     if(state.running)return;   // 이미 사격 중이면 무시
+    // 보정이 끝난 직후(3초 이내)에는 어떤 명령이 와도 시작하지 않는다 - 보정 결과를 눈으로 확인할 최소한의 시간을 보장해서,
+    // "카메라를 켜자마자/보정하자마자 바로 경기가 시작돼버린다"는 상황 자체가 구조적으로 생기지 않게 한다.
+    if(state.calibratedAt&&performance.now()-state.calibratedAt<3000){
+      lastCmdId=cmd.cmdId;
+      toast(`📡 ${cmd.firingLane}사로 명령을 받았지만 방금 보정이 끝나서 안전을 위해 대기 중이에요 - 라이브에서 다시 눌러주세요.`);
+      return;
+    }
     if(cmd.eventName!=null&&cmd.eventName!=='')els.eventName.value=cmd.eventName;
     if(cmd.player)els.player.value=cmd.player;
     if(cmd.laserColor&&cmd.laserColor!==els.laserColor.value){els.laserColor.value=cmd.laserColor;clearDetectorBackground();showDetectorInfo()}
