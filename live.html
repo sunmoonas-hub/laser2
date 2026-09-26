@@ -51,8 +51,6 @@
   .saveLearnBtn{width:100%;min-height:54px;margin-top:10px;border:2px solid #fff;border-radius:3px;background:#e3b91f;color:#171100;font-weight:950;font-size:1rem}
   .startBtn:disabled{opacity:.5}
   .endBtn{flex:none;min-width:110px;min-height:54px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:850;font-size:.92rem}
-  .restartBtn{width:100%;min-height:50px;border:1px solid var(--lime);border-radius:12px;background:transparent;color:var(--lime);font-weight:850;font-size:.92rem;margin-bottom:12px}
-  .busyNote{text-align:center;color:var(--gold);font-size:.78rem;margin-bottom:10px}
   .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
   .hint{font-size:.74rem;line-height:1.6;color:var(--muted);margin:10px 0 0}
   .shotPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px;margin-top:16px}
@@ -91,7 +89,6 @@
   .startBtn{background:#20dc60;color:#041408;border-radius:3px;box-shadow:inset 0 -3px 0 #0b8a34}
   .learnBtn{background:#30290f;color:#ffe468;border-color:#877321;border-radius:3px}
   .endBtn{background:#a61118;color:#fff;border-color:#f04a51;border-radius:3px}
-  .restartBtn{border-radius:3px;border-color:#20dc60;color:#35e972;background:#102217}
   .scoreGrid .slot{border-radius:3px;background:#0a0a0a;border-color:#555}.scoreGrid .slot.hit{background:#fff;border-color:#fff;color:#111}.scoreGrid .slot.miss{background:#d51b24;border-color:#ff4b52}
   .undoBtnLive{border-radius:3px;background:#2a0c0f}
   @media(min-width:860px){.layout{grid-template-columns:minmax(0,1.55fr) minmax(330px,.7fr);gap:0}.right{border-left:4px solid #050505}.startPanel,.shotPanel{margin:0}.shotPanel{border-top:0}}
@@ -130,8 +127,6 @@
     </div>
     <div class="right">
       <section class="startPanel" id="startPanel">
-        <button class="restartBtn" id="restartBtn">🔁 같은 설정으로 재시작</button>
-        <p class="busyNote" id="busyNote" hidden>⏳ 지금 사격이 진행 중이에요 - 끝나면 새 명령을 보낼 수 있어요.<br><a href="#" id="forceUnlockBtn" style="color:var(--gold)">그래도 지금 보내기</a></p>
         <div class="grid">
           <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
           <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
@@ -145,7 +140,7 @@
           <button class="startBtn" id="rStart">🕹️ 경기 시작</button>
           <button class="endBtn" id="rEnd">🛑 경기 종료</button>
         </div>
-        <button class="saveLearnBtn" id="rSaveLearn">💾 방금 쏜 학습탄 저장 (1발씩)</button>
+        <button class="saveLearnBtn" id="rSaveLearn">🎯 학습탄 1발 감지 준비</button>
         <p class="startMsg" id="rMsg"></p>
       </section>
       <section class="shotPanel" id="shotPanel" hidden>
@@ -215,21 +210,18 @@
     applyView();
     syncStartLock();
   }
-  let forceUnlock = false;
   // 서버 전체(사로 구분 없이)에 사격이 진행 중이면, 새 시작 명령이 밀렸다가 경기가 끝나자마자
   // 자동으로 실행되는 걸 막기 위해 시작 버튼을 잠가 둔다.
   // 단, 연결이 끊기거나 페이지를 닫는 바람에 "진행 중"으로 멈춰버린 죽은 기록이면 60초 뒤 자동으로 풀어준다.
   function syncStartLock(){
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
-    const busy = !!(lastState && (lastState.running||lastState.learning) && !stale) && !forceUnlock;
+    const busy = !!(lastState && (lastState.running||lastState.learning) && !stale);
     $('rStart').disabled = busy;
     $('rLearn').disabled = busy;
     // 서버의 학습 상태 수신이 늦어져도 버튼이 사라지지 않도록 항상 표시한다.
     // 경기 중에만 잠그고, 그 외에는 사용자가 직접 학습탄 저장 명령을 보낼 수 있다.
     $('rSaveLearn').hidden = false;
     $('rSaveLearn').disabled = !!(lastState&&((lastState.running&&!lastState.learning)||(lastState.learning&&!lastState.learningArmed)));
-    $('busyNote').hidden = !busy;
-    $('forceUnlockBtn').hidden = !busy;
   }
   function applyView(){
     const state = lastState;
@@ -237,7 +229,7 @@
     if(!state){ show('idle'); return; }
     const shots = Array.isArray(state.shots) ? state.shots : [];
     const learningShots=Array.isArray(state.learningShots)?state.learningShots:[];
-    const learning=!!state.learning,learningArmed=!!state.learningArmed,learningReady=!!state.learningReady;
+    const learning=!!state.learning,learningArmed=!!state.learningArmed,learningCaptureActive=!!state.learningCaptureActive,learningReady=!!state.learningReady;
     const hasResult = !!(learning||learningReady||state.player||shots.length);
     if(!hasResult){ show('idle'); return; }
     const lane = state.firingLane || 1;
@@ -251,7 +243,7 @@
     const pill = $('statusPill');
     pill.className = 'status ' + (state.running||learning ? 'live' : 'done');
     $('statusText').textContent = learning?`학습 ${state.learningCount||0}/3`:(learningReady&&!state.running&&!shots.length?'학습 완료':(state.running?'사격 중':(shots.length?'완료':'대기')));
-    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?(!learningArmed?'기준 화면 준비 중 · 아직 레이저를 쏘지 마세요':((state.learningCount||0)?`발사 가능 · 학습 ${state.learningCount}/3 완료, 다음 발을 쏜 뒤 저장하세요`:'발사 가능 · 레이저를 1발 쏜 직후 저장 버튼을 누르세요')):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
+    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?(learningCaptureActive?'감지 중 · 지금 6초 안에 레이저를 한 발 쏘세요':(!learningArmed?'기준 화면 준비 중 · 아직 레이저를 쏘지 마세요':((state.learningCount||0)?`학습 ${state.learningCount}/3 완료 · 감지 준비 버튼을 누른 뒤 다음 발을 쏘세요`:'발사 가능 · 감지 준비 버튼을 먼저 누른 뒤 한 발 쏘세요'))):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
     $('cnt').textContent = learning||learningReady&&!state.running&&!shots.length ? (state.learningCount||0) : shots.length;
@@ -272,7 +264,6 @@
     $('shotPanel').hidden = which!=='live';
   }
   $('watchLane').addEventListener('change', applyView);
-  $('forceUnlockBtn').addEventListener('click', (e) => { e.preventDefault(); forceUnlock = true; syncStartLock(); });
 
   function poll(){
     const cb = 'liveCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
@@ -296,7 +287,6 @@
     document.head.appendChild(script);
   }
 
-  let lastSentCmd = null;
   // 명령 전송의 공통 로직: cmd에 cmdId만 새로 채워서 서버로 보낸다. onOk(cmd)는 전송이 성공했을 때 호출된다.
   function sendCmd(cmd, btn, msg, onOk){
     cmd = Object.assign({}, cmd, { cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) });
@@ -307,8 +297,7 @@
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
-        msg.textContent = cmd.mode==='learn'?'✅ 학습 시작 · 한 발 쏜 뒤 「방금 쏜 학습탄 저장」을 누르세요.':(cmd.mode==='confirmLearn'?'✅ 방금 감지된 레이저를 학습탄으로 저장 요청했습니다.':'✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.');
-        if(cmd.mode!=='learn')lastSentCmd = cmd; forceUnlock = false;   // 학습 명령은 경기 재시작 설정으로 저장하지 않는다
+        msg.textContent = cmd.mode==='learn'?'✅ 학습 시작 · 준비가 끝나면 「학습탄 1발 감지 준비」를 먼저 누르세요.':(cmd.mode==='confirmLearn'?'✅ 감지 준비 완료 · 6초 안에 레이저를 한 발 쏘세요.':'✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.');
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
         if(onOk) onOk();
@@ -344,15 +333,6 @@
   $('rSaveLearn').addEventListener('click',saveRemoteLearnShot);
   $('rLearn').addEventListener('click',sendRemoteLearn);
   $('rStart').addEventListener('click', sendRemoteStart);
-  $('restartBtn').addEventListener('click', () => {
-    const base = lastSentCmd || {
-      mode:'start',eventName: $('rEvent').value.trim(), player: $('rPlayer').value.trim(), firingLane: Number($('rLane').value),
-      laserColor: $('rColor').value, detectKind: $('rKind').value, maxShots: Number($('rMax').value)
-    };
-    if(!base.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
-    sendCmd(base, $('rStart'), $('rMsg'));
-  });
-
   $('undoBtnLive').addEventListener('click', () => {
     const btn = $('undoBtnLive'), msg = $('undoMsg');
     btn.disabled = true; msg.textContent = '📡 취소 신호를 보내는 중…';
