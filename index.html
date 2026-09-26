@@ -608,15 +608,15 @@
     const inside=(x,y,margin=baseScan)=>{const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nx=ex/t.rx,ny=ey/t.ry,extra=ny>0?.48:.12;return Math.hypot(nx,ny)<=margin+extra};
     let V=state.pulseV2;
     if(!V||V.total!==total){
-      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warm:0,ready:false,candidate:null,latched:false,clear:0,trackTick:0};
+      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warm:0,ready:false,armedAt:0,candidate:null,latched:false,clear:0,trackTick:0};
       for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]=V.prevR[p]=data[i];V.bgG[p]=V.prevG[p]=data[i+1];V.bgB[p]=V.prevB[p]=data[i+2]}
       return;
     }
     const copyPrevious=()=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.prevR[p]=data[i];V.prevG[p]=data[i+1];V.prevB[p]=data[i+2]}};
     const learn=(a)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]+=a*(data[i]-V.bgR[p]);V.bgG[p]+=a*(data[i+1]-V.bgG[p]);V.bgB[p]+=a*(data[i+2]-V.bgB[p])}};
-    const warmFrames=state.laserLearning?Math.max(36,Math.round((state.actualFps||30)*1.2)):Math.max(18,Math.round((state.actualFps||30)*.65));
+    const warmFrames=state.laserLearning?Math.max(36,Math.round((state.actualFps||30)*1.2)):Math.max(42,Math.round((state.actualFps||30)*1.4));
     if(V.warm<warmFrames){learn(.18);copyPrevious();V.warm++;return}
-    if(!V.ready){V.ready=true;state.detectorReady=true;if(state.laserLearning){els.learnBtn.textContent='레이저 학습 0/3';els.guide.textContent='이제 표적에 레이저를 1발씩 천천히 3발 쏘세요.';setStatus('레이저 3발 학습','#ffc940')}else{els.matchBtn.textContent='경기 진행 중';els.guide.textContent='학습된 레이저 펄스 감지 대기 중';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66')}copyPrevious();return}
+    if(!V.ready){V.ready=true;V.armedAt=performance.now()+(state.laserLearning?0:700);state.detectorReady=true;if(state.laserLearning){els.learnBtn.textContent='레이저 학습 0/3';els.guide.textContent='이제 표적에 레이저를 1발씩 천천히 3발 쏘세요.';setStatus('레이저 3발 학습','#ffc940')}else{els.matchBtn.textContent='경기 진행 중';els.guide.textContent='학습된 레이저 펄스 감지 대기 중';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66')}copyPrevious();return}
 
     let motion=0,samples=0,shift=0;
     for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!inside(x,y))continue;const p=y*sw+x,i=p*4,now=(data[i]+data[i+1]*2+data[i+2])*.25,old=(V.prevR[p]+V.prevG[p]*2+V.prevB[p])*.25,base=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25;samples++;if(Math.abs(now-old)>20)motion++;shift+=now-base}
@@ -636,7 +636,7 @@
       if(green){colored=dg>localMin&&dg>=dr+(P?0:1)&&dg>=db+(P?0:1);whiteCore=(brightSurface?lumRise>(P?3:5):g>(P?155:175)&&lumRise>(P?5:9))&&dg>(P?2:7)&&dr>(P?1:4)&&db>(P?1:4);score=dg+Math.max(0,dg-Math.max(dr,db))*1.7+Math.max(0,lumRise)*(brightSurface?1.5:1)+Math.max(0,onset)*.3}
       else{colored=dr>localMin&&dr>=dg-(P?6:2)&&dr>=db-(P?6:2)&&warmRise>(P?(brightSurface?.12:.35):1.2);whiteCore=(brightSurface?lumRise>(P?3:5):r>(P?155:175)&&lumRise>(P?5:9))&&dr>(P?2:7)&&dg>(P?1:4)&&db>(P?1:4);score=dr+Math.max(0,warmRise)*1.8+Math.max(0,lumRise)*(brightSurface?1.5:1)+Math.max(0,onset)*.3}
       if(!(colored||whiteCore)||onset<(P?.5:2)&&lumRise<(P?7:15))continue;
-      if(!best||score>best.score)best={x,y,score,dr,dg,db,lumRise,colored,whiteCore};
+      if(!best||score>best.score)best={x,y,score,dr,dg,db,lumRise,onset,colored,whiteCore};
     }
     let valid=false,strong=false,cx=0,cy=0,feature=null;
     if(best){
@@ -650,15 +650,17 @@
       const bw=maxX-minX+1,bh=maxY-minY+1,centerLum=(data[(best.y*sw+best.x)*4]+data[(best.y*sw+best.x)*4+1]*2+data[(best.y*sw+best.x)*4+2])*.25,contrast=centerLum-sur/Math.max(1,surN);
       const bestP=best.y*sw+best.x,bestSurface=(V.bgR[bestP]+V.bgG[bestP]*2+V.bgB[bestP])*.25,bestBright=bestSurface>128;
       const maxN=P?P.sizeMax:150,maxW=P?P.widthMax:18,compact=n>=1&&n<=maxN&&bw<=maxW&&bh<=maxW&&bw/Math.max(1,bh)>.18&&bw/Math.max(1,bh)<5.5;
-      const needContrast=(state.laserLearning?3:(P?P.contrastFloor:5))*(bestBright?.62:1),needDr=(state.laserLearning?4:(P?P.drFloor:7))*(bestBright?.58:1);
+      const needContrast=(state.laserLearning?3:(P?P.contrastFloor:5))*(bestBright?.74:1),needDr=(state.laserLearning?4:(P?P.drFloor:7))*(bestBright?.7:1);
       valid=compact&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
       /* 학습탄은 두 형태를 모두 받는다.
          1) 흰 중심과 빨간 테두리가 같이 잡힌 약한 펄스
          2) 흰 중심은 작지만 빨간 상승량이 강한 펄스
          화면 흔들림·노출 변화 제한은 아래에서 별도로 유지한다. */
       const learningPulse=(best.score>=20&&contrast>=5&&best.dr>=7&&((redN>=1&&whiteN>=1)||redN>=3))||(best.dr>=18&&contrast>=7&&redN>=1);
-      strong=valid&&(state.laserLearning?learningPulse:(P?((best.score>=P.scoreFloor&&contrast>=P.contrastFloor)||(redN>=1&&whiteN>=1)):(best.score>=34&&contrast>=8)||(redN>=2&&whiteN>=1)||(best.dr>=28&&contrast>=10)));
+      const learnedShape=P&&redN>=1&&(whiteN>=1||best.dr>=Math.max(10,P.drFloor*2.2))&&best.onset>=1.2;
+      strong=valid&&(state.laserLearning?learningPulse:(P?learnedShape&&(best.score>=P.scoreFloor&&contrast>=needContrast):(best.score>=34&&contrast>=8)||(redN>=2&&whiteN>=1)||(best.dr>=28&&contrast>=10)));
       if(motionRatio>.16||exposureShift>17||(motionRatio>.065&&!strong))valid=false;
+      if(!state.laserLearning&&performance.now()<V.armedAt)valid=false;
       if(state.laserLearning&&(performance.now()<state.learningNextAllowed||motionRatio>.055||exposureShift>10||!strong))valid=false;
       if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature={score:best.score,contrast,dr:best.dr,n,bw,bh,redN,whiteN,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)}}
     }
