@@ -649,9 +649,14 @@
       const maxN=P?P.sizeMax:150,maxW=P?P.widthMax:18,compact=n>=1&&n<=maxN&&bw<=maxW&&bh<=maxW&&bw/Math.max(1,bh)>.18&&bw/Math.max(1,bh)<5.5;
       const needContrast=state.laserLearning?3:(P?P.contrastFloor:5),needDr=state.laserLearning?4:(P?P.drFloor:7);
       valid=compact&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
-      strong=valid&&(state.laserLearning?(best.score>=28&&contrast>=7&&best.dr>=10&&(redN>=2||redN>=1&&whiteN>=1)):(P?((best.score>=P.scoreFloor&&contrast>=P.contrastFloor)||(redN>=1&&whiteN>=1)):(best.score>=34&&contrast>=8)||(redN>=2&&whiteN>=1)||(best.dr>=28&&contrast>=10)));
+      /* 학습탄은 두 형태를 모두 받는다.
+         1) 흰 중심과 빨간 테두리가 같이 잡힌 약한 펄스
+         2) 흰 중심은 작지만 빨간 상승량이 강한 펄스
+         화면 흔들림·노출 변화 제한은 아래에서 별도로 유지한다. */
+      const learningPulse=(best.score>=20&&contrast>=5&&best.dr>=7&&((redN>=1&&whiteN>=1)||redN>=3))||(best.dr>=18&&contrast>=7&&redN>=1);
+      strong=valid&&(state.laserLearning?learningPulse:(P?((best.score>=P.scoreFloor&&contrast>=P.contrastFloor)||(redN>=1&&whiteN>=1)):(best.score>=34&&contrast>=8)||(redN>=2&&whiteN>=1)||(best.dr>=28&&contrast>=10)));
       if(motionRatio>.16||exposureShift>17||(motionRatio>.065&&!strong))valid=false;
-      if(state.laserLearning&&(performance.now()<state.learningNextAllowed||motionRatio>.035||exposureShift>7||!strong))valid=false;
+      if(state.laserLearning&&(performance.now()<state.learningNextAllowed||motionRatio>.055||exposureShift>10||!strong))valid=false;
       if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature={score:best.score,contrast,dr:best.dr,n,bw,bh,redN,whiteN,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)}}
     }
     if(valid){
