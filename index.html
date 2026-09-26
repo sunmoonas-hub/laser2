@@ -307,7 +307,9 @@
 
   function confirmLaserLearningSample(){
     if(!state.laserLearning)return false;const sample=state.learningBest,now=performance.now();
-    if(!sample||now-sample.seenAt>1800){toast('최근 레이저 신호가 없습니다. 다시 한 발 쏜 직후 저장을 눌러 주세요.');els.guide.textContent='학습탄 저장 실패 · 레이저를 다시 쏜 직후 라이브 저장 버튼을 누르세요';return false}
+    // 라이브 페이지 → Apps Script → 사대 화면으로 명령이 전달되는 지연까지 고려한다.
+    // 실제 광점 후보는 6.5초 동안 보관하되, 저장 버튼을 눌러야만 학습탄으로 확정한다.
+    if(!sample||now-sample.seenAt>6500){toast('최근 레이저 신호가 없습니다. 다시 한 발 쏜 직후 저장을 눌러 주세요.');els.guide.textContent='학습탄 저장 실패 · 레이저를 다시 쏜 직후 라이브 저장 버튼을 누르세요';return false}
     state.learningBest=null;acceptLaserLearningSample(sample);return true;
   }
 
@@ -670,6 +672,14 @@
       const maxN=P?P.sizeMax:150,maxW=P?P.widthMax:18,compact=n>=1&&n<=maxN&&bw<=maxW&&bh<=maxW&&bw/Math.max(1,bh)>.18&&bw/Math.max(1,bh)<5.5;
       const needContrast=(state.laserLearning?3:(P?P.contrastFloor:5))*(bestBright?.74:1),needDr=(state.laserLearning?4:(P?P.drFloor:7))*(bestBright?.7:1);
       valid=compact&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
+      const rawFeature={score:best.score,contrast,dr:best.dr,n,bw,bh,redN,whiteN,u:((wt?sx/wt:best.x)-t.x)/Math.max(1,t.rx),v:((wt?sy/wt:best.y)-t.y)/Math.max(1,t.ry)};
+      /* 학습은 경기 판정과 분리한다. 실제 발사 신호가 18→22처럼 약해도 한 프레임의
+         작은 색/밝기 상승을 임시 후보로 보관하고, 사용자가 저장 버튼을 눌렀을 때만 확정한다. */
+      const learningProbe=state.laserLearning&&performance.now()>=state.learningNextAllowed&&compact&&best.score>=8&&Math.max(best.dr,best.dg,best.db)>=2&&(contrast>=.8||best.onset>=2)&&motionRatio<.14&&exposureShift<14;
+      if(learningProbe&&(!state.learningBest||performance.now()-state.learningBest.seenAt>5500||rawFeature.score>state.learningBest.score)){
+        state.learningBest={...rawFeature,seenAt:performance.now()};
+        els.guide.textContent='약한 레이저 신호 포착 · 지금 라이브에서 「방금 쏜 학습탄 저장」을 누르세요';
+      }
       /* 학습탄은 두 형태를 모두 받는다.
          1) 흰 중심과 빨간 테두리가 같이 잡힌 약한 펄스
          2) 흰 중심은 작지만 빨간 상승량이 강한 펄스
@@ -680,13 +690,13 @@
       if(motionRatio>.16||exposureShift>17||(motionRatio>.065&&!strong))valid=false;
       if(!state.laserLearning&&performance.now()<V.armedAt)valid=false;
       if(state.laserLearning&&(performance.now()<state.learningNextAllowed||motionRatio>.055||exposureShift>10||!strong))valid=false;
-      if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature={score:best.score,contrast,dr:best.dr,n,bw,bh,redN,whiteN,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)}}
+      if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature=rawFeature}
     }
       if(valid){
       V.clear=0;
       if(!V.latched){
         if(V.candidate&&Math.hypot(cx-V.candidate.x,cy-V.candidate.y)<14){V.candidate.x=(V.candidate.x*V.candidate.n+cx)/(V.candidate.n+1);V.candidate.y=(V.candidate.y*V.candidate.n+cy)/(V.candidate.n+1);V.candidate.n++;V.candidate.strong=V.candidate.strong||strong}else V.candidate={x:cx,y:cy,n:1,strong};
-        if(V.candidate.strong||V.candidate.n>=2){if(state.laserLearning){if(!state.learningBest||feature.score>=state.learningBest.score||performance.now()-state.learningBest.seenAt>700)state.learningBest={...feature,seenAt:performance.now()};V.latched=true;V.candidate=null;els.guide.textContent='레이저 신호 포착 · 라이브에서 「방금 쏜 학습탄 저장」을 누르세요'}else if(tryRecordLaser(V.candidate.x,V.candidate.y,sw,sh,vw,vh,roi)){V.latched=true;V.candidate=null;els.fpsPill.textContent='◎ 학습 레이저';setTimeout(showDetectorInfo,600)}}
+        if(V.candidate.strong||V.candidate.n>=2){if(state.laserLearning){if(!state.learningBest||feature.score>=state.learningBest.score||performance.now()-state.learningBest.seenAt>5500)state.learningBest={...feature,seenAt:performance.now()};V.latched=true;V.candidate=null;els.guide.textContent='레이저 신호 포착 · 지금 라이브에서 「방금 쏜 학습탄 저장」을 누르세요'}else if(tryRecordLaser(V.candidate.x,V.candidate.y,sw,sh,vw,vh,roi)){V.latched=true;V.candidate=null;els.fpsPill.textContent='◎ 학습 레이저';setTimeout(showDetectorInfo,600)}}
       }
     }else{
       V.candidate=null;V.clear++;if(V.clear>=(state.laserLearning?5:2))V.latched=false;
