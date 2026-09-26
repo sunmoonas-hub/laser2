@@ -44,6 +44,8 @@
   .startPanel .field input,.startPanel .field select{width:100%;min-height:50px;border:1px solid #29415e;border-radius:10px;background:#091426;color:#fff;padding:10px 12px;font-size:.92rem}
   .startRow{display:flex;gap:10px}
   .startBtn{flex:1;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
+  .learnBtn{flex:1;min-height:54px;border:1px solid var(--gold);border-radius:12px;background:#2b2412;color:var(--gold);font-weight:850;font-size:.94rem}
+  .learnBtn:disabled{opacity:.5}
   .startBtn:disabled{opacity:.5}
   .endBtn{flex:none;min-width:110px;min-height:54px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:850;font-size:.92rem}
   .restartBtn{width:100%;min-height:50px;border:1px solid var(--lime);border-radius:12px;background:transparent;color:var(--lime);font-weight:850;font-size:.92rem;margin-bottom:12px}
@@ -106,11 +108,12 @@
           <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
           <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
           <div class="field"><label>레이저 색상</label><select id="rColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
-          <div class="field"><label>감지 대상</label><select id="rKind"><option value="both" selected>레이저+물체</option><option value="laser">레이저만</option><option value="object">물체만</option></select></div>
+          <div class="field"><label>감지 대상</label><select id="rKind"><option value="laser" selected>레이저만 (권장)</option><option value="both">레이저+물체</option><option value="object">물체만</option></select></div>
           <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
           <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
         </div>
         <div class="startRow">
+          <button class="learnBtn" id="rLearn">🎯 레이저 3발 학습</button>
           <button class="startBtn" id="rStart">🕹️ 경기 시작</button>
           <button class="endBtn" id="rEnd">🛑 경기 종료</button>
         </div>
@@ -190,6 +193,7 @@
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
     const busy = !!(lastState && lastState.running && !stale) && !forceUnlock;
     $('rStart').disabled = busy;
+    $('rLearn').disabled = busy;
     $('busyNote').hidden = !busy;
     $('forceUnlockBtn').hidden = !busy;
   }
@@ -266,8 +270,8 @@
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
-        msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
-        lastSentCmd = cmd; forceUnlock = false;   // 새로 보낸 이 경기는 다시 정상적으로 잠금이 걸리게 초기화
+        msg.textContent = cmd.mode==='learn'?'✅ 학습 명령 전송 완료 · 사대 화면 안내에 따라 3발을 쏘세요.':'✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
+        if(cmd.mode!=='learn')lastSentCmd = cmd; forceUnlock = false;   // 학습 명령은 경기 재시작 설정으로 저장하지 않는다
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
         if(onOk) onOk();
@@ -281,6 +285,7 @@
   }
   function sendRemoteStart(){
     const cmd = {
+      mode: 'start',
       eventName: $('rEvent').value.trim(),
       player: $('rPlayer').value.trim(),
       firingLane: Number($('rLane').value),
@@ -291,10 +296,15 @@
     if(!cmd.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
     sendCmd(cmd, $('rStart'), $('rMsg'));
   }
+  function sendRemoteLearn(){
+    const cmd={mode:'learn',firingLane:Number($('rLane').value),laserColor:$('rColor').value,detectKind:'laser'};
+    sendCmd(cmd,$('rLearn'),$('rMsg'));
+  }
+  $('rLearn').addEventListener('click',sendRemoteLearn);
   $('rStart').addEventListener('click', sendRemoteStart);
   $('restartBtn').addEventListener('click', () => {
     const base = lastSentCmd || {
-      eventName: $('rEvent').value.trim(), player: $('rPlayer').value.trim(), firingLane: Number($('rLane').value),
+      mode:'start',eventName: $('rEvent').value.trim(), player: $('rPlayer').value.trim(), firingLane: Number($('rLane').value),
       laserColor: $('rColor').value, detectKind: $('rKind').value, maxShots: Number($('rMax').value)
     };
     if(!base.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
