@@ -128,6 +128,11 @@
   async function startCamera(){
     try{
       if(state.stream) state.stream.getTracks().forEach(t=>t.stop());
+      // 카메라를 다시 시작하면 예전 보정값을 확실히 비운다 - 그래야 매번 새로 보정해야 하고,
+      // 낡은(어쩌면 지금 화면과 안 맞는) 보정 상태 때문에 미리 와있던 원격 명령이 갑자기 실행되는 일이 없다.
+      state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetVideo=null;state.paperMultiple=null;state.running=false;lastCmdId=null;lastNotifiedCmdId=null;
+      document.body.classList.remove('match-live');
+      els.matchBtn.disabled=true;els.matchBtn.textContent='경기 시작';
       try{state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280,min:640},height:{ideal:720,min:480},frameRate:{ideal:60,min:30,max:60}}})}
       catch(fastError){console.warn('60fps unavailable, retrying at standard speed',fastError);state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}}})}
       els.video.srcObject=state.stream;await els.video.play();state.videoTrack=state.stream.getVideoTracks()[0];await setupCameraZoom();els.cameraMsg.style.display='none';
