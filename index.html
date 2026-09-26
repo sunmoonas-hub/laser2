@@ -138,7 +138,13 @@
   async function setupCameraZoom(){
     const track=state.videoTrack;if(!track)return;
     let caps={},settings={};try{caps=track.getCapabilities?track.getCapabilities():{};settings=track.getSettings?track.getSettings():{};state.actualFps=Number(settings.frameRate)||0}catch(e){console.warn(e)}
-    const advanced=[];if(Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))advanced.push({focusMode:'continuous'});if(Array.isArray(caps.exposureMode)&&caps.exposureMode.includes('continuous'))advanced.push({exposureMode:'continuous'});if(caps.exposureCompensation&&Number.isFinite(caps.exposureCompensation.min)&&Number.isFinite(caps.exposureCompensation.max)){const exposure=Math.max(caps.exposureCompensation.min,Math.min(caps.exposureCompensation.max,-.7));advanced.push({exposureCompensation:exposure})}if(advanced.length){try{await track.applyConstraints({advanced})}catch(e){console.warn('camera tuning skipped',e)}}if(caps.frameRate&&Number.isFinite(caps.frameRate.max)){try{await track.applyConstraints({frameRate:{ideal:Math.min(60,caps.frameRate.max),min:Math.min(30,caps.frameRate.max)}})}catch(e){console.warn('high fps skipped',e)}settings=track.getSettings?track.getSettings():settings;state.actualFps=Number(settings.frameRate)||state.actualFps}
+    const advanced=[];if(Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))advanced.push({focusMode:'continuous'});if(Array.isArray(caps.exposureMode)&&caps.exposureMode.includes('continuous'))advanced.push({exposureMode:'continuous'});if(caps.exposureCompensation&&Number.isFinite(caps.exposureCompensation.min)&&Number.isFinite(caps.exposureCompensation.max)){
+      // 레이저히트 앱과 실제 촬영본을 비교해보니, 노출을 살짝만 낮추는 정도로는 부족했다(표적 검정부 밝기가 약 2배 차이).
+      // 지원 범위의 어두운 쪽(최소값에서 15%만 올라온 지점)까지 적극적으로 낮춰서, 레이저가 하얗게 포화되기 전 여유를 더 확보한다.
+      const min=caps.exposureCompensation.min,max=caps.exposureCompensation.max;
+      const exposure=Math.max(min,Math.min(max,min+(max-min)*.15));
+      advanced.push({exposureCompensation:exposure});
+    }if(advanced.length){try{await track.applyConstraints({advanced})}catch(e){console.warn('camera tuning skipped',e)}}if(caps.frameRate&&Number.isFinite(caps.frameRate.max)){try{await track.applyConstraints({frameRate:{ideal:Math.min(60,caps.frameRate.max),min:Math.min(30,caps.frameRate.max)}})}catch(e){console.warn('high fps skipped',e)}settings=track.getSettings?track.getSettings():settings;state.actualFps=Number(settings.frameRate)||state.actualFps}
     if(caps.zoom&&Number.isFinite(caps.zoom.min)&&Number.isFinite(caps.zoom.max)&&caps.zoom.max>caps.zoom.min){
       state.zoomMin=Number(caps.zoom.min);state.zoomMax=Number(caps.zoom.max);state.zoomStep=Math.max(.1,Number(caps.zoom.step)||.1);state.zoom=Math.min(state.zoomMax,Math.max(state.zoomMin,Number(settings.zoom)||state.zoomMin));els.zoomOut.disabled=false;els.zoomIn.disabled=false;updateZoomUI();
     }else{state.zoom=1;state.zoomMin=1;state.zoomMax=1;els.zoomOut.disabled=true;els.zoomIn.disabled=true;els.zoomValue.textContent='미지원'}
@@ -225,8 +231,10 @@
     if(fits.length){const bestQuality=Math.max(...fits.map(v=>v.quality)),bestHits=Math.max(...fits.filter(v=>v.quality>=bestQuality*.82).map(v=>v.hits));fit=fits.filter(v=>v.quality>=bestQuality*.82&&v.hits>=bestHits-1).sort((a,b)=>b.step-a.step)[0]}
     let outerR=fit?fit.step*10:0,rings=fit?fit.hits:0;
     if(!fit){const peaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.08&&v.score>avg*1.12&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score);if(peaks.length<3)return null;const outer=peaks.sort((a,b)=>b.r-a.r)[0];outerR=outer.r;rings=peaks.length}
-    /* 7~10점 검은 영역은 전체 표적 반지름의 약 40%이므로 크기 기준점으로 사용한다. */
-    if(best&&best.fill>.28){const blackAnchor=Math.max(best.bw,best.bh)/.8;if(blackAnchor>=38&&blackAnchor<=maxR*1.08)outerR=Math.max(outerR,blackAnchor)}
+    /* 실제 표적 사진(25M PRECISION 표적)에서 직접 측정: 바깥 반지름은 검은 중심부 지름의 약 1.06배였다.
+       (예전 추정치는 이보다 약 18% 크게 잡고 있어서 바로잡음) 여러 개의 링을 하나하나 맞추는 것보다, 뚜렷한
+       검은 중심 하나를 찾아 이 비율을 적용하는 쪽이 훨씬 안정적이라, 검은 중심이 뚜렷할 땐 이 값을 우선한다. */
+    if(best&&best.fill>.28){const blackAnchor=Math.max(best.bw,best.bh)*1.06;if(blackAnchor>=38&&blackAnchor<=maxR*1.08)outerR=outerR?(best.fill>.4?blackAnchor:Math.max(outerR,blackAnchor)):blackAnchor}
     const edge=new Uint8Array(sw*sh);for(let y=1;y<sh-1;y++)for(let x=1;x<sw-1;x++){const p=y*sw+x;edge[p]=Math.min(255,Math.abs(gray[p+1]-gray[p-1])+Math.abs(gray[p+sw]-gray[p-sw]))}
     let ellipse=null;const majorMin=Math.max(38,outerR*.82),majorMax=Math.min(Math.min(sw,sh)*.49,outerR*1.38);
     for(let major=majorMin;major<=majorMax;major+=3)for(let ratio=.58;ratio<=1.001;ratio+=.06)for(let deg=0;deg<180;deg+=15){const minor=major*ratio,a=deg*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);let sum=0,covered=0,n=0;for(let ring=4;ring<=10;ring++){const k=ring/10,ringWeight=ring>=8?1.25:1;for(let j=0;j<48;j++){const t=j*Math.PI*2/48,ex=major*k*Math.cos(t),ey=minor*k*Math.sin(t),x=Math.round(cx+ex*ca-ey*sa),y=Math.round(cy+ex*sa+ey*ca);if(x<2||x>=sw-2||y<2||y>=sh-2)continue;const e=edge[y*sw+x];sum+=Math.min(100,e)*ringWeight;if(e>24)covered+=ringWeight;n+=ringWeight}}const coverage=covered/Math.max(1,n),score=sum/Math.max(1,n)+coverage*34+major*.015;if(coverage>.1&&(!ellipse||score>ellipse.score))ellipse={major,minor,a,score,coverage}}
