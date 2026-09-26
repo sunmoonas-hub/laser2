@@ -36,7 +36,31 @@
     @media(max-width:520px){.shot-grid{grid-template-columns:repeat(5,1fr)}}
     @media(max-width:420px){.status{display:none}.fullscreen-btn{padding:7px 9px;font-size:.68rem}}
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
-    @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side";gap:8px;padding:4px 8px 8px}.camera{height:100%;min-height:0;position:relative;top:auto}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 3px 18px 0;scrollbar-gutter:stable}.setup{margin:0 0 7px;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0 0 7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0 0 7px}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0 0 7px;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
+    @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.72fr) minmax(300px,.78fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side";gap:0;padding:0}.camera{height:100%;min-height:0;position:relative;top:auto;border-radius:0}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 0 18px;scrollbar-gutter:stable}.setup{margin:0;padding:10px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0;padding:7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0}.metric{padding:9px 3px}.metric strong{font-size:1.2rem}.metric:first-child strong{font-size:1.75rem}.shots{margin:0;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
+
+    /* LaserHIT 경기 화면에서 영감을 받은 고대비 사격장 UI */
+    :root{--bg:#050505;--panel:#151515;--line:#383838;--text:#fff;--muted:#b8b8b8;--cyan:#21dc63;--lime:#20e66d;--red:#d51b24;--gold:#ffd441}
+    html,body{background:#050505}
+    .camera{background:#000;border-color:#343434;box-shadow:inset 0 0 0 1px #000}
+    .camera-msg{background:radial-gradient(circle,#242424,#050505)}
+    .panel,.setup{background:#171717;border-color:#383838;box-shadow:none}
+    .mini-brand{padding:4px 2px 8px;border-bottom:3px solid #20d95d}
+    .brand-mark{border-color:#20d95d;box-shadow:0 0 16px #20d95d55}.brand-mark:before{border-color:#e3272f;box-shadow:inset 0 0 0 4px #111}
+    .status{color:#23e466}.dot{box-shadow:0 0 9px currentColor}
+    .field input,.field select{background:#0b0b0b;border-color:#4b4b4b;border-radius:4px}.field input:focus,.field select:focus{border-color:#20df62}
+    .fullscreen-btn{background:#222;border-color:#555;border-radius:4px}
+    .btn{border-radius:3px;background:#20db5e;color:#041408;text-transform:none;box-shadow:inset 0 -2px 0 #0b8d36}
+    .btn.secondary{background:#292929;color:#fff;border-color:#585858;box-shadow:none}
+    #learnBtn{background:#383018;color:#ffe05a;border-color:#806e25}
+    #matchBtn{background:#20db5e;color:#041408}
+    .scoreboard{background:#760b10;border:1px solid #ee3740;border-radius:0;gap:1px}
+    .metric{background:#b6141c;color:#fff;border-right:1px solid #e84a50}
+    .metric:last-child{border-right:0}.metric small{color:#ffd7d9;text-transform:uppercase;letter-spacing:.06em}.metric strong,.metric:first-child strong{color:#fff;text-shadow:0 2px 0 #700;font-weight:950}
+    .pill{background:#050505db;border-color:#777;border-radius:3px}.hud .live{color:#ff3038}
+    .guide{background:#050505eb;border:1px solid #555;border-radius:3px}
+    .zoom-controls{background:#080808e8;border-color:#666;border-radius:3px}.zoom-controls button{background:#242424}.zoom-controls span{color:#29e56a}
+    .flash{background:#a90000de}.score-pop{color:#fff;text-shadow:0 4px 0 #600,0 0 24px #fff}.score-pop.miss{color:#fff}
+    .shot{background:#111;border-color:#555}.shot.hit{background:#fff;border-color:#fff;color:#121212}.shot.miss{background:#d51b24;border-color:#ff545b}
   </style>
 </head>
 <body>
@@ -269,7 +293,7 @@
     const width=els.overlay.clientWidth,height=els.overlay.clientHeight;ctx.clearRect(0,0,width,height);
     if(!state.center)return;
     ctx.save();ctx.lineWidth=1.2;
-    if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#29e7d6cc':'#ffffff55';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
+    if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#ff222bee':'#ff303888';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
     ctx.beginPath();ctx.arc(state.center.x,state.center.y,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
     state.shots.forEach((s,i)=>{if(s.manual||s.screenX==null)return;let px=s.screenX,py=s.screenY;if(Number.isFinite(s.videoX)&&Number.isFinite(s.videoY)){const g=videoGeometry(),mapped=videoToScreen(s.videoX*g.vw,s.videoY*g.vh);px=mapped.x;py=mapped.y}s.screenX=px;s.screenY=py;ctx.beginPath();if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}else ctx.arc(px,py,9,0,Math.PI*2);ctx.fillStyle=s.score?'#b7ff3c':'#ff4d66';ctx.fill();ctx.fillStyle='#07111f';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),px,py)});ctx.restore();
   }
