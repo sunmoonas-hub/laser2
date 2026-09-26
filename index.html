@@ -486,7 +486,7 @@
     if(state.shots.length>=state.maxShots)setTimeout(finishMatch,650)
   }
 
-  function showScore(score){els.scorePop.textContent=score?String(score):'MISS';els.scorePop.classList.toggle('miss',!score);els.flash.classList.add('show');setTimeout(()=>els.flash.classList.remove('show'),420)}
+  function showScore(score){els.scorePop.textContent=score?String(score):'MISS';els.scorePop.classList.toggle('miss',!score);clearTimeout(state.scoreFlashTimer);els.flash.classList.add('show');state.scoreFlashTimer=setTimeout(()=>els.flash.classList.remove('show'),920)}
   function updateScore(){const total=state.shots.reduce((a,s)=>a+s.score,0);els.totalScore.textContent=total;els.shotCount.textContent=state.shots.length;els.shotMax.textContent=state.running?state.maxShots:Number(els.maxShots.value);els.average.textContent=state.shots.length?(total/state.shots.length).toFixed(1):'0.0';els.shotGrid.innerHTML='';const count=state.running?state.maxShots:Number(els.maxShots.value);for(let i=0;i<count;i++){const d=document.createElement('div'),s=state.shots[i];d.className='shot'+(s?(s.score?' hit':' miss'):'')+(s&&s.kind==='object'?' obj':'');d.textContent=s?s.score:(i+1);els.shotGrid.appendChild(d)}}
 
   function processFrames(){
