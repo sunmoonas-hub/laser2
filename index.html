@@ -375,6 +375,11 @@
       toast(`📡 ${cmd.firingLane}사로 명령을 받았지만 방금 보정이 끝나서 안전을 위해 대기 중이에요 - 라이브에서 다시 눌러주세요.`);
       return;
     }
+    if(cmd.mode==='learn'){
+      if(cmd.laserColor&&cmd.laserColor!==els.laserColor.value){els.laserColor.value=cmd.laserColor;clearDetectorBackground();showDetectorInfo()}
+      els.detectKind.value='laser';beginLaserLearning();lastCmdId=cmd.cmdId;toast(`📡 ${cmd.firingLane}사로 · 레이저 3발 학습을 시작합니다.`);return;
+    }
+    if(!state.laserProfile){lastCmdId=cmd.cmdId;toast('📡 경기 시작 전에 라이브에서 레이저 3발 학습을 먼저 눌러 주세요.');return}
     if(cmd.eventName!=null&&cmd.eventName!=='')els.eventName.value=cmd.eventName;
     if(cmd.player)els.player.value=cmd.player;
     if(cmd.laserColor&&cmd.laserColor!==els.laserColor.value){els.laserColor.value=cmd.laserColor;clearDetectorBackground();showDetectorInfo()}
