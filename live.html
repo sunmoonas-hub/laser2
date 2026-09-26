@@ -67,6 +67,31 @@
   .undoBtnLive:disabled{opacity:.4}
   .undoMsg{text-align:center;color:var(--muted);font-size:.76rem;margin-top:8px;min-height:1.1em}
   @media(max-width:420px){.startPanel .grid{grid-template-columns:1fr}}
+
+  /* LaserHIT 경기 화면에서 영감을 받은 관전용 고대비 UI */
+  :root{--bg:#050505;--text:#fff;--muted:#b8b8b8;--cyan:#20dc60;--lime:#22df67;--red:#d51b24;--gold:#ffd441}
+  html,body{background:#050505}
+  .wrap{max-width:1280px;padding-top:max(env(safe-area-inset-top),8px)}
+  header{margin:-8px -16px 12px;padding:12px 16px;background:#16b94a;border-bottom:4px solid #08792e;text-align:left}
+  header h1{color:#fff;font-weight:950;text-shadow:0 2px 0 #08732d}
+  .watchRow{justify-content:flex-start;background:#191919;border:1px solid #3d3d3d;padding:8px 10px;margin:0;color:#ddd}
+  .watchRow select{background:#080808;border-color:#666;border-radius:3px}
+  .target-box{background:#141414;border:2px solid #4c4c4c;border-radius:0;margin:0 auto}
+  .who{background:#161616;border-left:5px solid #1ed65b;margin:0;padding:10px 12px}.who .name{font-weight:950}
+  .status{background:#050505;border-color:#666;border-radius:3px}
+  .scoreboard{border:1px solid #f24b52;border-radius:0;background:#72090e;margin:0}
+  .metric{background:#b5141b;color:#fff;border-right:1px solid #ee4b51}.metric:last-child{border-right:0}
+  .metric small{color:#ffd8da;text-transform:uppercase;letter-spacing:.06em}.metric strong,.metric:first-child strong{color:#fff;text-shadow:0 2px 0 #700;font-weight:950}
+  .startPanel,.shotPanel{background:#171717;border-color:#444;border-radius:0;box-shadow:none}
+  .startPanel h2,.shotPanel h2{border-left:5px solid #20dc60;padding-left:9px;text-transform:uppercase;letter-spacing:.04em}
+  .startPanel .field input,.startPanel .field select{background:#080808;border-color:#555;border-radius:3px}
+  .startBtn{background:#20dc60;color:#041408;border-radius:3px;box-shadow:inset 0 -3px 0 #0b8a34}
+  .learnBtn{background:#30290f;color:#ffe468;border-color:#877321;border-radius:3px}
+  .endBtn{background:#a61118;color:#fff;border-color:#f04a51;border-radius:3px}
+  .restartBtn{border-radius:3px;border-color:#20dc60;color:#35e972;background:#102217}
+  .scoreGrid .slot{border-radius:3px;background:#0a0a0a;border-color:#555}.scoreGrid .slot.hit{background:#fff;border-color:#fff;color:#111}.scoreGrid .slot.miss{background:#d51b24;border-color:#ff4b52}
+  .undoBtnLive{border-radius:3px;background:#2a0c0f}
+  @media(min-width:860px){.layout{grid-template-columns:minmax(0,1.55fr) minmax(330px,.7fr);gap:0}.right{border-left:4px solid #050505}.startPanel,.shotPanel{margin:0}.shotPanel{border-top:0}}
 </style>
 </head>
 <body>
@@ -164,7 +189,7 @@
     ctx.clearRect(0,0,W,H);
     for(let i=10;i>=1;i--){
       ctx.beginPath();ctx.arc(cx,cy,R*i/10,0,Math.PI*2);
-      ctx.strokeStyle = i===10 ? '#29e7d6cc' : '#ffffff33';
+      ctx.strokeStyle = i===10 ? '#ff242cee' : '#ef303877';
       ctx.lineWidth = i===10 ? 2.5 : 1.4; ctx.stroke();
     }
     ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
@@ -173,8 +198,9 @@
       ctx.beginPath();
       if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}
       else ctx.arc(px,py,10,0,Math.PI*2);
-      ctx.fillStyle = s.score ? '#b7ff3c' : '#ff4d66'; ctx.fill();
-      ctx.fillStyle = '#07111f'; ctx.font = 'bold 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle = s.score ? '#ffffff' : '#e11b24'; ctx.fill();
+      ctx.strokeStyle='#d71922';ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle = '#111111'; ctx.font = 'bold 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(String(i+1), px, py);
     });
   }
