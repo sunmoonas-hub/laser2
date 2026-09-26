@@ -693,26 +693,21 @@
       const needContrast=(state.laserLearning?3:(P?P.contrastFloor:5))*(bestBright?.74:1),needDr=(state.laserLearning?4:(P?P.drFloor:7))*(bestBright?.7:1);
       const matchScore=P?Math.max(14,P.scoreFloor):14,matchContrast=P?Math.max(3.5,P.contrastFloor):3.5,matchDr=P?Math.max(4.5,P.drFloor):4.5;
       const profileGate=state.laserLearning||!P||(best.score>=matchScore&&contrast>=matchContrast*(bestBright?.74:1)&&(best.dr>=matchDr*(bestBright?.7:1)||whiteN>=1&&best.lumRise>=4));
-      valid=compact&&profileGate&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
-      const rawFeature={score:best.score,contrast,dr:best.dr,n,bw,bh,redN,whiteN,u:((wt?sx/wt:best.x)-t.x)/Math.max(1,t.rx),v:((wt?sy/wt:best.y)-t.y)/Math.max(1,t.ry)};
-      /* 학습은 경기 판정과 분리한다. 실제 발사 신호가 18→22처럼 약해도 한 프레임의
-         작은 색/밝기 상승을 임시 후보로 보관하고, 사용자가 저장 버튼을 눌렀을 때만 확정한다. */
-      const learningProbe=state.laserLearning&&performance.now()>=state.learningNextAllowed&&compact&&best.score>=8&&Math.max(best.dr,best.dg,best.db)>=2&&(contrast>=.8||best.onset>=2)&&motionRatio<.14&&exposureShift<14;
-      if(learningProbe&&(!state.learningBest||performance.now()-state.learningBest.seenAt>5500||rawFeature.score>state.learningBest.score)){
+      const colorRise=green?best.dg:best.dr;
+      const pulseCompact=n>=2&&n<=220&&bw>=1&&bh>=1&&bw<=26&&bh<=26&&bw/Math.max(1,bh)>.16&&bw/Math.max(1,bh)<6;
+      /* 실제 영상에서 레이저는 대부분 단 1프레임만 보였다. 연속 프레임 대신
+         ① 직전 프레임 대비 급상승, ② 흰 중심 또는 강한 색 중심, ③ 빨강/초록 테두리,
+         ④ 화면 전체 노출·흔들림이 아님을 한꺼번에 확인한다. */
+      const temporalPulse=pulseCompact&&best.score>=16&&best.onset>=10&&best.lumRise>=4&&colorRise>=6&&contrast>=3&&redN>=1&&(whiteN>=1||colorRise>=14)&&motionRatio<.05&&exposureShift<8;
+      const normalShape=compact&&profileGate&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
+      valid=(state.laserLearning||P)?temporalPulse:normalShape;
+      const rawFeature={score:best.score,contrast,dr:best.dr,dg:best.dg,db:best.db,onset:best.onset,lumRise:best.lumRise,n,bw,bh,redN,whiteN,u:((wt?sx/wt:best.x)-t.x)/Math.max(1,t.rx),v:((wt?sy/wt:best.y)-t.y)/Math.max(1,t.ry)};
+      if(state.laserLearning&&performance.now()>=state.learningNextAllowed&&temporalPulse&&(!state.learningBest||performance.now()-state.learningBest.seenAt>5500||rawFeature.score>state.learningBest.score)){
         state.learningBest={...rawFeature,seenAt:performance.now()};
-        els.guide.textContent='약한 레이저 신호 포착 · 지금 라이브에서 「방금 쏜 학습탄 저장」을 누르세요';
+        els.guide.textContent='실제 레이저 펄스 포착 · 지금 라이브에서 「방금 쏜 학습탄 저장」을 누르세요';
       }
-      /* 학습탄은 두 형태를 모두 받는다.
-         1) 흰 중심과 빨간 테두리가 같이 잡힌 약한 펄스
-         2) 흰 중심은 작지만 빨간 상승량이 강한 펄스
-         화면 흔들림·노출 변화 제한은 아래에서 별도로 유지한다. */
-      const learningPulse=(best.score>=16&&contrast>=4&&best.dr>=5&&((redN>=1&&whiteN>=1)||redN>=2))||(best.dr>=14&&contrast>=6&&redN>=1);
-      const learnedShape=P&&redN>=1&&(whiteN>=1||best.dr>=Math.max(8,matchDr*1.5))&&best.onset>=2;
-      // 경기는 보통 같은 위치에서 2프레임 확인 후 기록한다. 학습값보다 훨씬 강한
-      // 전형적인 레이저 펄스만 한 프레임 즉시 확정해 순간 노출 변화를 차단한다.
-      const singleFrameLaser=P&&learnedShape&&best.score>=Math.max(28,matchScore*1.6)&&contrast>=Math.max(6,matchContrast*1.35)&&best.dr>=Math.max(9,matchDr*1.45);
-      strong=valid&&(state.laserLearning?learningPulse:(P?singleFrameLaser:(best.score>=34&&contrast>=8)||(redN>=2&&whiteN>=1)||(best.dr>=28&&contrast>=10)));
-      if(motionRatio>.16||exposureShift>17||(motionRatio>.065&&!strong))valid=false;
+      strong=valid&&temporalPulse;
+      if(motionRatio>.08||exposureShift>10)valid=false;
       if(!state.laserLearning&&performance.now()<V.armedAt)valid=false;
       if(state.laserLearning&&(performance.now()<state.learningNextAllowed||motionRatio>.055||exposureShift>10||!strong))valid=false;
       if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature=rawFeature}
@@ -728,7 +723,7 @@
       if(motionRatio<.035&&exposureShift<8)learn(.018);
       /* 경기 중에는 ROI와 배경 좌표가 어긋나지 않도록 최초 보정 위치를 고정한다. */
     }
-    if(state.dbgTick++%6===0)els.clrPill.textContent=`원본 ROI ${sw}px · ${Math.round(V.detectorFps||0)}fps · 신호 ${best?Math.round(best.score):0} · 흔들림 ${Math.round(motionRatio*100)}%${valid?' ✓':''}`;
+    if(state.dbgTick++%6===0)els.clrPill.textContent=`ROI ${sw}px · ${Math.round(V.detectorFps||0)}fps · 신호 ${best?Math.round(best.score):0} · 순간상승 ${best?Math.round(best.onset):0} · 흔들림 ${Math.round(motionRatio*100)}%${valid?' ✓':''}`;
     copyPrevious();
   }
 
