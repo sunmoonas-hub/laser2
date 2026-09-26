@@ -18,6 +18,8 @@
     .mini-brand .status{font-size:.68rem;padding:5px 9px}
     .mini-brand .fullscreen-btn{min-height:32px;padding:5px 8px;font-size:.64rem}
     body.match-live .mini-brand{display:none}
+    body.match-live .guide{display:none}
+    body.match-live #calibrationInfo{display:none}
     header{grid-area:header;min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:8px}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand-mark{flex:0 0 auto;width:clamp(38px,10vw,46px);height:clamp(38px,10vw,46px);border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 22px #29e7d655}.brand-mark:before{content:"";width:42%;height:42%;border:2px solid var(--red);border-radius:50%;box-shadow:inset 0 0 0 4px var(--bg)}h1{font-size:clamp(1.05rem,5vw,1.35rem);letter-spacing:.08em;margin:0;white-space:nowrap}.sub{font-size:.72rem;color:var(--muted);margin-top:2px}.header-actions{display:flex;align-items:center;gap:7px}.status{font-size:.75rem;color:var(--cyan);display:flex;gap:6px;align-items:center;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}.fullscreen-btn{min-height:44px;border:1px solid #3b5877;border-radius:11px;background:#142941;color:white;padding:8px 11px;font-size:.72rem;font-weight:800;white-space:nowrap}.fullscreen-btn:active{background:var(--cyan);color:#07111f}:fullscreen .app{min-height:100vh}
     .panel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 40px #0005;overflow:hidden}.setup{grid-area:setup;padding:14px 12px;margin-bottom:10px}.grid{display:grid;grid-template-columns:1fr;gap:11px}.field label{display:block;color:var(--muted);font-size:.78rem;margin:0 0 7px 3px;font-weight:700}.field input,.field select{width:100%;min-height:58px;border:1px solid var(--line);border-radius:12px;background:#091426;color:white;padding:12px 14px;outline:none;font-size:1rem}.field input:focus,.field select:focus{border-color:var(--cyan)}
     .camera{grid-area:camera;position:relative;width:100%;height:clamp(440px,68svh,780px);background:#02060c;border-radius:14px;overflow:hidden;border:1px solid var(--line)}video,.overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.overlay{touch-action:none}.camera-msg{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:22px;color:var(--muted);background:radial-gradient(circle,#10243a,#050a12);font-size:1rem;line-height:1.6}.camera-msg b{color:white;font-size:1.25rem;margin-bottom:8px}.hud{position:absolute;left:9px;right:9px;top:9px;display:flex;justify-content:space-between;pointer-events:none}.pill{border:1px solid #ffffff28;background:#06101dcc;backdrop-filter:blur(9px);border-radius:999px;padding:9px 12px;font-size:.78rem}.live{color:var(--red)}
@@ -49,7 +51,7 @@
       <span id="zoomValue">1.0×</span>
       <button id="zoomIn" type="button" disabled aria-label="확대">＋</button>
     </div>
-    <div class="guide" id="guide" style="display:none">① 카메라 시작 → ② 표적 자동 보정 → ③ 경기 시작</div>
+    <div class="guide" id="guide">① 카메라 시작 → ② 표적 자동 보정 → ③ 경기 시작</div>
     <div class="pill" id="clrPill" style="position:absolute;left:9px;bottom:9px;font-size:.66rem;opacity:.9">–</div>
     <div class="pill" id="liveStatus" style="position:absolute;left:9px;bottom:34px;font-size:.66rem;opacity:.9">📡 관전 연결 안 됨</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
@@ -66,7 +68,7 @@
     <div class="grid">
       <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
     </div>
-    <p class="hint" id="calibrationInfo" style="display:none">표적 보정 전입니다. 표적 전체가 화면에 보이도록 휴대폰을 정면으로 고정하세요.</p>
+    <p class="hint" id="calibrationInfo">표적 보정 전입니다. 표적 전체가 화면에 보이도록 휴대폰을 정면으로 고정하세요.</p>
     <div class="field" style="display:none">
       <input id="eventName" value="교내 레이저 사격대회" maxlength="80">
       <input id="player" placeholder="선수 이름" maxlength="40">
@@ -169,9 +171,9 @@
       els.calibrationInfo.textContent=`자동 보정 완료: 카메라 표적 형태 ${Math.round(target.radiusX)}×${Math.round(target.radiusY)}px · 기울기 ${Math.round(target.angle*180/Math.PI)}°`;
       els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';setStatus('경기 시작 대기 중');drawOverlay();toast('표적을 자동으로 인식했습니다. 라이브 페이지에서 경기를 시작하세요.');
     }else{
-      state.calibrationMode=1;els.guide.textContent='자동 인식 실패 · 표적 중심을 한 번 눌러 수동 보정하세요.';
-      els.calibrationInfo.textContent='자동 인식이 어려운 조명입니다. 표적 중심과 가장 바깥쪽 1점 원을 차례로 눌러 주세요.';
-      setStatus('수동 보정','#ffc940');toast('표적을 더 크게, 정면으로 맞춘 뒤 다시 시도할 수 있습니다.');
+      els.guide.textContent='표적 자동 인식 실패 · 표적 자동 보정을 다시 눌러 주세요.';
+      els.calibrationInfo.textContent='표적을 화면 중앙에 더 크게, 정면으로 맞춘 뒤 표적 자동 보정을 다시 눌러 보세요.';
+      setStatus('인식 실패','#ff4d66');toast('표적을 더 크게, 정면으로 맞춘 뒤 표적 자동 보정을 다시 눌러 주세요.');
     }
   }
 
@@ -235,20 +237,6 @@
   }
 
   function canvasPoint(ev){const r=els.overlay.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top}}
-  els.overlay.addEventListener('pointerdown',ev=>{
-    const p=canvasPoint(ev);
-    if(state.calibrationMode===1){state.center=p;state.calibrationMode=2;els.guide.textContent='가장 바깥쪽 1점 원의 테두리를 누르세요.';drawOverlay();return}
-    if(state.calibrationMode===2){const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);if(d<40){toast('중심에서 더 먼 바깥 원을 눌러 주세요.');return}state.radius=state.radiusX=state.radiusY=d;state.targetAngle=0;state.paperMultiple=null;state.calibrationMode=3;saveTargetToVideo();els.guide.textContent='(선택) 표적지 모서리를 탭하면 그 크기까지만 빗나간 발을 인정해요 · 안 누르면 기본값으로 바로 시작할 수 있어요.';els.calibrationInfo.textContent=`수동 보정 완료: 외곽 반지름 ${Math.round(d)}px`;els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';setStatus('경기 시작 대기 중');drawOverlay();return}
-    if(state.calibrationMode===3){
-      const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);
-      if(d<=state.radius*1.2){toast('링에서 조금 더 떨어진, 표적지 모서리를 눌러 주세요.');return}
-      state.paperMultiple=d/state.radius;saveTargetToVideo();state.calibrationMode=0;
-      els.guide.textContent='표적지 경계 저장 완료 · 라이브 페이지에서 경기 시작을 누르세요.';
-      els.calibrationInfo.textContent=`수동 보정 완료: 외곽 반지름 ${Math.round(state.radius)}px · 표적지 경계 ${state.paperMultiple.toFixed(2)}배`;
-      toast('📄 표적지 경계를 저장했어요.');drawOverlay();return;
-    }
-  });
-
   function drawOverlay(){
     const width=els.overlay.clientWidth,height=els.overlay.clientHeight;ctx.clearRect(0,0,width,height);
     if(!state.center)return;
