@@ -34,6 +34,8 @@
   .metric strong{font-size:1.6rem}
   .metric:first-child strong{color:var(--lime);font-size:2rem}
   .updated{text-align:center;color:var(--muted);font-size:.72rem;margin-top:6px}
+  .learningBanner{margin:0;padding:11px 14px;background:#30270d;border:1px solid #d8ad27;color:#ffe373;font-weight:900;text-align:center;font-size:.92rem}
+  .learningBanner.done{background:#0c3119;border-color:#20dc60;color:#6dff9d}
   .watchRow{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;font-size:.82rem;color:var(--muted)}
   .watchRow select{background:#091426;color:#fff;border:1px solid #29415e;border-radius:8px;padding:6px 10px;font-size:.85rem}
   .otherLane{text-align:center;color:var(--muted);padding:40px 16px;font-size:.9rem;line-height:1.7}
@@ -111,6 +113,7 @@
       <div id="idleHint" class="idle"><b>대기 중…</b>선택한 사로에서 아직 경기가 시작되지 않았어요.</div>
       <div id="otherLaneBox" class="otherLane" hidden></div>
       <div id="liveBox" hidden>
+        <div class="learningBanner" id="learningBanner" hidden></div>
         <div class="who">
           <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
           <span class="status" id="statusPill"><i class="dot"></i><span id="statusText">대기</span></span>
@@ -198,10 +201,10 @@
       ctx.beginPath();
       if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}
       else ctx.arc(px,py,10,0,Math.PI*2);
-      ctx.fillStyle = s.score ? '#ffffff' : '#e11b24'; ctx.fill();
-      ctx.strokeStyle='#d71922';ctx.lineWidth=2;ctx.stroke();
+      const learning=s.kind==='learning';ctx.fillStyle=learning?'#ffd641':(s.score?'#ffffff':'#e11b24');ctx.fill();
+      ctx.strokeStyle=learning?'#ffffff':'#d71922';ctx.lineWidth=learning?3:2;ctx.stroke();
       ctx.fillStyle = '#111111'; ctx.font = 'bold 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(String(i+1), px, py);
+      ctx.fillText(String(s.no||i+1), px, py);
     });
   }
 
@@ -217,7 +220,7 @@
   // 단, 연결이 끊기거나 페이지를 닫는 바람에 "진행 중"으로 멈춰버린 죽은 기록이면 60초 뒤 자동으로 풀어준다.
   function syncStartLock(){
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
-    const busy = !!(lastState && lastState.running && !stale) && !forceUnlock;
+    const busy = !!(lastState && (lastState.running||lastState.learning) && !stale) && !forceUnlock;
     $('rStart').disabled = busy;
     $('rLearn').disabled = busy;
     $('busyNote').hidden = !busy;
@@ -228,25 +231,28 @@
     const watch = Number($('watchLane').value) || 1;
     if(!state){ show('idle'); return; }
     const shots = Array.isArray(state.shots) ? state.shots : [];
-    const hasResult = !!(state.player || shots.length);
+    const learningShots=Array.isArray(state.learningShots)?state.learningShots:[];
+    const learning=!!state.learning,learningReady=!!state.learningReady;
+    const hasResult = !!(learning||learningReady||state.player||shots.length);
     if(!hasResult){ show('idle'); return; }
     const lane = state.firingLane || 1;
     if(lane !== watch){
-      $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">다른 사로에서 진행 중</b>${lane}사로에서 "${state.player||''}" 선수가 ${state.running?'사격 중':'경기를 마쳤어요'}.<br>${watch}사로를 보려면 위에서 사로를 바꿔서 기다려 주세요.`;
+      $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">다른 사로에서 진행 중</b>${lane}사로에서 ${state.learning?'레이저 학습 중':(`"${state.player||''}" 선수가 ${state.running?'사격 중':'경기를 마쳤어요'}`)}.<br>${watch}사로를 보려면 위에서 사로를 바꿔서 기다려 주세요.`;
       show('other'); return;
     }
     show('live');
-    $('pName').textContent = state.player || '이름 없음';
+    $('pName').textContent = learning||learningReady&&!state.running&&!shots.length ? '레이저 3발 학습' : (state.player || '이름 없음');
     $('pLane').textContent = state.eventName ? `${state.eventName} · ${lane}사로` : `${lane}사로`;
     const pill = $('statusPill');
-    pill.className = 'status ' + (state.running ? 'live' : 'done');
-    $('statusText').textContent = state.running ? '사격 중' : (shots.length ? '완료' : '대기');
+    pill.className = 'status ' + (state.running||learning ? 'live' : 'done');
+    $('statusText').textContent = learning?`학습 ${state.learningCount||0}/3`:(learningReady&&!state.running&&!shots.length?'학습 완료':(state.running?'사격 중':(shots.length?'완료':'대기')));
+    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?((state.learningCount||0)?`레이저 학습 진행 중 · ${state.learningCount}/3발 인식 완료`:'레이저 학습 준비 중 · 안내가 나오면 1발씩 천천히 쏘세요'):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
-    $('cnt').textContent = shots.length;
-    $('maxS').textContent = state.maxShots || 10;
+    $('cnt').textContent = learning||learningReady&&!state.running&&!shots.length ? (state.learningCount||0) : shots.length;
+    $('maxS').textContent = learning||learningReady&&!state.running&&!shots.length ? 3 : (state.maxShots || 10);
     $('avg').textContent = shots.length ? (total/shots.length).toFixed(1) : '0.0';
-    drawTarget(shots);
+    drawTarget(learning||learningReady&&!state.running&&!shots.length ? learningShots : shots);
     renderScores(shots, state.maxShots);
     $('undoBtnLive').disabled = !shots.length;
     if(state.updatedAt){
@@ -277,7 +283,7 @@
         const sig = JSON.stringify(state);
         if(sig !== lastSig){ lastSig = sig; handleState(state); }
       }
-      setTimeout(poll, 1200);
+      setTimeout(poll, 400);
     }
     window[cb] = data => finish(data);
     script.onerror = () => finish(null);
