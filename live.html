@@ -48,6 +48,7 @@
   .startBtn{flex:1;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
   .learnBtn{flex:1;min-height:54px;border:1px solid var(--gold);border-radius:12px;background:#2b2412;color:var(--gold);font-weight:850;font-size:.94rem}
   .learnBtn:disabled{opacity:.5}
+  .saveLearnBtn{width:100%;min-height:54px;margin-top:10px;border:2px solid #fff;border-radius:3px;background:#e3b91f;color:#171100;font-weight:950;font-size:1rem}
   .startBtn:disabled{opacity:.5}
   .endBtn{flex:none;min-width:110px;min-height:54px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:850;font-size:.92rem}
   .restartBtn{width:100%;min-height:50px;border:1px solid var(--lime);border-radius:12px;background:transparent;color:var(--lime);font-weight:850;font-size:.92rem;margin-bottom:12px}
@@ -145,6 +146,7 @@
           <button class="startBtn" id="rStart">🕹️ 경기 시작</button>
           <button class="endBtn" id="rEnd">🛑 경기 종료</button>
         </div>
+        <button class="saveLearnBtn" id="rSaveLearn" hidden>＋ 방금 쏜 학습탄 저장</button>
         <p class="startMsg" id="rMsg"></p>
       </section>
       <section class="shotPanel" id="shotPanel" hidden>
@@ -223,6 +225,7 @@
     const busy = !!(lastState && (lastState.running||lastState.learning) && !stale) && !forceUnlock;
     $('rStart').disabled = busy;
     $('rLearn').disabled = busy;
+    $('rSaveLearn').hidden=!(lastState&&lastState.learning);
     $('busyNote').hidden = !busy;
     $('forceUnlockBtn').hidden = !busy;
   }
@@ -246,7 +249,7 @@
     const pill = $('statusPill');
     pill.className = 'status ' + (state.running||learning ? 'live' : 'done');
     $('statusText').textContent = learning?`학습 ${state.learningCount||0}/3`:(learningReady&&!state.running&&!shots.length?'학습 완료':(state.running?'사격 중':(shots.length?'완료':'대기')));
-    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?((state.learningCount||0)?`레이저 학습 진행 중 · ${state.learningCount}/3발 인식 완료`:'레이저 학습 준비 중 · 안내가 나오면 1발씩 천천히 쏘세요'):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
+    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?((state.learningCount||0)?`레이저 학습 ${state.learningCount}/3 저장 완료 · 다음 발을 쏜 뒤 저장 버튼을 누르세요`:'레이저를 1발 쏜 직후 「방금 쏜 학습탄 저장」을 누르세요'):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
     $('cnt').textContent = learning||learningReady&&!state.running&&!shots.length ? (state.learningCount||0) : shots.length;
@@ -302,7 +305,7 @@
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
-        msg.textContent = cmd.mode==='learn'?'✅ 학습 명령 전송 완료 · 사대 화면 안내에 따라 3발을 쏘세요.':'✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
+        msg.textContent = cmd.mode==='learn'?'✅ 학습 시작 · 한 발 쏜 뒤 「방금 쏜 학습탄 저장」을 누르세요.':(cmd.mode==='confirmLearn'?'✅ 방금 감지된 레이저를 학습탄으로 저장 요청했습니다.':'✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.');
         if(cmd.mode!=='learn')lastSentCmd = cmd; forceUnlock = false;   // 학습 명령은 경기 재시작 설정으로 저장하지 않는다
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
@@ -332,6 +335,11 @@
     const cmd={mode:'learn',firingLane:Number($('rLane').value),laserColor:$('rColor').value,detectKind:'laser'};
     sendCmd(cmd,$('rLearn'),$('rMsg'));
   }
+  function saveRemoteLearnShot(){
+    const cmd={mode:'confirmLearn',firingLane:Number($('rLane').value)};
+    sendCmd(cmd,$('rSaveLearn'),$('rMsg'));
+  }
+  $('rSaveLearn').addEventListener('click',saveRemoteLearnShot);
   $('rLearn').addEventListener('click',sendRemoteLearn);
   $('rStart').addEventListener('click', sendRemoteStart);
   $('restartBtn').addEventListener('click', () => {
