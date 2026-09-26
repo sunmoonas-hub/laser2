@@ -9,7 +9,15 @@
   <style>
     :root{--bg:#07111f;--panel:#101d30;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940;font-size:clamp(20px,5.2vw,23px)}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{width:100%;max-width:100%;margin:0;min-height:100%;overflow-x:hidden;background:radial-gradient(circle at 50% -15%,#17375a 0,var(--bg) 45%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;-webkit-text-size-adjust:100%;text-size-adjust:100%}button,input,select{font:inherit}button{cursor:pointer}
-    .app{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"header" "setup" "camera" "match" "score" "shots" "footer";width:100vw;max-width:none;margin:0;min-height:100svh;padding:max(env(safe-area-inset-top),4px) max(env(safe-area-inset-left),6px) calc(26px + env(safe-area-inset-bottom)) max(env(safe-area-inset-right),6px)}
+    .app{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"setup" "camera" "match" "score" "shots" "footer";width:100vw;max-width:none;margin:0;min-height:100svh;padding:max(env(safe-area-inset-top),4px) max(env(safe-area-inset-left),6px) calc(26px + env(safe-area-inset-bottom)) max(env(safe-area-inset-right),6px)}
+    .mini-brand{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+    .mini-brand .brand{display:flex;align-items:center;gap:8px;min-width:0}
+    .mini-brand .brand-mark{width:26px;height:26px;flex:0 0 auto}
+    .mini-brand h1{font-size:.92rem;letter-spacing:.06em;margin:0;white-space:nowrap}
+    .mini-brand .sub{display:none}
+    .mini-brand .status{font-size:.68rem;padding:5px 9px}
+    .mini-brand .fullscreen-btn{min-height:32px;padding:5px 8px;font-size:.64rem}
+    body.match-live .mini-brand{display:none}
     header{grid-area:header;min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:8px}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand-mark{flex:0 0 auto;width:clamp(38px,10vw,46px);height:clamp(38px,10vw,46px);border:2px solid var(--cyan);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 22px #29e7d655}.brand-mark:before{content:"";width:42%;height:42%;border:2px solid var(--red);border-radius:50%;box-shadow:inset 0 0 0 4px var(--bg)}h1{font-size:clamp(1.05rem,5vw,1.35rem);letter-spacing:.08em;margin:0;white-space:nowrap}.sub{font-size:.72rem;color:var(--muted);margin-top:2px}.header-actions{display:flex;align-items:center;gap:7px}.status{font-size:.75rem;color:var(--cyan);display:flex;gap:6px;align-items:center;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}.fullscreen-btn{min-height:44px;border:1px solid #3b5877;border-radius:11px;background:#142941;color:white;padding:8px 11px;font-size:.72rem;font-weight:800;white-space:nowrap}.fullscreen-btn:active{background:var(--cyan);color:#07111f}:fullscreen .app{min-height:100vh}
     .panel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 40px #0005;overflow:hidden}.setup{grid-area:setup;padding:14px 12px;margin-bottom:10px}.grid{display:grid;grid-template-columns:1fr;gap:11px}.field label{display:block;color:var(--muted);font-size:.78rem;margin:0 0 7px 3px;font-weight:700}.field input,.field select{width:100%;min-height:58px;border:1px solid var(--line);border-radius:12px;background:#091426;color:white;padding:12px 14px;outline:none;font-size:1rem}.field input:focus,.field select:focus{border-color:var(--cyan)}
     .camera{grid-area:camera;position:relative;width:100%;height:clamp(440px,68svh,780px);background:#02060c;border-radius:14px;overflow:hidden;border:1px solid var(--line)}video,.overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.overlay{touch-action:none}.camera-msg{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:22px;color:var(--muted);background:radial-gradient(circle,#10243a,#050a12);font-size:1rem;line-height:1.6}.camera-msg b{color:white;font-size:1.25rem;margin-bottom:8px}.hud{position:absolute;left:9px;right:9px;top:9px;display:flex;justify-content:space-between;pointer-events:none}.pill{border:1px solid #ffffff28;background:#06101dcc;backdrop-filter:blur(9px);border-radius:999px;padding:9px 12px;font-size:.78rem}.live{color:var(--red)}
@@ -26,18 +34,11 @@
     @media(max-width:520px){.shot-grid{grid-template-columns:repeat(5,1fr)}}
     @media(max-width:420px){.status{display:none}.fullscreen-btn{padding:7px 9px;font-size:.68rem}}
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
-    @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:52px minmax(0,1fr);grid-template-areas:"header header" "camera side";gap:8px;padding:4px 8px 8px}.app>header{min-height:52px}.brand-mark{width:38px;height:38px}h1{font-size:1.08rem}.sub{font-size:.65rem}.camera{height:100%;min-height:0;position:relative;top:auto}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 3px 18px 0;scrollbar-gutter:stable}.setup{margin:0 0 7px;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0 0 7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0 0 7px}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0 0 7px;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
-    body.match-live header{display:none}
-    body.match-live .app{padding-top:max(env(safe-area-inset-top),4px)}
+    @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side";gap:8px;padding:4px 8px 8px}.camera{height:100%;min-height:0;position:relative;top:auto}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 3px 18px 0;scrollbar-gutter:stable}.setup{margin:0 0 7px;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0 0 7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0 0 7px}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0 0 7px;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
   </style>
 </head>
 <body>
 <main class="app">
-  <header>
-    <div class="brand"><div class="brand-mark"></div><div><h1>LASER MATCH</h1><div class="sub">모바일 자동채점 시스템</div></div></div>
-    <div class="header-actions"><div class="status" id="status"><i class="dot"></i><span>준비</span></div><button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶ 전체화면</button></div>
-  </header>
-
   <section class="camera" id="cameraBox">
     <video id="video" playsinline muted></video>
     <canvas id="overlay" class="overlay"></canvas>
@@ -57,6 +58,11 @@
   <div class="side-panel" id="sidePanel">
 
   <section class="panel setup">
+    <div class="mini-brand">
+      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH</h1></div>
+      <div class="status" id="status"><i class="dot"></i><span>준비</span></div>
+      <button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶</button>
+    </div>
     <div class="grid">
       <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
     </div>
@@ -235,7 +241,7 @@
     if(state.calibrationMode===2){const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);if(d<40){toast('중심에서 더 먼 바깥 원을 눌러 주세요.');return}state.radius=state.radiusX=state.radiusY=d;state.targetAngle=0;state.paperMultiple=null;state.calibrationMode=3;saveTargetToVideo();els.guide.textContent='(선택) 표적지 모서리를 탭하면 그 크기까지만 빗나간 발을 인정해요 · 안 누르면 기본값으로 바로 시작할 수 있어요.';els.calibrationInfo.textContent=`수동 보정 완료: 외곽 반지름 ${Math.round(d)}px`;els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';setStatus('경기 시작 대기 중');drawOverlay();return}
     if(state.calibrationMode===3){
       const d=Math.hypot(p.x-state.center.x,p.y-state.center.y);
-      if(d<=state.radius*1.02){toast('링 바깥쪽, 표적지 모서리를 눌러 주세요.');return}
+      if(d<=state.radius*1.2){toast('링에서 조금 더 떨어진, 표적지 모서리를 눌러 주세요.');return}
       state.paperMultiple=d/state.radius;saveTargetToVideo();state.calibrationMode=0;
       els.guide.textContent='표적지 경계 저장 완료 · 라이브 페이지에서 경기 시작을 누르세요.';
       els.calibrationInfo.textContent=`수동 보정 완료: 외곽 반지름 ${Math.round(state.radius)}px · 표적지 경계 ${state.paperMultiple.toFixed(2)}배`;
@@ -256,6 +262,9 @@
     if(!state.center||!state.radius)return;if(!els.player.value.trim()){toast('선수 이름을 입력해 주세요.');els.player.focus();return}
     state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.warmupStart=performance.now();state.detectorReady=false;
     state.detectKind=els.detectKind.value;
+    // 표적지 모서리 탭(선택 단계)을 건너뛴 채로 남아있으면, 사격 중 화면을 잘못 건드렸을 때
+    // 그 자리가 표적지 경계로 저장돼 스캔 범위가 잘못 좁아질 수 있어 여기서 확실히 종료한다.
+    if(state.calibrationMode===3)state.calibrationMode=0;
     els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 2초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();pushLive(true);
     document.body.classList.add('match-live');setTimeout(resize,60);
     // 전체화면은 사람이 직접 탭했을 때만 브라우저가 허용해 주는 경우가 많아, 원격 명령으로 시작된 경우엔 실패할 수 있다(무해하게 무시).
