@@ -243,7 +243,7 @@
     const pill = $('statusPill');
     pill.className = 'status ' + (state.running||learning ? 'live' : 'done');
     $('statusText').textContent = learning?`학습 ${state.learningCount||0}/3`:(learningReady&&!state.running&&!shots.length?'학습 완료':(state.running?'사격 중':(shots.length?'완료':'대기')));
-    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?(learningCaptureActive?'감지 중 · 지금 6초 안에 레이저를 한 발 쏘세요':(!learningArmed?'기준 화면 준비 중 · 아직 레이저를 쏘지 마세요':((state.learningCount||0)?`학습 ${state.learningCount}/3 완료 · 감지 준비 버튼을 누른 뒤 다음 발을 쏘세요`:'발사 가능 · 감지 준비 버튼을 먼저 누른 뒤 한 발 쏘세요'))):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
+    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?(learningCaptureActive?'감지 중 · 지금 4초 안에 레이저를 한 발 쏘세요':(!learningArmed?'기준 화면 준비 중 · 아직 레이저를 쏘지 마세요':((state.learningCount||0)?`학습 ${state.learningCount}/3 완료 · 감지 준비 버튼을 누른 뒤 다음 발을 쏘세요`:'발사 가능 · 감지 준비 버튼을 먼저 누른 뒤 한 발 쏘세요'))):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
     $('cnt').textContent = learning||learningReady&&!state.running&&!shots.length ? (state.learningCount||0) : shots.length;
@@ -297,7 +297,7 @@
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
-        msg.textContent = cmd.mode==='learn'?'✅ 학습 시작 · 준비가 끝나면 「학습탄 1발 감지 준비」를 먼저 누르세요.':(cmd.mode==='confirmLearn'?'✅ 감지 준비 완료 · 6초 안에 레이저를 한 발 쏘세요.':'✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.');
+        msg.textContent = cmd.mode==='learn'?'✅ 학습 시작 · 준비가 끝나면 「학습탄 1발 감지 준비」를 먼저 누르세요.':(cmd.mode==='confirmLearn'?'✅ 감지 준비 완료 · 4초 안에 레이저를 한 발 쏘세요.':'✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.');
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
         if(onOk) onOk();
