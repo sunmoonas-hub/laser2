@@ -413,7 +413,9 @@
   function recordShot(x,y,manualScore=null,kind){
     if(!state.running||state.shots.length>=state.maxShots)return;
     const dx=x==null?0:x-state.center.x,dy=y==null?0:y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nr=manualScore==null?Math.hypot(ex/state.radiusX,ey/state.radiusY):0;
-    const score=manualScore==null?(nr>1?0:Math.max(1,10-Math.floor(nr*10))):Number(manualScore);
+    // 실제 사격 채점 규칙처럼, 링 경계선에 걸치면 더 높은 점수로 인정한다.
+    // (경계선(예: 10점/9점 사이)에서 살짝 안쪽으로 기운 만큼은 위쪽 점수로 쳐준다)
+    const ringPos=nr*10,score=manualScore==null?(nr>1.015?0:Math.min(10,Math.max(1,10-Math.floor(ringPos-.15)))):Number(manualScore);
     const xMm=ex/state.radiusX*80,yMm=ey/state.radiusY*80;
     let videoX=null,videoY=null;if(x!=null&&y!=null){const g=videoGeometry();videoX=((x-g.offX)/g.scale)/g.vw;videoY=((y-g.offY)/g.scale)/g.vh}
     const k=manualScore!=null?'manual':(kind||'laser');
