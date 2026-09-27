@@ -612,7 +612,7 @@
         const satOk=dr>adaptFloor*1.5&&dg>adaptFloor*1.2&&db>adaptFloor*1.2;
         if(colorOk||satOk)near++;
       }
-      if(near>=2){
+      if(near>=1){
         state.releaseFrames=0;if(state.laserBlocked)return;
         if(tryRecordLaser(coreBest.x,coreBest.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
         return;
