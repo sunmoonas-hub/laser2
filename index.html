@@ -44,7 +44,7 @@
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
     @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.72fr) minmax(300px,.78fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side";gap:0;padding:0}.camera{height:100%;min-height:0;position:relative;top:auto;border-radius:0}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 0 18px;scrollbar-gutter:stable}.setup{margin:0;padding:10px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0;padding:7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0}.metric{padding:9px 3px}.metric strong{font-size:1.2rem}.metric:first-child strong{font-size:1.75rem}.shots{margin:0;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
 
-    /* LaserHIT 寃쎄린 �붾㈃�먯꽌 �곴컧�� 諛쏆� 怨좊�鍮� �ш꺽�� UI */
+    /* LaserHIT 경기 화면에서 영감을 받은 고대비 사격장 UI */
     :root{--bg:#050505;--panel:#151515;--line:#383838;--text:#fff;--muted:#b8b8b8;--cyan:#21dc63;--lime:#20e66d;--red:#d51b24;--gold:#ffd441}
     html,body{background:#050505}
     .camera{background:#000;border-color:#343434;box-shadow:inset 0 0 0 1px #000}
@@ -74,21 +74,21 @@
   <section class="camera" id="cameraBox">
     <video id="video" playsinline muted></video>
     <canvas id="overlay" class="overlay"></canvas>
-    <div class="camera-msg" id="cameraMsg"><b>移대찓�쇰� �쒖옉�섏꽭��</b><span>�쒖쟻吏�媛� �붾㈃ 以묒븰�� �ㅻ룄濡�<br>�대��곗쓣 �⑤떒�� 怨좎젙�⑸땲��.</span></div>
-    <div class="hud"><span class="pill live" id="livePill">�� OFF</span><span class="pill" id="fpsPill">�덉씠�� 媛먮룄 98</span></div>
-    <div class="zoom-controls" aria-label="移대찓�� �뺣� 異뺤냼">
-      <button id="zoomOut" type="button" disabled aria-label="異뺤냼">��</button>
-      <span id="zoomValue">1.0횞</span>
-      <button id="zoomIn" type="button" disabled aria-label="�뺣�">竊�</button>
+    <div class="camera-msg" id="cameraMsg"><b>카메라를 시작하세요</b><span>표적지가 화면 중앙에 오도록<br>휴대폰을 단단히 고정합니다.</span></div>
+    <div class="hud"><span class="pill live" id="livePill">● OFF</span><span class="pill" id="fpsPill">레이저 감도 98</span></div>
+    <div class="zoom-controls" aria-label="카메라 확대 축소">
+      <button id="zoomOut" type="button" disabled aria-label="축소">−</button>
+      <span id="zoomValue">1.0×</span>
+      <button id="zoomIn" type="button" disabled aria-label="확대">＋</button>
     </div>
     <div class="camera-learning-buttons" id="cameraLearningButtons" hidden>
-      <button type="button" id="learnArmLocal">�렞 �숈뒿�� 媛먯� 以�鍮�</button>
-      <button type="button" id="learnSaveLocal" disabled>�뮶 �숈뒿�� ����</button>
+      <button type="button" id="learnArmLocal">🎯 학습탄 감지 준비</button>
+      <button type="button" id="learnSaveLocal" disabled>💾 학습탄 저장</button>
     </div>
-    <div class="guide" id="guide">�� 移대찓�� �� �� �쒖쟻 蹂댁젙 �� �� �덉씠�� 3諛� �숈뒿 �� �� 寃쎄린</div>
+    <div class="guide" id="guide">① 카메라 → ② 표적 보정 → ③ 레이저 3발 학습 → ④ 경기</div>
     <div class="match-countdown" id="matchCountdown" hidden>5</div>
-    <div class="pill" id="clrPill" style="position:absolute;left:9px;bottom:9px;font-size:.66rem;opacity:.9">��</div>
-    <div class="pill" id="liveStatus" style="position:absolute;left:9px;bottom:34px;font-size:.66rem;opacity:.9">�뱻 愿��� �곌껐 �� ��</div>
+    <div class="pill" id="clrPill" style="position:absolute;left:9px;bottom:9px;font-size:.66rem;opacity:.9">–</div>
+    <div class="pill" id="liveStatus" style="position:absolute;left:9px;bottom:34px;font-size:.66rem;opacity:.9">📡 관전 연결 안 됨</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
   </section>
 
@@ -97,56 +97,56 @@
   <section class="panel setup">
     <div class="mini-brand">
       <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH <small style="font-size:.55em;color:#ffd441">v34</small></h1></div>
-      <div class="status" id="status"><i class="dot"></i><span>以�鍮�</span></div>
-      <button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="�꾩껜�붾㈃ 耳쒓린">��</button>
+      <div class="status" id="status"><i class="dot"></i><span>준비</span></div>
+      <button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶</button>
     </div>
     <div class="grid">
-      <div class="field"><label>�щ줈 吏���</label><select id="firingLane"><option value="1">1�щ줈</option><option value="2">2�щ줈</option><option value="3">3�щ줈</option><option value="4">4�щ줈</option><option value="5">5�щ줈</option><option value="6">6�щ줈</option><option value="7">7�щ줈</option><option value="8">8�щ줈</option></select></div>
+      <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
     </div>
-    <p class="hint" id="calibrationInfo">�쒖쟻 蹂댁젙 �꾩엯�덈떎. �쒖쟻 �꾩껜媛� �붾㈃�� 蹂댁씠�꾨줉 �대��곗쓣 �뺣㈃�쇰줈 怨좎젙�섏꽭��.</p>
+    <p class="hint" id="calibrationInfo">표적 보정 전입니다. 표적 전체가 화면에 보이도록 휴대폰을 정면으로 고정하세요.</p>
     <div class="field" style="display:none">
-      <input id="eventName" value="援먮궡 �덉씠�� �ш꺽����" maxlength="80">
-      <input id="player" placeholder="�좎닔 �대쫫" maxlength="40">
-      <select id="laserColor"><option value="red">鍮④컙��</option><option value="green">珥덈줉��</option></select>
-      <select id="detectKind"><option value="laser" selected>�덉씠��留� (沅뚯옣)</option><option value="both">�덉씠�� + 臾쇱껜쨌�먭뎅</option><option value="object">臾쇱껜쨌�먭뎅留�</option></select>
+      <input id="eventName" value="교내 레이저 사격대회" maxlength="80">
+      <input id="player" placeholder="선수 이름" maxlength="40">
+      <select id="laserColor"><option value="red">빨간색</option><option value="green">초록색</option></select>
+      <select id="detectKind"><option value="laser" selected>레이저만 (권장)</option><option value="both">레이저 + 물체·자국</option><option value="object">물체·자국만</option></select>
       <select id="maxShots"><option>5</option><option selected>10</option><option>20</option></select>
     </div>
   </section>
 
   <div class="controls match-controls">
-    <button class="btn" id="cameraBtn">移대찓�� �쒖옉</button>
-    <button class="btn secondary" id="calibrateBtn" disabled>�쒖쟻 �먮룞 蹂댁젙</button>
-    <button class="btn secondary wide" id="learnBtn" disabled>�덉씠�� 3諛� �숈뒿</button>
-    <button class="btn wide" id="matchBtn" disabled>寃쎄린 �쒖옉</button>
+    <button class="btn" id="cameraBtn">카메라 시작</button>
+    <button class="btn secondary" id="calibrateBtn" disabled>표적 자동 보정</button>
+    <button class="btn secondary wide" id="learnBtn" disabled>레이저 3발 학습</button>
+    <button class="btn wide" id="matchBtn" disabled>경기 시작</button>
   </div>
 
   <section class="panel scoreboard">
-    <div class="metric"><small>珥앹젏</small><strong id="totalScore">0</strong></div>
-    <div class="metric"><small>諛쒖닔</small><strong><span id="shotCount">0</span>/<span id="shotMax">10</span></strong></div>
-    <div class="metric"><small>�됯퇏</small><strong id="average">0.0</strong></div>
+    <div class="metric"><small>총점</small><strong id="totalScore">0</strong></div>
+    <div class="metric"><small>발수</small><strong><span id="shotCount">0</span>/<span id="shotMax">10</span></strong></div>
+    <div class="metric"><small>평균</small><strong id="average">0.0</strong></div>
   </section>
 
   <div style="display:none">
-    <button id="manualBtn">�섎룞 紐낆쨷 �낅젰</button>
-    <button id="undoBtn">留덉�留� 諛� 痍⑥냼</button>
+    <button id="manualBtn">수동 명중 입력</button>
+    <button id="undoBtn">마지막 발 취소</button>
     <div class="shot-grid" id="shotGrid"></div>
-    <button id="sensitivityDown">媛먮룄��</button>
-    <button id="sensitivityUp">媛먮룄竊�</button>
-    <button id="leaderBtn">�쒖쐞��</button>
-    <button id="resetBtn">�� 寃쎄린</button>
+    <button id="sensitivityDown">감도−</button>
+    <button id="sensitivityUp">감도＋</button>
+    <button id="leaderBtn">순위표</button>
+    <button id="resetBtn">새 경기</button>
   </div>
   </div>
 </main>
 
-<dialog id="leaderDialog"><div class="modal"><h3>�룇 寃쎄린 �쒖쐞��</h3><div id="leaderList" class="empty">湲곕줉�� 遺덈윭�ㅻ뒗 以묒엯�덈떎.</div><div class="footer-actions"><button class="btn secondary" onclick="leaderDialog.close()">�リ린</button></div></div></dialog>
-<dialog id="manualDialog"><div class="modal"><h3>�섎룞 �먯닔 �낅젰</h3><div class="field"><label>�ы뙋 �먯젙 �먯닔</label><select id="manualScore"><option value="10">10��</option><option value="9">9��</option><option value="8">8��</option><option value="7">7��</option><option value="6">6��</option><option value="5">5��</option><option value="4">4��</option><option value="3">3��</option><option value="2">2��</option><option value="1">1��</option><option value="0">0�� / �쒖쟻 諛�</option></select></div><div class="footer-actions"><button class="btn secondary" onclick="manualDialog.close()">痍⑥냼</button><button class="btn" id="manualConfirm">湲곕줉</button></div></div></dialog>
+<dialog id="leaderDialog"><div class="modal"><h3>🏆 경기 순위표</h3><div id="leaderList" class="empty">기록을 불러오는 중입니다.</div><div class="footer-actions"><button class="btn secondary" onclick="leaderDialog.close()">닫기</button></div></div></dialog>
+<dialog id="manualDialog"><div class="modal"><h3>수동 점수 입력</h3><div class="field"><label>심판 판정 점수</label><select id="manualScore"><option value="10">10점</option><option value="9">9점</option><option value="8">8점</option><option value="7">7점</option><option value="6">6점</option><option value="5">5점</option><option value="4">4점</option><option value="3">3점</option><option value="2">2점</option><option value="1">1점</option><option value="0">0점 / 표적 밖</option></select></div><div class="footer-actions"><button class="btn secondary" onclick="manualDialog.close()">취소</button><button class="btn" id="manualConfirm">기록</button></div></div></dialog>
 <div class="toast" id="toast"></div>
 <canvas id="work" hidden></canvas>
 
 <script>
 (() => {
   'use strict';
-  // Apps Script瑜� �� �깆쑝濡� 諛고룷�� �� �꾨옒 �곗샂�� �덉뿉 /exec 二쇱냼瑜� �ｌ쑝�몄슂.
+  // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','learnBtn','learnArmLocal','learnSaveLocal','cameraLearningButtons','matchBtn','manualBtn','undoBtn','guide','matchCountdown','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
@@ -164,49 +164,49 @@
   async function startCamera(){
     try{
       if(state.stream) state.stream.getTracks().forEach(t=>t.stop());
-      // 移대찓�쇰� �ㅼ떆 �쒖옉�섎㈃ �덉쟾 蹂댁젙媛믪쓣 �뺤떎�� 鍮꾩슫�� - 洹몃옒�� 留ㅻ쾲 �덈줈 蹂댁젙�댁빞 �섍퀬,
-      // �≪�(�댁찈硫� 吏�湲� �붾㈃怨� �� 留욌뒗) 蹂댁젙 �곹깭 �뚮Ц�� 誘몃━ ���덈뜕 �먭꺽 紐낅졊�� 媛묒옄湲� �ㅽ뻾�섎뒗 �쇱씠 �녿떎.
+      // 카메라를 다시 시작하면 예전 보정값을 확실히 비운다 - 그래야 매번 새로 보정해야 하고,
+      // 낡은(어쩌면 지금 화면과 안 맞는) 보정 상태 때문에 미리 와있던 원격 명령이 갑자기 실행되는 일이 없다.
       state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetVideo=null;state.paperMultiple=null;state.running=false;lastCmdId=null;lastNotifiedCmdId=null;
       clearInterval(state.countdownTimer);state.countdownTimer=0;state.matchArmAt=0;els.matchCountdown.hidden=true;
       document.body.classList.remove('match-live');
-      els.learnBtn.disabled=true;els.matchBtn.disabled=true;els.matchBtn.textContent='寃쎄린 �쒖옉';
+      els.learnBtn.disabled=true;els.matchBtn.disabled=true;els.matchBtn.textContent='경기 시작';
       try{state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280,min:640},height:{ideal:720,min:480},frameRate:{ideal:60,min:30,max:60}}})}
       catch(fastError){console.warn('60fps unavailable, retrying at standard speed',fastError);state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}}})}
       els.video.srcObject=state.stream;await els.video.play();state.videoTrack=state.stream.getVideoTracks()[0];await setupCameraZoom();els.cameraMsg.style.display='none';
-      els.cameraBtn.textContent='移대찓�� �ㅼ떆 �쒖옉';els.calibrateBtn.disabled=false;els.livePill.textContent='�� CAMERA';setStatus('移대찓�� �곌껐');els.guide.textContent='�쒖쟻�� �붾㈃ 以묒븰�� 留욎텛硫� �먮룞�쇰줈 �몄떇�⑸땲��.';resize();processFrames();ensureRemotePolling();setTimeout(()=>{if(state.stream&&!state.center&&!state.running)beginCalibration()},900);
-    }catch(e){console.error(e);toast('移대찓�� 沅뚰븳�� �덉슜�� 二쇱꽭��.');els.guide.textContent='釉뚮씪�곗� �ㅼ젙�먯꽌 移대찓�� 沅뚰븳�� �덉슜�� �� �ㅼ떆 �쒕룄�섏꽭��.'}
+      els.cameraBtn.textContent='카메라 다시 시작';els.calibrateBtn.disabled=false;els.livePill.textContent='● CAMERA';setStatus('카메라 연결');els.guide.textContent='표적을 화면 중앙에 맞추면 자동으로 인식합니다.';resize();processFrames();ensureRemotePolling();setTimeout(()=>{if(state.stream&&!state.center&&!state.running)beginCalibration()},900);
+    }catch(e){console.error(e);toast('카메라 권한을 허용해 주세요.');els.guide.textContent='브라우저 설정에서 카메라 권한을 허용한 뒤 다시 시도하세요.'}
   }
 
   async function setupCameraZoom(){
     const track=state.videoTrack;if(!track)return;
     let caps={},settings={};try{caps=track.getCapabilities?track.getCapabilities():{};settings=track.getSettings?track.getSettings():{};state.actualFps=Number(settings.frameRate)||0}catch(e){console.warn(e)}
     const advanced=[];if(Array.isArray(caps.focusMode)&&caps.focusMode.includes('continuous'))advanced.push({focusMode:'continuous'});if(Array.isArray(caps.exposureMode)&&caps.exposureMode.includes('continuous'))advanced.push({exposureMode:'continuous'});if(caps.exposureCompensation&&Number.isFinite(caps.exposureCompensation.min)&&Number.isFinite(caps.exposureCompensation.max)){
-      // �덉씠���덊듃 �깃낵 �ㅼ젣 珥ъ쁺蹂몄쓣 鍮꾧탳�대낫��, �몄텧�� �댁쭩留� ��텛�� �뺣룄濡쒕뒗 遺�議깊뻽��(�쒖쟻 寃��뺣� 諛앷린媛� �� 2諛� 李⑥씠).
-      // 吏��� 踰붿쐞�� �대몢�� 履�(理쒖냼媛믪뿉�� 15%留� �щ씪�� 吏���)源뚯� �곴레�곸쑝濡� ��떠��, �덉씠��媛� �섏뼏寃� �ы솕�섍린 �� �ъ쑀瑜� �� �뺣낫�쒕떎.
+      // 레이저히트 앱과 실제 촬영본을 비교해보니, 노출을 살짝만 낮추는 정도로는 부족했다(표적 검정부 밝기가 약 2배 차이).
+      // 지원 범위의 어두운 쪽(최소값에서 15%만 올라온 지점)까지 적극적으로 낮춰서, 레이저가 하얗게 포화되기 전 여유를 더 확보한다.
       const min=caps.exposureCompensation.min,max=caps.exposureCompensation.max;
       const exposure=Math.max(min,Math.min(max,min+(max-min)*.15));
       advanced.push({exposureCompensation:exposure});
     }if(advanced.length){try{await track.applyConstraints({advanced})}catch(e){console.warn('camera tuning skipped',e)}}if(caps.frameRate&&Number.isFinite(caps.frameRate.max)){try{await track.applyConstraints({frameRate:{ideal:Math.min(60,caps.frameRate.max),min:Math.min(30,caps.frameRate.max)}})}catch(e){console.warn('high fps skipped',e)}settings=track.getSettings?track.getSettings():settings;state.actualFps=Number(settings.frameRate)||state.actualFps}
     if(caps.zoom&&Number.isFinite(caps.zoom.min)&&Number.isFinite(caps.zoom.max)&&caps.zoom.max>caps.zoom.min){
       state.zoomMin=Number(caps.zoom.min);state.zoomMax=Number(caps.zoom.max);state.zoomStep=Math.max(.1,Number(caps.zoom.step)||.1);state.zoom=Math.min(state.zoomMax,Math.max(state.zoomMin,Number(settings.zoom)||state.zoomMin));els.zoomOut.disabled=false;els.zoomIn.disabled=false;updateZoomUI();
-    }else{state.zoom=1;state.zoomMin=1;state.zoomMax=1;els.zoomOut.disabled=true;els.zoomIn.disabled=true;els.zoomValue.textContent='誘몄���'}
+    }else{state.zoom=1;state.zoomMin=1;state.zoomMax=1;els.zoomOut.disabled=true;els.zoomIn.disabled=true;els.zoomValue.textContent='미지원'}
     showDetectorInfo();
   }
 
-  function updateZoomUI(){els.zoomValue.textContent=state.zoom.toFixed(1)+'횞';els.zoomOut.disabled=state.zoom<=state.zoomMin+.001;els.zoomIn.disabled=state.zoom>=state.zoomMax-.001}
+  function updateZoomUI(){els.zoomValue.textContent=state.zoom.toFixed(1)+'×';els.zoomOut.disabled=state.zoom<=state.zoomMin+.001;els.zoomIn.disabled=state.zoom>=state.zoomMax-.001}
 
   async function changeZoom(direction){
-    if(!state.videoTrack||state.zoomMax<=state.zoomMin){toast('�� 釉뚮씪�곗��먯꽌�� 移대찓�� 以뚯쓣 吏��먰븯吏� �딆뒿�덈떎.');return}
+    if(!state.videoTrack||state.zoomMax<=state.zoomMin){toast('이 브라우저에서는 카메라 줌을 지원하지 않습니다.');return}
     const next=Math.min(state.zoomMax,Math.max(state.zoomMin,state.zoom+direction*state.zoomStep));if(Math.abs(next-state.zoom)<.001)return;
-    try{await state.videoTrack.applyConstraints({advanced:[{zoom:next}]});state.zoom=next;updateZoomUI();state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetVideo=null;clearDetectorBackground();els.matchBtn.disabled=true;drawOverlay();els.guide.textContent='諛곗쑉�� 蹂�寃쎈릺�덉뒿�덈떎 쨌 �쒖쟻�� �ㅼ떆 �먮룞 蹂댁젙�⑸땲��.';setTimeout(()=>beginCalibration(),450)}catch(e){console.error(e);toast('移대찓�� 諛곗쑉�� 蹂�寃쏀븯吏� 紐삵뻽�듬땲��.')}
+    try{await state.videoTrack.applyConstraints({advanced:[{zoom:next}]});state.zoom=next;updateZoomUI();state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetVideo=null;clearDetectorBackground();els.matchBtn.disabled=true;drawOverlay();els.guide.textContent='배율이 변경되었습니다 · 표적을 다시 자동 보정합니다.';setTimeout(()=>beginCalibration(),450)}catch(e){console.error(e);toast('카메라 배율을 변경하지 못했습니다.')}
   }
 
   async function beginCalibration(){
     if(!state.stream||els.video.readyState<2||state.autoCalibrating)return;state.autoCalibrating=true;
     state.running=false;state.laserLearning=false;state.laserProfile=null;state.laserSamples=[];state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetAngle=0;state.targetVideo=null;state.paperMultiple=null;state.shots=[];state.calibrationMode=0;clearDetectorBackground();updateScore();drawOverlay();
-    els.calibrateBtn.disabled=true;els.matchBtn.disabled=true;els.guide.textContent='�쒖쟻�� �숈떖�먭낵 以묒떖�� 遺꾩꽍�섍퀬 �덉뒿�덈떎��';setStatus('�먮룞 蹂댁젙 以�','#ffc940');
-    // 移대찓�� 珥덉젏쨌�몄텧�� 留� 耳쒖쭊 吏곹썑�� �꾩쭅 �� �덉젙�� 寃쎌슦媛� 留롮븘, �� 踰덉뿉 �ㅽ뙣濡� �앸궡吏� �딄퀬
-    // 吏㏃� 媛꾧꺽�� �먭퀬 紐� 踰� �� �쒕룄�댁꽌 洹몄궗�� �덉젙�� �붾㈃�쇰줈 �ㅼ떆 �몄떇�� �쒕룄�쒕떎.
+    els.calibrateBtn.disabled=true;els.matchBtn.disabled=true;els.guide.textContent='표적의 동심원과 중심을 분석하고 있습니다…';setStatus('자동 보정 중','#ffc940');
+    // 카메라 초점·노출이 막 켜진 직후엔 아직 안 안정된 경우가 많아, 한 번에 실패로 끝내지 않고
+    // 짧은 간격을 두고 몇 번 더 시도해서 그사이 안정된 화면으로 다시 인식을 시도한다.
     let target=null;
     for(let attempt=0;attempt<4&&!target;attempt++){
       await new Promise(resolve=>setTimeout(resolve,attempt===0?350:450));
@@ -215,19 +215,19 @@
     els.calibrateBtn.disabled=false;state.autoCalibrating=false;
     if(target){
       state.center={x:target.x,y:target.y};state.radiusX=target.radiusX;state.radiusY=target.radiusY;state.radius=Math.max(target.radiusX,target.radiusY);state.targetAngle=target.angle;state.calibrationMode=0;state.calibratedAt=performance.now();saveTargetToVideo();
-      els.guide.textContent='�쒖쟻 �먮룞 蹂댁젙 �꾨즺 쨌 �쇱씠釉� �섏씠吏��먯꽌 寃쎄린 �쒖옉�� �꾨Ⅴ�몄슂.';
-      els.calibrationInfo.textContent=`�먮룞 蹂댁젙 �꾨즺: 移대찓�� �쒖쟻 �뺥깭 ${Math.round(target.radiusX)}횞${Math.round(target.radiusY)}px 쨌 湲곗슱湲� ${Math.round(target.angle*180/Math.PI)}째`;
-      els.learnBtn.disabled=false;els.learnBtn.textContent='�덉씠�� 3諛� �숈뒿';els.matchBtn.disabled=true;els.matchBtn.textContent='�덉씠�� �숈뒿 �� 寃쎄린 �쒖옉';setStatus('�덉씠�� �숈뒿 ��湲�','#ffc940');drawOverlay();toast('�쒖쟻�� �몄떇�덉뒿�덈떎. �덉씠�� 3諛쒖쓣 癒쇱� �숈뒿�� 二쇱꽭��.');
+      els.guide.textContent='표적 자동 보정 완료 · 라이브 페이지에서 경기 시작을 누르세요.';
+      els.calibrationInfo.textContent=`자동 보정 완료: 카메라 표적 형태 ${Math.round(target.radiusX)}×${Math.round(target.radiusY)}px · 기울기 ${Math.round(target.angle*180/Math.PI)}°`;
+      els.learnBtn.disabled=false;els.learnBtn.textContent='레이저 3발 학습';els.matchBtn.disabled=true;els.matchBtn.textContent='레이저 학습 후 경기 시작';setStatus('레이저 학습 대기','#ffc940');drawOverlay();toast('표적을 인식했습니다. 레이저 3발을 먼저 학습해 주세요.');
     }else{
-      els.guide.textContent='�쒖쟻 �먮룞 �몄떇 �ㅽ뙣 쨌 �쒖쟻 �먮룞 蹂댁젙�� �ㅼ떆 �뚮윭 二쇱꽭��.';
-      els.calibrationInfo.textContent='�쒖쟻�� �붾㈃ 以묒븰�� �� �ш쾶, �뺣㈃�쇰줈 留욎텣 �� �쒖쟻 �먮룞 蹂댁젙�� �ㅼ떆 �뚮윭 蹂댁꽭��.';
-      setStatus('�몄떇 �ㅽ뙣','#ff4d66');toast('�쒖쟻�� �� �ш쾶, �뺣㈃�쇰줈 留욎텣 �� �쒖쟻 �먮룞 蹂댁젙�� �ㅼ떆 �뚮윭 二쇱꽭��.');
+      els.guide.textContent='표적 자동 인식 실패 · 표적 자동 보정을 다시 눌러 주세요.';
+      els.calibrationInfo.textContent='표적을 화면 중앙에 더 크게, 정면으로 맞춘 뒤 표적 자동 보정을 다시 눌러 보세요.';
+      setStatus('인식 실패','#ff4d66');toast('표적을 더 크게, 정면으로 맞춘 뒤 표적 자동 보정을 다시 눌러 주세요.');
     }
   }
 
   function videoGeometry(){
     const vw=els.video.videoWidth,vh=els.video.videoHeight,box=els.overlay.getBoundingClientRect();
-    const scale=Math.max(box.width/vw,box.height/vh);   // cover: �붾㈃�� 苑� 梨꾩슦怨�(�섎┝ �덉쓬), contain�대㈃ Math.min
+    const scale=Math.max(box.width/vw,box.height/vh);   // cover: 화면을 꽉 채우고(잘림 있음), contain이면 Math.min
     return{vw,vh,box,scale,offX:(box.width-vw*scale)/2,offY:(box.height-vh*scale)/2};
   }
 
@@ -242,8 +242,8 @@
     return{x:(state.center.x-g.offX)/g.scale/g.vw*sw,y:(state.center.y-g.offY)/g.scale/g.vh*sh,rx:state.radiusX/g.scale/g.vw*sw,ry:state.radiusY/g.scale/g.vw*sw,r:state.radius/g.scale/g.vw*sw,a:state.targetAngle};
   }
 
-  /* �꾩옱 �쒖쟻�� 寃��� 以묒븰遺�瑜� 湲곗��쇰줈 以묒떖�� 議곌툑�� �곕씪媛꾨떎. �� �쒖쟻�� 留뚮뱾�대궡吏� �딄퀬,
-     理쒖큹 �숈떖�� 蹂댁젙媛믪뿉�� 踰쀬뼱�섏� �딅뒗 �묒� �대룞留� �덉슜�쒕떎. */
+  /* 현재 표적의 검은 중앙부를 기준으로 중심을 조금씩 따라간다. 새 표적을 만들어내지 않고,
+     최초 동심원 보정값에서 벗어나지 않는 작은 이동만 허용한다. */
   function trackTargetCenter(data,sw,sh,t,roi){
     if(!state.targetVideo)return;
     const x0=Math.max(1,Math.floor(t.x-t.rx*.48)),x1=Math.min(sw-2,Math.ceil(t.x+t.rx*.48)),y0=Math.max(1,Math.floor(t.y-t.ry*.48)),y1=Math.min(sh-2,Math.ceil(t.y+t.ry*.48));
@@ -261,7 +261,7 @@
     const sw=360,sh=Math.max(200,Math.round(sw*vh/vw));els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);
     const data=wctx.getImageData(0,0,sw,sh).data,gray=new Uint8Array(sw*sh);let mean=0;
     for(let p=0,i=0;p<gray.length;p++,i+=4){const v=Math.round(data[i]*.299+data[i+1]*.587+data[i+2]*.114);gray[p]=v;mean+=v}mean/=gray.length;
-    // 議곕챸�� 諛앷굅�� �대몢�곕㈃ �꾧퀎媛� �섎굹濡쒕뒗 寃��� 以묒떖遺�瑜� 紐� 李얜뒗 寃쎌슦媛� 留롮븘, 紐� 媛�吏� �꾧퀎媛믪쓣 �쒖꽌��濡� �쒕룄�쒕떎.
+    // 조명이 밝거나 어두우면 임계값 하나로는 검은 중심부를 못 찾는 경우가 많아, 몇 가지 임계값을 순서대로 시도한다.
     const thrCandidates=[Math.max(45,Math.min(150,mean-38)),Math.max(35,mean-60),Math.min(175,mean-15),90,120];
     let best=null,mask=null;
     for(const threshold of thrCandidates){
@@ -272,7 +272,7 @@
         while(stack.length&&area<12000){const p=stack.pop(),px=p%sw,py=(p/sw)|0;area++;sumX+=px;sumY+=py;if(px<minX)minX=px;if(px>maxX)maxX=px;if(py<minY)minY=py;if(py>maxY)maxY=py;const n=[p-1,p+1,p-sw,p+sw];for(const q of n){if(q>0&&q<m.length&&m[q]&&!seen[q]){seen[q]=1;stack.push(q)}}}
         const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh;if(area<25||ratio<.4||ratio>2.5||bw>sw*.58||bh>sh*.72)continue;const cx=sumX/area,cy=sumY/area,dist=Math.hypot(cx-sw/2,cy-sh/2),fill=area/(bw*bh),score=area*(.4+fill)/(1+dist*.025);if(!best||score>best.score){best={cx,cy,bw,bh,fill,score};mask=m}
       }
-      if(best)break;   // �꾨낫瑜� 李얠븯�쇰㈃ �� �먯뒯�� �꾧퀎媛믪� �쒕룄�섏� �딅뒗��
+      if(best)break;   // 후보를 찾았으면 더 느슨한 임계값은 시도하지 않는다
     }
     let cx=best?best.cx:sw/2,cy=best?best.cy:sh/2;if(Math.hypot(cx-sw/2,cy-sh/2)>Math.min(sw,sh)*.32){cx=sw/2;cy=sh/2}
     const startR=5,maxR=Math.floor(Math.min(sw,sh)*.46),profile=[];
@@ -282,14 +282,14 @@
     const rawPeaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.07&&v.score>avg*1.03&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score).map(v=>({...v,strength:v.score*(.55+v.coverage)}));
     const ringPeaks=[];for(const peak of [...rawPeaks].sort((a,b)=>b.strength-a.strength)){if(ringPeaks.every(p=>Math.abs(p.r-peak.r)>3))ringPeaks.push(peak)}ringPeaks.sort((a,b)=>a.r-b.r);
     let fit=null;const fits=[];
-    /* �쒕줈 �ㅻⅨ �좊쭔 �� 踰덉뵫 �ъ슜�섍퀬, 諛붽묑履� �먭퉴吏� 留욌뒗 �꾨낫 以� �� �쒖쟻�� �곗꽑�쒕떎. */
+    /* 서로 다른 선만 한 번씩 사용하고, 바깥쪽 원까지 맞는 후보 중 큰 표적을 우선한다. */
     for(let step=4;step<=maxR/10;step+=.25){let strength=0,hits=0,outerHits=0,error=0;const used=new Set(),tolerance=Math.max(2,step*.18);for(let ring=1;ring<=10;ring++){let pick=-1,pickError=Infinity;for(let i=0;i<ringPeaks.length;i++){if(used.has(i))continue;const e=Math.abs(ringPeaks[i].r-step*ring);if(e<=tolerance&&e<pickError){pick=i;pickError=e}}if(pick<0)continue;used.add(pick);hits++;if(ring>=8)outerHits++;error+=pickError/tolerance;strength+=ringPeaks[pick].strength*(ring>=8?1.25:1)}if(hits>=4&&outerHits>=1){const quality=hits*12+outerHits*5+strength/Math.max(1,avg)-error*2;fits.push({step,hits,outerHits,quality})}}
     if(fits.length){const bestQuality=Math.max(...fits.map(v=>v.quality)),bestHits=Math.max(...fits.filter(v=>v.quality>=bestQuality*.82).map(v=>v.hits));fit=fits.filter(v=>v.quality>=bestQuality*.82&&v.hits>=bestHits-1).sort((a,b)=>b.step-a.step)[0]}
     let outerR=fit?fit.step*10:0,rings=fit?fit.hits:0;
     if(!fit){const peaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.08&&v.score>avg*1.12&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score);if(peaks.length<3)return null;const outer=peaks.sort((a,b)=>b.r-a.r)[0];outerR=outer.r;rings=peaks.length}
-    /* �ㅼ젣 �쒖쟻 �ъ쭊(25M PRECISION �쒖쟻)�먯꽌 吏곸젒 痢≪젙: 諛붽묑 諛섏�由꾩� 寃��� 以묒떖遺� 吏�由꾩쓽 �� 1.06諛곗���.
-       (�덉쟾 異붿젙移섎뒗 �대낫�� �� 18% �ш쾶 �↔퀬 �덉뼱�� 諛붾줈�≪쓬) �щ윭 媛쒖쓽 留곸쓣 �섎굹�섎굹 留욎텛�� 寃껊낫��, �쒕졆��
-       寃��� 以묒떖 �섎굹瑜� 李얠븘 �� 鍮꾩쑉�� �곸슜�섎뒗 履쎌씠 �⑥뵮 �덉젙�곸씠��, 寃��� 以묒떖�� �쒕졆�� �� �� 媛믪쓣 �곗꽑�쒕떎. */
+    /* 실제 표적 사진(25M PRECISION 표적)에서 직접 측정: 바깥 반지름은 검은 중심부 지름의 약 1.06배였다.
+       (예전 추정치는 이보다 약 18% 크게 잡고 있어서 바로잡음) 여러 개의 링을 하나하나 맞추는 것보다, 뚜렷한
+       검은 중심 하나를 찾아 이 비율을 적용하는 쪽이 훨씬 안정적이라, 검은 중심이 뚜렷할 땐 이 값을 우선한다. */
     if(best&&best.fill>.28){const blackAnchor=Math.max(best.bw,best.bh)*1.06;if(blackAnchor>=38&&blackAnchor<=maxR*1.08)outerR=outerR?(best.fill>.4?blackAnchor:Math.max(outerR,blackAnchor)):blackAnchor}
     const edge=new Uint8Array(sw*sh);for(let y=1;y<sh-1;y++)for(let x=1;x<sw-1;x++){const p=y*sw+x;edge[p]=Math.min(255,Math.abs(gray[p+1]-gray[p-1])+Math.abs(gray[p+sw]-gray[p-sw]))}
     let ellipse=null;const majorMin=Math.max(38,outerR*.82),majorMax=Math.min(Math.min(sw,sh)*.49,outerR*1.38);
@@ -313,16 +313,16 @@
   function beginLaserLearning(){
     if(!state.stream||!state.center||!state.radius||state.laserLearning)return;
     state.running=false;state.laserLearning=true;state.learningArmed=false;state.learningCaptureUntil=0;state.learningIgnoreUntil=0;state.learningCaptureBest=null;state.laserSamples=[];state.laserProfile=null;state.learningBest=null;state.shots=[];state.learningNextAllowed=Infinity;state.lastHit=0;clearDetectorBackground();state.detectorReady=false;updateScore();drawOverlay();
-    els.learnBtn.disabled=true;els.matchBtn.disabled=true;els.learnBtn.textContent='湲곗� �붾㈃ 以�鍮� 以�';els.livePill.textContent='�� LEARN';
-    els.guide.textContent='湲곗� �붾㈃ 以�鍮� 以� 쨌 �쇱씠釉뚯쓽 �뚰븰�듯깂 1諛� 媛먯� 以�鍮꾠�� 踰꾪듉�� 湲곕떎由ъ꽭��';setStatus('�덉씠�� �숈뒿 以�鍮�','#ffc940');pushLive(true);
+    els.learnBtn.disabled=true;els.matchBtn.disabled=true;els.learnBtn.textContent='기준 화면 준비 중';els.livePill.textContent='● LEARN';
+    els.guide.textContent='기준 화면 준비 중 · 라이브의 「학습탄 1발 감지 준비」 버튼을 기다리세요';setStatus('레이저 학습 준비','#ffc940');pushLive(true);
   }
 
   function confirmLaserLearningSample(){
     if(!state.laserLearning||!state.learningArmed)return false;
     const now=performance.now(),ignoreUntil=now+1250;
     state.learningBest=null;state.learningCaptureBest=null;state.learningArmed=false;state.learningIgnoreUntil=ignoreUntil;state.learningCaptureUntil=ignoreUntil+7000;state.learningNextAllowed=ignoreUntil;VResetLatch();
-    els.guide.textContent='移대찓�� �덉젙�� 以� 쨌 �꾩쭅 �섏� 留덉꽭��';els.livePill.textContent='�� STABILIZING';toast('1珥덇컙 �덉젙�뷀빀�덈떎 쨌 �꾩쭅 �섏� 留덉꽭��');pushLive(true);
-    setTimeout(()=>{if(state.laserLearning&&state.learningIgnoreUntil===ignoreUntil&&state.learningCaptureUntil>performance.now()){els.guide.textContent='�� 媛먯� �쒖옉�� 쨌 吏�湲� �덉씠��瑜� �� 諛� �섏꽭��';els.livePill.textContent='�� SHOOT NOW';toast('吏�湲� �� 諛� �섏꽭��');pushLive(true)}},1250);
+    els.guide.textContent='카메라 안정화 중 · 아직 쏘지 마세요';els.livePill.textContent='● STABILIZING';toast('1초간 안정화합니다 · 아직 쏘지 마세요');pushLive(true);
+    setTimeout(()=>{if(state.laserLearning&&state.learningIgnoreUntil===ignoreUntil&&state.learningCaptureUntil>performance.now()){els.guide.textContent='● 감지 시작됨 · 지금 레이저를 한 발 쏘세요';els.livePill.textContent='● SHOOT NOW';toast('지금 한 발 쏘세요');pushLive(true)}},1250);
     return true;
   }
 
@@ -336,65 +336,65 @@
 
   function acceptLaserLearningSample(f){
     state.laserSamples.push(f);const count=state.laserSamples.length;
-    state.learningNextAllowed=performance.now()+850;state.learningCaptureUntil=0;state.learningIgnoreUntil=0;state.learningArmed=false;els.livePill.textContent='�� LEARN';
-    els.learnBtn.textContent=`�덉씠�� �숈뒿 ${count}/3`;els.guide.textContent=count<3?`�숈뒿 ${count}/3 �꾨즺 쨌 �덉씠��媛� �щ씪吏� �� �ㅼ쓬 諛쒖쓣 �섏꽭��`:'�덉씠�� �뱀꽦�� 怨꾩궛�섍퀬 �덉뒿�덈떎��';
-    toast(`�덉씠�� �숈뒿 ${count}/3`);if(count<3){pushLive(true);setTimeout(()=>{if(state.laserLearning&&state.laserSamples.length===count){state.learningArmed=true;els.guide.textContent=`�숈뒿 ${count}/3 �꾨즺 쨌 �쇱씠釉뚯뿉�� 媛먯� 以�鍮꾨� �꾨Ⅸ �� �ㅼ쓬 諛쒖쓣 �섏꽭��.`;pushLive(true)}},900);return}
+    state.learningNextAllowed=performance.now()+850;state.learningCaptureUntil=0;state.learningIgnoreUntil=0;state.learningArmed=false;els.livePill.textContent='● LEARN';
+    els.learnBtn.textContent=`레이저 학습 ${count}/3`;els.guide.textContent=count<3?`학습 ${count}/3 완료 · 레이저가 사라진 뒤 다음 발을 쏘세요`:'레이저 특성을 계산하고 있습니다…';
+    toast(`레이저 학습 ${count}/3`);if(count<3){pushLive(true);setTimeout(()=>{if(state.laserLearning&&state.laserSamples.length===count){state.learningArmed=true;els.guide.textContent=`학습 ${count}/3 완료 · 라이브에서 감지 준비를 누른 뒤 다음 발을 쏘세요.`;pushLive(true)}},900);return}
     const a=state.laserSamples,smallest=k=>Math.min(...a.map(v=>v[k])),largest=k=>Math.max(...a.map(v=>v[k])),median=k=>a.map(v=>Number(v[k])||0).sort((x,y)=>x-y)[Math.floor(a.length/2)];
-    /* �숈뒿媛믪쓣 洹몃�濡� �섑븳�좎쑝濡� �곕㈃ 寃��� 以묒븰�먯꽌 �숈뒿�� 愿묒젏蹂대떎 �뚯깋 �멸낸�� 愿묒젏�� �쏀븯寃� 李랁옄 ��
-       �볦튌 �� �덈떎. �숈뒿�� �됀룻겕湲걔룻삎�쒖쓽 湲곗��쇰줈 �ъ슜�섍퀬 諛앷린 �섑븳�� 異⑸텇�� �ъ쑀瑜� �붾떎. */
-    // �숈뒿�� �쏀븳 �좏샇�� 諛쏆븘 二쇱�留�, 寃쎄린�먯꽌�� �숈뒿�� �� 諛� 以� 媛��� �쏀븳 媛믪쓽
-    // �� �덈컲 �댁긽�� �붽뎄�쒕떎. 移대찓�� �몄텧 蹂��붽� �숈뒿媛믪쓽 20%留� �섏뼱�� �꾩갑�쇰줈
-    // �뺤젙�섎뜕 �댁쟾 �ㅼ젙�� �쒓굅�쒕떎.
+    /* 학습값을 그대로 하한선으로 쓰면 검은 중앙에서 학습한 광점보다 회색 외곽의 광점이 약하게 찍힐 때
+       놓칠 수 있다. 학습은 색·크기·형태의 기준으로 사용하고 밝기 하한은 충분한 여유를 둔다. */
+    // 학습은 약한 신호도 받아 주지만, 경기에서는 학습탄 세 발 중 가장 약한 값의
+    // 약 절반 이상을 요구한다. 카메라 노출 변화가 학습값의 20%만 넘어도 탄착으로
+    // 확정되던 이전 설정을 제거한다.
     state.laserProfile={scoreFloor:Math.max(9,median('score')*.32),onsetFloor:Math.max(10,median('onset')*.32),contrastFloor:Math.max(3,median('lumRise')*.30),colorFloor:Math.max(.03,median('colorRatio')*.3),drFloor:Math.max(2,median('dr')*.15),clusterMin:1,sizeMax:Math.min(320,Math.max(28,median('n')*4)),widthMax:Math.min(38,Math.max(16,median('bw')*2.8)),learnedAt:Date.now()};
-    state.laserLearning=false;state.learningArmed=false;clearDetectorBackground();els.learnBtn.disabled=false;els.learnBtn.textContent='�덉씠�� �ㅼ떆 �숈뒿';els.matchBtn.disabled=false;els.matchBtn.textContent='寃쎄린 �쒖옉 ��湲� 以�';els.livePill.textContent='�� READY';els.guide.textContent='�덉씠�� �숈뒿 �꾨즺 쨌 �쇱씠釉� �섏씠吏��먯꽌 寃쎄린瑜� �쒖옉�섏꽭��.';setStatus('�덉씠�� �숈뒿 �꾨즺','var(--lime)');toast('�덉씠�� �뱀꽦 3諛� �숈뒿�� �꾨즺�섏뿀�듬땲��.');pushLive(true);
+    state.laserLearning=false;state.learningArmed=false;clearDetectorBackground();els.learnBtn.disabled=false;els.learnBtn.textContent='레이저 다시 학습';els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';els.livePill.textContent='● READY';els.guide.textContent='레이저 학습 완료 · 라이브 페이지에서 경기를 시작하세요.';setStatus('레이저 학습 완료','var(--lime)');toast('레이저 특성 3발 학습이 완료되었습니다.');pushLive(true);
   }
 
   function startMatch(){
-    if(!state.center||!state.radius)return;if(!state.laserProfile){toast('癒쇱� �덉씠�� 3諛� �숈뒿�� �꾨즺�� 二쇱꽭��.');return}if(!els.player.value.trim()){toast('�좎닔 �대쫫�� �낅젰�� 二쇱꽭��.');els.player.focus();return}
+    if(!state.center||!state.radius)return;if(!state.laserProfile){toast('먼저 레이저 3발 학습을 완료해 주세요.');return}if(!els.player.value.trim()){toast('선수 이름을 입력해 주세요.');els.player.focus();return}
     state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.matchArmAt=performance.now()+5000;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.warmupStart=performance.now();state.detectorReady=false;
     state.detectKind=els.detectKind.value;
-    // �쒖쟻吏� 紐⑥꽌由� ��(�좏깮 �④퀎)�� 嫄대꼫�� 梨꾨줈 �⑥븘�덉쑝硫�, �ш꺽 以� �붾㈃�� �섎せ 嫄대뱶�몄쓣 ��
-    // 洹� �먮━媛� �쒖쟻吏� 寃쎄퀎濡� ���λ뤌 �ㅼ틪 踰붿쐞媛� �섎せ 醫곸븘吏� �� �덉뼱 �ш린�� �뺤떎�� 醫낅즺�쒕떎.
+    // 표적지 모서리 탭(선택 단계)을 건너뛴 채로 남아있으면, 사격 중 화면을 잘못 건드렸을 때
+    // 그 자리가 표적지 경계로 저장돼 스캔 범위가 잘못 좁아질 수 있어 여기서 확실히 종료한다.
     if(state.calibrationMode===3)state.calibrationMode=0;
-    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='移대찓�� �덉젙�� 以�';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}�щ줈 쨌 5珥� �숈븞 �덉씠��瑜� �섏� 留덉꽭��`;els.livePill.textContent='�� READY';setStatus('�몄텧쨌珥덉젏 �덉젙��','#ffc940');updateScore();drawOverlay();pushLive(true);
+    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='카메라 안정화 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 5초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('노출·초점 안정화','#ffc940');updateScore();drawOverlay();pushLive(true);
     document.body.classList.add('match-live');setTimeout(resize,60);
     startMatchCountdown();
-    // �꾩껜�붾㈃�� �щ엺�� 吏곸젒 ��뻽�� �뚮쭔 釉뚮씪�곗�媛� �덉슜�� 二쇰뒗 寃쎌슦媛� 留롮븘, �먭꺽 紐낅졊�쇰줈 �쒖옉�� 寃쎌슦�� �ㅽ뙣�� �� �덈떎(臾댄빐�섍쾶 臾댁떆).
+    // 전체화면은 사람이 직접 탭했을 때만 브라우저가 허용해 주는 경우가 많아, 원격 명령으로 시작된 경우엔 실패할 수 있다(무해하게 무시).
     try{const root=document.documentElement,req=root.requestFullscreen||root.webkitRequestFullscreen;if(req&&!document.fullscreenElement)req.call(root,{navigationUI:'hide'}).catch(()=>{})}catch(e){}
   }
 
   function startMatchCountdown(){
     clearInterval(state.countdownTimer);els.matchCountdown.hidden=false;els.matchCountdown.classList.remove('go');
-    const tick=()=>{const left=Math.ceil((state.matchArmAt-performance.now())/1000);if(left>0)els.matchCountdown.textContent=String(Math.min(5,left));else els.matchCountdown.textContent='以�鍮� �꾨즺'};
+    const tick=()=>{const left=Math.ceil((state.matchArmAt-performance.now())/1000);if(left>0)els.matchCountdown.textContent=String(Math.min(5,left));else els.matchCountdown.textContent='준비 완료'};
     tick();state.countdownTimer=setInterval(tick,100);
   }
 
   function activateMatchDetection(){
     if(state.detectorReady)return;state.detectorReady=true;clearInterval(state.countdownTimer);state.countdownTimer=0;
-    els.matchCountdown.hidden=false;els.matchCountdown.classList.add('go');els.matchCountdown.textContent='�ш꺽 �쒖옉';
-    els.matchBtn.textContent='寃쎄린 吏꾪뻾 以�';els.guide.textContent='�숈뒿�� �덉씠�� �꾩뒪 媛먯� ��湲� 以�';els.livePill.textContent='�� LIVE';setStatus('�덉씠�� 媛먯� ��湲�','#ff4d66');
+    els.matchCountdown.hidden=false;els.matchCountdown.classList.add('go');els.matchCountdown.textContent='사격 시작';
+    els.matchBtn.textContent='경기 진행 중';els.guide.textContent='학습된 레이저 펄스 감지 대기 중';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');
     setTimeout(()=>{if(state.running&&state.detectorReady)els.matchCountdown.hidden=true},1100);
   }
 
-  function finishMatch(){state.running=false;clearInterval(state.countdownTimer);state.countdownTimer=0;els.matchCountdown.hidden=true;els.livePill.textContent='�� COMPLETE';els.guide.textContent='寃쎄린 �꾨즺 쨌 湲곕줉�� ���ν븯怨� �덉뒿�덈떎.';els.manualBtn.disabled=true;setStatus('���� 以�','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
+  function finishMatch(){state.running=false;clearInterval(state.countdownTimer);state.countdownTimer=0;els.matchCountdown.hidden=true;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
   async function saveMatch(){
     const payload={matchId:state.matchId,eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),maxShots:state.maxShots,totalScore:state.shots.reduce((a,s)=>a+s.score,0),device:navigator.userAgent,shots:state.shots};
     localStorage.setItem('laserMatchLast',JSON.stringify(payload));
-    if(!isServerConfigured()){setStatus('湲곌린�� ���λ맖');els.guide.textContent='Apps Script 二쇱냼媛� �ㅼ젙�섏� �딆븘 �� 湲곌린�먮쭔 湲곕줉�덉뒿�덈떎.';toast('index.html�� Apps Script 二쇱냼瑜� �ｌ뼱 二쇱꽭��.');return}
+    if(!isServerConfigured()){setStatus('기기에 저장됨');els.guide.textContent='Apps Script 주소가 설정되지 않아 이 기기에만 기록했습니다.';toast('index.html에 Apps Script 주소를 넣어 주세요.');return}
     try{
       const body=new URLSearchParams({action:'saveMatch',payload:JSON.stringify(payload)});
       await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body});
-      setStatus('���� �붿껌 �꾨즺');els.guide.textContent=`${state.shots.length}諛� ���� �붿껌 �꾨즺 쨌 �쒖쐞�쒖뿉�� �뺤씤�섏꽭��.`;toast('援ш� �쒗듃�� ���� �붿껌�� 蹂대깉�듬땲��.');
-    }catch(err){console.error(err);setStatus('湲곌린 ����');els.guide.textContent='�쒕쾭 ���� �ㅽ뙣 쨌 湲곕줉�� �� 湲곌린�� 蹂닿��덉뒿�덈떎.';toast('�쒕쾭 �곌껐�� �ㅽ뙣�덉뒿�덈떎.')}
+      setStatus('저장 요청 완료');els.guide.textContent=`${state.shots.length}발 저장 요청 완료 · 순위표에서 확인하세요.`;toast('구글 시트에 저장 요청을 보냈습니다.');
+    }catch(err){console.error(err);setStatus('기기 저장');els.guide.textContent='서버 저장 실패 · 기록은 이 기기에 보관했습니다.';toast('서버 연결에 실패했습니다.')}
   }
 
   function isServerConfigured(){return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(APPS_SCRIPT_URL)}
 
   let lastPush=0;
   function pushLive(force){
-    if(!isServerConfigured()){els.liveStatus.textContent='�뱻 愿��� URL 誘몄꽕��';return}
+    if(!isServerConfigured()){els.liveStatus.textContent='📡 관전 URL 미설정';return}
     const now=Date.now();if(!force&&now-lastPush<300)return;lastPush=now;
-    els.liveStatus.textContent='�뱻 �꾩넚 以묅��';
+    els.liveStatus.textContent='📡 전송 중…';
     try{
       const cbName='pushCb_'+now+'_'+Math.random().toString(36).slice(2,7);
       const qs=new URLSearchParams({action:'liveUpdate',callback:cbName,payload:JSON.stringify({
@@ -403,70 +403,70 @@
         learning:state.laserLearning,learningArmed:state.learningArmed,learningCaptureActive:state.laserLearning&&state.learningCaptureUntil>performance.now(),learningSettling:state.laserLearning&&state.learningIgnoreUntil>performance.now(),learningCandidateReady:state.laserLearning&&!!state.learningCaptureBest,learningReady:!!state.laserProfile,learningCount:state.laserSamples.length,
         learningShots:state.laserSamples.map((s,i)=>({u:+(s.u||0).toFixed(3),v:+(s.v||0).toFixed(3),kind:'learning',no:i+1})),
         shots:state.shots.map(s=>{
-          // 愿��� �섏씠吏��� �쒖쟻�� ��긽 �묐컮濡� 洹몃━誘�濡�, 梨꾩젏�⑹쑝濡� 湲곗슱湲곕� 蹂댁젙�� 醫뚰몴(xMm/yMm) ����
-          // �붾㈃�� �ㅼ젣 蹂댁씠�� 洹몃�濡쒖쓽 �꾩튂(�붾㈃ 醫뚰몴 湲곗�)瑜� 蹂대궦��.
+          // 관전 페이지는 표적을 항상 똑바로 그리므로, 채점용으로 기울기를 보정한 좌표(xMm/yMm) 대신
+          // 화면에 실제 보이는 그대로의 위치(화면 좌표 기준)를 보낸다.
           let u=0,v=0;
           if(s.screenX!=null&&s.screenY!=null&&state.radiusX&&state.radiusY){u=(s.screenX-state.center.x)/state.radiusX;v=(s.screenY-state.center.y)/state.radiusY}
           return{score:s.score,u:+u.toFixed(3),v:+v.toFixed(3),kind:s.manual?'manual':(s.kind||'laser')};
         })
       })});
-      // �덉뿉 �� 蹂댁씠�� fetch() �붿껌留� 嫄몃윭�대뒗 �섍꼍�� �덉뼱, �쒖쐞�쑣룰��� �섏씠吏�媛� �대� �곌퀬 �덈뒗
-      // <script> �쒓렇 �쎌엯(JSONP) 諛⑹떇�쇰줈 �듭씪�쒕떎 - �닿굔 �뺤떎�� �듦낵�쒕떎.
+      // 눈에 안 보이는 fetch() 요청만 걸러내는 환경이 있어, 순위표·관전 페이지가 이미 쓰고 있는
+      // <script> 태그 삽입(JSONP) 방식으로 통일한다 - 이건 확실히 통과한다.
       const script=document.createElement('script');
-      const timer=setTimeout(()=>{els.liveStatus.textContent='�뱻 �묐떟 �놁쓬(�쒓컙 珥덇낵)';cleanup()},9000);
+      const timer=setTimeout(()=>{els.liveStatus.textContent='📡 응답 없음(시간 초과)';cleanup()},9000);
       function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
-      window[cbName]=()=>{els.liveStatus.textContent='�뱻 �꾩넚�� '+new Date().toLocaleTimeString('ko-KR',{hour12:false});cleanup()};
-      script.onerror=()=>{els.liveStatus.textContent='�뱻 �꾩넚 �ㅽ뙣(�ㅽ듃�뚰겕 李⑤떒)';cleanup()};
+      window[cbName]=()=>{els.liveStatus.textContent='📡 전송됨 '+new Date().toLocaleTimeString('ko-KR',{hour12:false});cleanup()};
+      script.onerror=()=>{els.liveStatus.textContent='📡 전송 실패(네트워크 차단)';cleanup()};
       script.src=`${APPS_SCRIPT_URL}?${qs.toString()}`;
       document.head.appendChild(script);
     }catch(err){
-      els.liveStatus.textContent='�뱻 �꾩넚 以�鍮� �ㅻ쪟: '+((err&&err.message)||err);
+      els.liveStatus.textContent='📡 전송 준비 오류: '+((err&&err.message)||err);
     }
   }
 
   let lastCmdId=null,lastNotifiedCmdId=null,remotePollOn=false;
   const REMOTE_POLL_MS=900;
   function applyRemoteCmd(cmd){
-    if(cmd.cmdId===lastCmdId)return;   // �대� 洹� 紐낅졊�쇰줈 寃쎄린瑜� �쒖옉�� �ㅻ씪硫� �� �댁긽 �꾨Т寃껊룄 �� ��
+    if(cmd.cmdId===lastCmdId)return;   // 이미 그 명령으로 경기를 시작한 뒤라면 더 이상 아무것도 안 함
     const myLane=Number(els.firingLane.value);
     if(myLane!==cmd.firingLane){
-      // �щ줈媛� �ㅻⅤ硫� �곗쓽 �꾨Т 媛믩룄 嫄대뱶由ъ� �딅뒗�� - �щ엺�� �곗뿉�� 吏곸젒 �щ줈瑜� 留욎떠�� �곌껐�쒕떎.
-      if(lastNotifiedCmdId!==cmd.cmdId){lastNotifiedCmdId=cmd.cmdId;toast(`�뱻 ${cmd.firingLane}�щ줈 �쒖옉 紐낅졊�� �붿뼱�� - �щ줈瑜� ${cmd.firingLane}濡� 諛붽씀硫� �곌껐�쇱슂.`)}
+      // 사로가 다르면 폰의 아무 값도 건드리지 않는다 - 사람이 폰에서 직접 사로를 맞춰야 연결된다.
+      if(lastNotifiedCmdId!==cmd.cmdId){lastNotifiedCmdId=cmd.cmdId;toast(`📡 ${cmd.firingLane}사로 시작 명령이 왔어요 - 사로를 ${cmd.firingLane}로 바꾸면 연결돼요.`)}
       return;
     }
-    // �щ줈�� 留욎븘�� �꾩쭅 �쒖쟻 蹂댁젙 �꾩씠硫�, �� 紐낅졊�� 洹몃깷 �뚮퉬(臾댁떆)�섍퀬 �앸궦�� - �섏쨷�� 蹂댁젙�� �앸굹�� �먮룞�쇰줈 �쒖옉�섏� �딅뒗��.
-    // 蹂댁젙�� 留덉튇 �ㅼ뿏 �쇱씠釉뚯뿉�� "寃쎄린 �쒖옉"�� �ㅼ떆 �뚮윭�� �쒕떎.
+    // 사로는 맞아도 아직 표적 보정 전이면, 이 명령은 그냥 소비(무시)하고 끝낸다 - 나중에 보정이 끝나도 자동으로 시작되지 않는다.
+    // 보정을 마친 뒤엔 라이브에서 "경기 시작"을 다시 눌러야 한다.
     if(!(state.center&&state.radius)){
       lastCmdId=cmd.cmdId;
-      toast(`�뱻 ${cmd.firingLane}�щ줈 紐낅졊�� 諛쏆븯吏�留� �꾩쭅 �쒖쟻 蹂댁젙 �꾩씠�먯슂 - 蹂댁젙 �� �쇱씠釉뚯뿉�� �ㅼ떆 �뚮윭二쇱꽭��.`);
+      toast(`📡 ${cmd.firingLane}사로 명령을 받았지만 아직 표적 보정 전이에요 - 보정 후 라이브에서 다시 눌러주세요.`);
       return;
     }
-    if(state.running)return;   // �대� �ш꺽 以묒씠硫� 臾댁떆
-    // �숈뒿�� ���μ� 寃쎄린 �쒖옉 紐낅졊�� �꾨땲誘�濡�, 蹂댁젙 吏곹썑�� 寃쎄린 �쒖옉 �덉쟾 ��湲곗� 愿�怨꾩뾾�� 利됱떆 泥섎━�쒕떎.
+    if(state.running)return;   // 이미 사격 중이면 무시
+    // 학습탄 저장은 경기 시작 명령이 아니므로, 보정 직후의 경기 시작 안전 대기와 관계없이 즉시 처리한다.
     if(cmd.mode==='confirmLearn'){
-      const ok=confirmLaserLearningSample();lastCmdId=cmd.cmdId;if(ok)toast('�뱻 移대찓�� 媛먯� �쒖옉 쨌 吏�湲� �� 諛� �섏꽭��.');return;
+      const ok=confirmLaserLearningSample();lastCmdId=cmd.cmdId;if(ok)toast('📡 카메라 감지 시작 · 지금 한 발 쏘세요.');return;
     }
     if(cmd.mode==='saveLearn'){
-      const ok=saveLaserLearningSample();lastCmdId=cmd.cmdId;toast(ok?'�뱻 諛⑷툑 �� �숈뒿�꾩쓣 ���ν뻽�듬땲��.':'�뱻 ���ν븷 �덉씠�� �꾨낫媛� �놁뒿�덈떎. �ㅼ떆 媛먯� 以�鍮� �� �섏꽭��.');pushLive(true);return;
+      const ok=saveLaserLearningSample();lastCmdId=cmd.cmdId;toast(ok?'📡 방금 쏜 학습탄을 저장했습니다.':'📡 저장할 레이저 후보가 없습니다. 다시 감지 준비 후 쏘세요.');pushLive(true);return;
     }
-    // 蹂댁젙�� �앸궃 吏곹썑(3珥� �대궡)�먮뒗 �대뼡 紐낅졊�� ���� �쒖옉�섏� �딅뒗�� - 蹂댁젙 寃곌낵瑜� �덉쑝濡� �뺤씤�� 理쒖냼�쒖쓽 �쒓컙�� 蹂댁옣�댁꽌,
-    // "移대찓�쇰� 耳쒖옄留덉옄/蹂댁젙�섏옄留덉옄 諛붾줈 寃쎄린媛� �쒖옉�쇰쾭由곕떎"�� �곹솴 �먯껜媛� 援ъ“�곸쑝濡� �앷린吏� �딄쾶 �쒕떎.
+    // 보정이 끝난 직후(3초 이내)에는 어떤 명령이 와도 시작하지 않는다 - 보정 결과를 눈으로 확인할 최소한의 시간을 보장해서,
+    // "카메라를 켜자마자/보정하자마자 바로 경기가 시작돼버린다"는 상황 자체가 구조적으로 생기지 않게 한다.
     if(state.calibratedAt&&performance.now()-state.calibratedAt<3000){
       lastCmdId=cmd.cmdId;
-      toast(`�뱻 ${cmd.firingLane}�щ줈 紐낅졊�� 諛쏆븯吏�留� 諛⑷툑 蹂댁젙�� �앸굹�� �덉쟾�� �꾪빐 ��湲� 以묒씠�먯슂 - �쇱씠釉뚯뿉�� �ㅼ떆 �뚮윭二쇱꽭��.`);
+      toast(`📡 ${cmd.firingLane}사로 명령을 받았지만 방금 보정이 끝나서 안전을 위해 대기 중이에요 - 라이브에서 다시 눌러주세요.`);
       return;
     }
     if(cmd.mode==='learn'){
       if(cmd.laserColor&&cmd.laserColor!==els.laserColor.value){els.laserColor.value=cmd.laserColor;clearDetectorBackground();showDetectorInfo()}
-      els.detectKind.value='laser';beginLaserLearning();lastCmdId=cmd.cmdId;toast(`�뱻 ${cmd.firingLane}�щ줈 쨌 �덉씠�� 3諛� �숈뒿�� �쒖옉�⑸땲��.`);return;
+      els.detectKind.value='laser';beginLaserLearning();lastCmdId=cmd.cmdId;toast(`📡 ${cmd.firingLane}사로 · 레이저 3발 학습을 시작합니다.`);return;
     }
-    if(!state.laserProfile){lastCmdId=cmd.cmdId;toast('�뱻 寃쎄린 �쒖옉 �꾩뿉 �쇱씠釉뚯뿉�� �덉씠�� 3諛� �숈뒿�� 癒쇱� �뚮윭 二쇱꽭��.');return}
+    if(!state.laserProfile){lastCmdId=cmd.cmdId;toast('📡 경기 시작 전에 라이브에서 레이저 3발 학습을 먼저 눌러 주세요.');return}
     if(cmd.eventName!=null&&cmd.eventName!=='')els.eventName.value=cmd.eventName;
     if(cmd.player)els.player.value=cmd.player;
     if(cmd.laserColor&&cmd.laserColor!==els.laserColor.value){els.laserColor.value=cmd.laserColor;clearDetectorBackground();showDetectorInfo()}
     if(cmd.detectKind)els.detectKind.value=cmd.detectKind;
     if(cmd.maxShots){els.maxShots.value=String(cmd.maxShots);updateScore()}
-    startMatch();lastCmdId=cmd.cmdId;toast(`�뱻 ${cmd.firingLane}�щ줈 �곌껐�� - 寃쎄린瑜� �쒖옉�덉뼱��: `+(cmd.player||''));
+    startMatch();lastCmdId=cmd.cmdId;toast(`📡 ${cmd.firingLane}사로 연결됨 - 경기를 시작했어요: `+(cmd.player||''));
   }
   function pollRemoteCmd(){
     if(!isServerConfigured()){setTimeout(pollRemoteCmd,3000);return}
@@ -495,10 +495,10 @@
     function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
     window[cbName]=res=>{
       cleanup();
-      if(lastEndId===null){lastEndId=(res&&res.endId)||'';}   // 泥섏쓬 �곌껐 �� 吏�湲� 媛믪쓣 湲곗��쇰줈 �쇱븘, 怨쇨굅 �좏샇�� 臾댁떆�쒕떎
+      if(lastEndId===null){lastEndId=(res&&res.endId)||'';}   // 처음 연결 시 지금 값을 기준으로 삼아, 과거 신호는 무시한다
       else if(res&&res.endId&&res.endId!==lastEndId){
         lastEndId=res.endId;
-        reset();pushLive(true);toast('�뱻 �쇱씠釉뚯뿉�� 寃쎄린瑜� 醫낅즺�덉뼱�� - �꾩갑援걔룹젏�섍� 珥덇린�붾릱�댁슂.');
+        reset();pushLive(true);toast('📡 라이브에서 경기를 종료했어요 - 탄착군·점수가 초기화됐어요.');
       }
       setTimeout(pollRemoteEnd,900);
     };
@@ -516,10 +516,10 @@
     function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
     window[cbName]=res=>{
       cleanup();
-      if(lastUndoId===null){lastUndoId=(res&&res.undoId)||'';}   // 泥섏쓬 �곌껐 �� 吏�湲� 媛믪쓣 湲곗��쇰줈 �쇱븘, 怨쇨굅 �좏샇�� 臾댁떆�쒕떎
+      if(lastUndoId===null){lastUndoId=(res&&res.undoId)||'';}   // 처음 연결 시 지금 값을 기준으로 삼아, 과거 신호는 무시한다
       else if(res&&res.undoId&&res.undoId!==lastUndoId){
         lastUndoId=res.undoId;
-        if(state.shots.length){undo();toast('�뱻 �쇱씠釉뚯뿉�� 留덉�留� 諛쒖쓣 痍⑥냼�덉뼱��.')}
+        if(state.shots.length){undo();toast('📡 라이브에서 마지막 발을 취소했어요.')}
       }
       setTimeout(pollRemoteUndo,800);
     };
@@ -545,11 +545,11 @@
 
   function processFrames(){
     cancelAnimationFrame(state.raf);const token=++state.frameLoopToken;
-    const loop=()=>{if(token!==state.frameLoopToken)return;if((state.running||state.laserLearning)&&!state.processing&&els.video.readyState>=2){state.processing=true;try{detectLaserV2()}catch(err){console.error('laser detector',err);els.clrPill.textContent='媛먯�湲� �먮룞 蹂듦뎄 以�';}finally{state.processing=false}}schedule()};
+    const loop=()=>{if(token!==state.frameLoopToken)return;if((state.running||state.laserLearning)&&!state.processing&&els.video.readyState>=2){state.processing=true;try{detectLaserV2()}catch(err){console.error('laser detector',err);els.clrPill.textContent='감지기 자동 복구 중';}finally{state.processing=false}}schedule()};
     const schedule=()=>{if(token!==state.frameLoopToken)return;if(typeof els.video.requestVideoFrameCallback==='function')els.video.requestVideoFrameCallback(loop);else state.raf=requestAnimationFrame(loop)};schedule();
   }
 
-  /* 湲곗� �ъ쭊(寃쎄린 �쒖옉 �쒓컙�� �쒖쟻 �붾㈃)怨� 鍮꾧탳�� �ㅽ듃쨌�붿궡쨌�ㅽ떚而ㅒ룰뎄硫띿쿂�� �덈줈 �앷꺼�� 媛�留뚰엳 �덈뒗 寃껋쓣 李얜뒗��. */
+  /* 기준 사진(경기 시작 순간의 표적 화면)과 비교해 다트·화살·스티커·구멍처럼 새로 생겨서 가만히 있는 것을 찾는다. */
   function detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan){
     if(!state.objRef||state.objRef.length!==total*3)return;
     if(!state.objMask||state.objMask.length!==total){state.objMask=new Uint8Array(total);state.objDil=new Uint8Array(total);state.objTmp=new Uint8Array(total);state.objSeen=new Uint8Array(total);state.objStack=new Int32Array(total)}
@@ -578,10 +578,10 @@
       if(!state.objBusySince)state.objBusySince=now;
       state.objTracks=[];
       if(now-state.objBusySince>2500){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,k=p*3,i=p*4;R[k]=data[i];R[k+1]=data[i+1];R[k+2]=data[i+2]}state.objBusySince=0}
-      if(!state.objBusy){state.objBusy=true;els.guide.textContent='�붾㈃�� �ш쾶 諛붾�뚯뿀�댁슂(�� ��) 쨌 �쒖쟻�먯꽌 �먯쓣 �� 二쇱꽭��'}
+      if(!state.objBusy){state.objBusy=true;els.guide.textContent='화면이 크게 바뀌었어요(손 등) · 표적에서 손을 떼 주세요'}
       return;
     }
-    if(state.objBusy){state.objBusy=false;if(state.running)els.guide.textContent='�덉씠�� 媛먯� ��湲� 以� 쨌 吏㏐쾶 諛쒖궗�섏꽭��.'}
+    if(state.objBusy){state.objBusy=false;if(state.running)els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.'}
     state.objBusySince=0;
     const D=state.objDil,Tm=state.objTmp,seen=state.objSeen,stack=state.objStack;
     Tm.fill(0);D.fill(0);seen.fill(0);
@@ -640,30 +640,30 @@
     const videoX=roi?roi.sx+wx/sw*roi.sWidth:wx/sw*vw,videoY=roi?roi.sy+wy/sh*roi.sHeight:wy/sh*vh;
     const mapped=videoToScreen(videoX,videoY),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
     const nx=ex/state.radiusX,ny=ey/state.radiusY;
-    /* �쒖쟻 �꾨옒履� 誘몄뒪�� 醫낆씠 �щ갚源뚯� �ы븿�� �� �볤쾶 諛쏅뒗��. �대��� �붾㈃�� �꾨옒 諛⑺뼢��
-       蹂댁젙�� �쒖쟻 醫뚰몴�먯꽌�� ny>0�대�濡�, �꾨옒履쎈쭔 異붽� �ъ쑀瑜� 二쇨퀬 �ㅻⅨ 諛⑺뼢�� �쒗븳�쒕떎. */
+    /* 표적 아래쪽 미스는 종이 여백까지 포함해 더 넓게 받는다. 휴대폰 화면의 아래 방향은
+       보정된 표적 좌표에서도 ny>0이므로, 아래쪽만 추가 여유를 주고 다른 방향은 제한한다. */
     const distance=Math.hypot(nx,ny),baseLimit=state.paperMultiple||1.55,limit=baseLimit+(ny>0?.52:.18);if(distance>limit)return false;
     recordShot(mapped.x,mapped.y,null,'laser');return true;
   }
 
   /*
-   * LaserHIT 諛⑹떇�� 媛�源앷쾶 留뚮뱺 �꾩뒪 媛먯�湲�.
-   * �� �섎굹留� 寃��ы븯吏� �딄퀬 �� 吏곸쟾 �꾨젅�꾩뿉�� 媛묒옄湲� �앷릿 諛앷린, �� 湲곗� �붾㈃ ��鍮� �곸듅,
-   * �� �곗깋 �ы솕 以묒떖怨� 洹� 二쇰��� 遺됱� �뚮몢由�, �� �묎퀬 �κ렐 �ш린瑜� �④퍡 寃��ы븳��.
-   * 媛뺥븳 �꾩뒪�� �� �꾨젅�꾨쭔 蹂댁뿬�� 湲곕줉�섎�濡� 30/60fps 移대찓�쇱뿉�� 吏㏃� 諛쒓킅�� �볦튂吏� �딅뒗��.
+   * LaserHIT 방식에 가깝게 만든 펄스 감지기.
+   * 색 하나만 검사하지 않고 ① 직전 프레임에서 갑자기 생긴 밝기, ② 기준 화면 대비 상승,
+   * ③ 흰색 포화 중심과 그 주변의 붉은 테두리, ④ 작고 둥근 크기를 함께 검사한다.
+   * 강한 펄스는 한 프레임만 보여도 기록하므로 30/60fps 카메라에서 짧은 발광을 놓치지 않는다.
    */
   function detectLaserV2(){
     const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return;
-    // �숈뒿�� 怨좎냽 寃쎈줈�먯꽌�� �ъ슜�섎뒗 �꾨줈�꾩씠��. �⑥닔 �꾨옒�먯꽌 �좎뼵�섎㈃ 泥� 愿묒젏 �쒓컙
-    // TDZ(�좎뼵 �� �묎렐) �ㅻ쪟濡� �꾨젅�� 猷⑦봽媛� 硫덉텛誘�濡� 諛섎뱶�� 吏꾩엯遺��먯꽌 癒쇱� �〓뒗��.
+    // 학습용 고속 경로에서도 사용하는 프로필이다. 함수 아래에서 선언하면 첫 광점 순간
+    // TDZ(선언 전 접근) 오류로 프레임 루프가 멈추므로 반드시 진입부에서 먼저 잡는다.
     const P=state.laserProfile;
-    /* �꾩껜 移대찓�쇰� 480px濡� 以꾩씠吏� �딄퀬, 蹂댁젙�� �쒖쟻怨� �꾨옒履� 誘몄뒪 �곸뿭留� �먮낯 �곸긽�먯꽌 吏곸젒 �먮Ⅸ��.
-       媛숈� 怨꾩궛�됱쑝濡� �쒖쟻�� �ㅼ젣 �쎌��� �� 留롮씠 蹂댁〈�� 1~2px吏쒕━ 吏㏃� �덉씠��媛� 異뺤냼 以� �щ씪吏��� 寃껋쓣 以꾩씤��. */
+    /* 전체 카메라를 480px로 줄이지 않고, 보정된 표적과 아래쪽 미스 영역만 원본 영상에서 직접 자른다.
+       같은 계산량으로 표적의 실제 픽셀을 더 많이 보존해 1~2px짜리 짧은 레이저가 축소 중 사라지는 것을 줄인다. */
     const tv=state.targetVideo;if(!tv)return;
     const vcx=tv.x*vw,vcy=tv.y*vh,vrx=(tv.rx||tv.r)*vw,vry=(tv.ry||tv.r)*vw,baseScan=state.paperMultiple?state.paperMultiple+.12:1.68;
     const halfW=vrx*(baseScan+.55),topH=vry*(baseScan+.28),bottomH=vry*(baseScan+.7);
     let sx=Math.max(0,vcx-halfW),sy=Math.max(0,vcy-topH),ex=Math.min(vw,vcx+halfW),ey=Math.min(vh,vcy+bottomH);
-    // 1�꾨젅�꾩쭨由� �덉씠��瑜� �볦튂吏� �딅룄濡� �숈뒿怨� 寃쎄린 紐⑤몢 480px 寃쎈웾 遺꾩꽍�� �ъ슜�쒕떎.
+    // 1프레임짜리 레이저를 놓치지 않도록 학습과 경기 모두 480px 경량 분석을 사용한다.
     const sWidth=Math.max(64,ex-sx),sHeight=Math.max(64,ey-sy),sw=480,sh=Math.max(260,Math.round(sw*sHeight/sWidth)),roi={sx,sy,sWidth,sHeight,vw,vh};
     els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,sx,sy,sWidth,sHeight,0,0,sw,sh);
     const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh;
@@ -679,12 +679,12 @@
     const copyPrevious=()=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.prevR[p]=data[i];V.prevG[p]=data[i+1];V.prevB[p]=data[i+2]}};
     const learn=(a)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]+=a*(data[i]-V.bgR[p]);V.bgG[p]+=a*(data[i+1]-V.bgG[p]);V.bgB[p]+=a*(data[i+2]-V.bgB[p])}};
     V.frames++;const fpsNow=performance.now();if(fpsNow-V.fpsAt>=1000){V.detectorFps=V.frames*1000/(fpsNow-V.fpsAt);V.frames=0;V.fpsAt=fpsNow}
-    // 寃쎄린�� 5珥� 移댁슫�몃떎�� �꾩껜瑜� 諛곌꼍 �덉젙�붿뿉 �ъ슜�섍퀬, 0�� �� �쒓컙�먮쭔 媛먯�湲곕� 臾댁옣�쒕떎.
+    // 경기의 5초 카운트다운 전체를 배경 안정화에 사용하고, 0이 된 순간에만 감지기를 무장한다.
     if(performance.now()<V.warmUntil){learn(state.laserLearning?.18:.28);copyPrevious();V.warm++;return}
-    if(!V.ready){V.ready=true;V.armedAt=performance.now();if(state.laserLearning){state.detectorReady=true;state.learningArmed=true;state.learningNextAllowed=performance.now();els.learnBtn.textContent=`�덉씠�� �숈뒿 ${state.laserSamples.length}/3`;els.guide.textContent='�쇱씠釉뚯뿉�� �뚰븰�듯깂 1諛� 媛먯� 以�鍮꾠�띾� �꾨Ⅸ �� �덉씠��瑜� �섏꽭��.';setStatus('�숈뒿 媛먯� 以�鍮� 媛���','#ffc940');pushLive(true)}else activateMatchDetection();copyPrevious();return}
+    if(!V.ready){V.ready=true;V.armedAt=performance.now();if(state.laserLearning){state.detectorReady=true;state.learningArmed=true;state.learningNextAllowed=performance.now();els.learnBtn.textContent=`레이저 학습 ${state.laserSamples.length}/3`;els.guide.textContent='라이브에서 「학습탄 1발 감지 준비」를 누른 뒤 레이저를 쏘세요.';setStatus('학습 감지 준비 가능','#ffc940');pushLive(true)}else activateMatchDetection();copyPrevious();return}
 
-    // 媛먯� 以�鍮� 踰꾪듉 �먯껜濡� �앷릿 �뚮뜑留� 吏��걔룹옄�� �몄텧 蹂��붾� �덉씠��濡� �ㅼ씤�섏� �딅룄濡�
-    // 泥� 1珥덈뒗 留� �꾨젅�꾩쓣 湲곗� �붾㈃�쇰줈 �≪닔�섍퀬 �대뼡 �꾨낫�� 寃��ы븯吏� �딅뒗��.
+    // 감지 준비 버튼 자체로 생긴 렌더링 지연·자동 노출 변화를 레이저로 오인하지 않도록
+    // 첫 1초는 매 프레임을 기준 화면으로 흡수하고 어떤 후보도 검사하지 않는다.
     if(state.laserLearning&&state.learningCaptureUntil&&performance.now()<state.learningIgnoreUntil){learn(.25);copyPrevious();return}
 
     let motion=0,samples=0,shift=0;
@@ -692,24 +692,24 @@
     const motionRatio=motion/Math.max(1,samples),exposureShift=Math.abs(shift/Math.max(1,samples));
     if(state.laserLearning&&state.learningCaptureUntil&&performance.now()>state.learningCaptureUntil){
       const captured=state.learningCaptureBest;state.learningCaptureUntil=0;state.learningIgnoreUntil=0;
-      if(captured){els.livePill.textContent='�� REVIEW';els.guide.textContent='愿묒젏 �꾨낫媛� �덉뒿�덈떎 쨌 �쇱씠釉뚯뿉�� �뚮갑湲� �� �숈뒿�� ���γ�띿쓣 �꾨Ⅴ�몄슂';pushLive(true);copyPrevious();return}
-      state.learningArmed=true;els.livePill.textContent='�� LEARN';els.guide.textContent='愿묒젏�� 李얠� 紐삵뻽�듬땲�� 쨌 媛먯� 以�鍮꾨� �ㅼ떆 �꾨Ⅸ �� �� 諛� �섏꽭��';pushLive(true)
+      if(captured){els.livePill.textContent='● REVIEW';els.guide.textContent='광점 후보가 있습니다 · 라이브에서 「방금 쏜 학습탄 저장」을 누르세요';pushLive(true);copyPrevious();return}
+      state.learningArmed=true;els.livePill.textContent='● LEARN';els.guide.textContent='광점을 찾지 못했습니다 · 감지 준비를 다시 누른 뒤 한 발 쏘세요';pushLive(true)
     }
-    /* 1�꾨젅�� 愿묒젏 �꾩슜 怨좎냽 寃�異쒓린. 諛곌꼍�됱씠�� �� 以묒떖/�뚮몢由� 紐⑥뼇�� 癒쇱� �붽뎄�섏� �딄퀬
-       吏곸쟾 �꾨젅�꾨낫�� 媛묒옄湲� 諛앹븘吏� �묒� �� 愿묒젏 援곗쭛�� 李얜뒗��. �꾩껜 �몄텧 蹂��붿� �붾뱾由쇱�
-       motionRatio/exposureShift濡� �쒖쇅�쒕떎. �� 寃쎈줈媛� �ㅼ젣 �곸긽�� 吏㏃� �덉씠��瑜� �대떦�쒕떎. */
+    /* 1프레임 광점 전용 고속 검출기. 배경색이나 흰 중심/테두리 모양을 먼저 요구하지 않고
+       직전 프레임보다 갑자기 밝아진 작은 색 광점 군집을 찾는다. 전체 노출 변화와 흔들림은
+       motionRatio/exposureShift로 제외한다. 이 경로가 실제 영상의 짧은 레이저를 담당한다. */
     let flashPeak=null;
     const learningCaptureOpen=state.laserLearning&&state.learningCaptureUntil>performance.now();
-    /* �숈뒿怨� 寃쎄린媛� 媛숈� 寃쎈웾 �꾨젅�� 寃�異쒓린瑜� �ъ슜�쒕떎. �숈뒿�� ROI �꾩껜�먯꽌 媛��� 媛뺥븳
-       蹂��붾� 紐⑥쑝怨�, 寃쎄린�� �숈뒿 3諛쒖쓽 以묎컙媛� 湲곗��� �섎뒗 �쒖쟻 �대� 蹂��붾쭔 湲곕줉�쒕떎. */
+    /* 학습과 경기가 같은 경량 프레임 검출기를 사용한다. 학습은 ROI 전체에서 가장 강한
+       변화를 모으고, 경기는 학습 3발의 중간값 기준을 넘는 표적 내부 변화만 기록한다. */
     const simpleP=state.laserProfile,matchSimpleOpen=state.running&&state.detectorReady&&!!simpleP;
     if((learningCaptureOpen||matchSimpleOpen)&&performance.now()>=state.learningNextAllowed){
       let peak=null,simpleSignal=false;
       for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
         if(!inside(x,y))continue;
         const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25;
-        // �숈뒿�먯꽌�� �쇱꽌 �≪쓬(.5 �섏�)�� �꾨낫濡� 留뚮뱾吏� �딅뒗��. �ㅼ젣 �덉씠���� �쒓컙 �곸듅��
-        // �볦튂吏� �딆쓣 留뚰겮�� ��쾶 �먮릺, �먮룞 �몄텧�� 誘몄꽭�� 異쒕쟻�꾩� �ш린�� 癒쇱� �쒓굅�쒕떎.
+        // 학습에서도 센서 잡음(.5 수준)을 후보로 만들지 않는다. 실제 레이저의 순간 상승을
+        // 놓치지 않을 만큼은 낮게 두되, 자동 노출의 미세한 출렁임은 여기서 먼저 제거한다.
         const minRise=learningCaptureOpen?1.5:Math.max(3,simpleP.onsetFloor*.55),minLum=learningCaptureOpen?.1:Math.max(.5,simpleP.contrastFloor*.45);
         if(rise<minRise||lum<minLum)continue;const score=rise+Math.max(0,lum)*.7;
         if(!peak||score>peak.score)peak={x,y,score,rise,lum,pr,pg,pb};
@@ -734,7 +734,7 @@
           minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
         }
         const bw=maxX-minX+1,bh=maxY-minY+1;
-        // 二쇰��� �먮옒 諛곌꼍蹂대떎 諛앹� 愿묒젏�몄� �뺤씤�쒕떎. �묒� �쇱꽌 �≪쓬�� �� �④퀎�먯꽌 踰꾨┛��.
+        // 주변의 원래 배경보다 밝은 광점인지 확인한다. 작은 센서 잡음은 이 단계에서 버린다.
         const pp=peak.y*sw+peak.x,pi=pp*4;
         const bgLum=(V.bgR[pp]+V.bgG[pp]*2+V.bgB[pp])*.25;
         const nowLum=(data[pi]+data[pi+1]*2+data[pi+2])*.25;
@@ -760,13 +760,13 @@
           if(learningCaptureOpen){
             if(!state.learningCaptureBest||candidate.score>state.learningCaptureBest.score){
               state.learningCaptureBest=candidate;
-              els.clrPill.textContent=`�숈뒿 愿묒젏 �꾨낫 쨌 �곸듅 ${Math.round(candidate.onset)} 쨌 ${n}px`;
-              els.guide.textContent='愿묒젏 �꾨낫 �ъ갑 쨌 �ㅼ젣 諛쒖궗�덈떎硫� �숈뒿�꾩쓣 ���ν븯�몄슂';
+              els.clrPill.textContent=`학습 광점 후보 · 상승 ${Math.round(candidate.onset)} · ${n}px`;
+              els.guide.textContent='광점 후보 포착 · 실제 발사했다면 학습탄을 저장하세요';
               pushLive(true);
             }
           }else{
-            // �숈뒿 �뚯� 寃쎄린 �� �숈씪�� 寃��щ� �곸슜�쒕떎. �쏀븳 �꾨낫瑜� 臾댁“嫄� 湲곕줉�섎뜕
-            // �댁쟾�� 蹂꾨룄 怨좎냽 寃쎈줈瑜� �듦낵�쒗궎吏� �딅뒗��.
+            // 학습 때와 경기 때 동일한 검사를 적용한다. 약한 후보를 무조건 기록하던
+            // 이전의 별도 고속 경로를 통과시키지 않는다.
             const matched=candidate.onset>=simpleP.onsetFloor
               &&candidate.score>=simpleP.scoreFloor
               &&candidate.contrast>=simpleP.contrastFloor
@@ -775,7 +775,7 @@
             simpleSignal=matched;
             if(matched&&!V.latched&&tryRecordLaser(cx,cy,sw,sh,vw,vh,roi)){
               V.latched=true;
-              els.clrPill.textContent=`�덉씠�� 紐낆쨷 쨌 �곸듅 ${Math.round(candidate.onset)} 쨌 ${n}px`;
+              els.clrPill.textContent=`레이저 명중 · 상승 ${Math.round(candidate.onset)} · ${n}px`;
             }
           }
         }
@@ -804,8 +804,8 @@
       const captureOpen=!state.laserLearning||(state.learningCaptureUntil>performance.now());
       if(fastPulse&&captureOpen&&performance.now()>=state.learningNextAllowed&&!V.latched){
         const fcx=fw?fsx/fw:flashPeak.x,fcy=fw?fsy/fw:flashPeak.y,fastFeature={score:flashPeak.score,contrast:flashPeak.lumStep,dr:els.laserColor.value==='green'?0:flashPeak.colorStep,dg:els.laserColor.value==='green'?flashPeak.colorStep:0,db:0,onset:flashPeak.onset,lumRise:flashPeak.lumStep,n:fn,bw:fbw,bh:fbh,redN:fn,whiteN,u:(fcx-t.x)/Math.max(1,t.rx),v:(fcy-t.y)/Math.max(1,t.ry)};
-        if(state.laserLearning){if(!state.learningCaptureBest||fastFeature.score>state.learningCaptureBest.score)state.learningCaptureBest=fastFeature;els.guide.textContent='愿묒젏 �꾨낫 �ъ갑 쨌 媛��� 媛뺥븳 �좏샇瑜� �좏깮 以묒엯�덈떎';els.clrPill.textContent=`�숈뒿 �꾨낫 쨌 �곸듅 ${Math.round(flashPeak.onset)} 쨌 �ш린 ${fn}px`}
-        if(P&&state.detectorReady&&tryRecordLaser(fcx,fcy,sw,sh,vw,vh,roi)){V.latched=true;els.fpsPill.textContent='�� �ㅼ젣 �덉씠��';els.clrPill.textContent=`�덉씠�� �ъ갑 쨌 �곸듅 ${Math.round(flashPeak.onset)} 쨌 �ш린 ${fn}px`;copyPrevious();return}
+        if(state.laserLearning){if(!state.learningCaptureBest||fastFeature.score>state.learningCaptureBest.score)state.learningCaptureBest=fastFeature;els.guide.textContent='광점 후보 포착 · 가장 강한 신호를 선택 중입니다';els.clrPill.textContent=`학습 후보 · 상승 ${Math.round(flashPeak.onset)} · 크기 ${fn}px`}
+        if(P&&state.detectorReady&&tryRecordLaser(fcx,fcy,sw,sh,vw,vh,roi)){V.latched=true;els.fpsPill.textContent='◎ 실제 레이저';els.clrPill.textContent=`레이저 포착 · 상승 ${Math.round(flashPeak.onset)} · 크기 ${fn}px`;copyPrevious();return}
       }
     }
     if(state.detectKind!=='laser'){
@@ -842,9 +842,9 @@
       const profileGate=state.laserLearning||!P||(best.score>=matchScore&&contrast>=matchContrast*(bestBright?.74:1)&&(best.dr>=matchDr*(bestBright?.7:1)||whiteN>=1&&best.lumRise>=4));
       const colorRise=green?best.dg:best.dr;
       const pulseCompact=n>=2&&n<=220&&bw>=1&&bh>=1&&bw<=26&&bh<=26&&bw/Math.max(1,bh)>.16&&bw/Math.max(1,bh)<6;
-      /* �ㅼ젣 �곸긽�먯꽌 �덉씠���� ��遺�遺� �� 1�꾨젅�꾨쭔 蹂댁���. �곗냽 �꾨젅�� ����
-         �� 吏곸쟾 �꾨젅�� ��鍮� 湲됱긽��, �� �� 以묒떖 �먮뒗 媛뺥븳 �� 以묒떖, �� 鍮④컯/珥덈줉 �뚮몢由�,
-         �� �붾㈃ �꾩껜 �몄텧쨌�붾뱾由쇱씠 �꾨떂�� �쒓볼踰덉뿉 �뺤씤�쒕떎. */
+      /* 실제 영상에서 레이저는 대부분 단 1프레임만 보였다. 연속 프레임 대신
+         ① 직전 프레임 대비 급상승, ② 흰 중심 또는 강한 색 중심, ③ 빨강/초록 테두리,
+         ④ 화면 전체 노출·흔들림이 아님을 한꺼번에 확인한다. */
       const temporalPulse=pulseCompact&&best.score>=16&&best.onset>=10&&best.lumRise>=4&&colorRise>=6&&contrast>=3&&redN>=1&&(whiteN>=1||colorRise>=14)&&motionRatio<.05&&exposureShift<8;
       const normalShape=compact&&profileGate&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
       valid=state.laserLearning?false:(P?temporalPulse:normalShape);
@@ -859,30 +859,30 @@
       V.clear=0;
       if(!V.latched){
         if(V.candidate&&Math.hypot(cx-V.candidate.x,cy-V.candidate.y)<14){V.candidate.x=(V.candidate.x*V.candidate.n+cx)/(V.candidate.n+1);V.candidate.y=(V.candidate.y*V.candidate.n+cy)/(V.candidate.n+1);V.candidate.n++;V.candidate.strong=V.candidate.strong||strong}else V.candidate={x:cx,y:cy,n:1,strong};
-        if(V.candidate.strong||V.candidate.n>=2){if(state.laserLearning){if(!state.learningBest||feature.score>=state.learningBest.score||performance.now()-state.learningBest.seenAt>5500)state.learningBest={...feature,seenAt:performance.now()};V.latched=true;V.candidate=null;els.guide.textContent='�숈뒿 �꾨낫 �뺤씤 以� 쨌 媛먯� �쒓컙�� �앸궇 �뚭퉴吏� 湲곕떎由ъ꽭��'}else if(tryRecordLaser(V.candidate.x,V.candidate.y,sw,sh,vw,vh,roi)){V.latched=true;V.candidate=null;els.fpsPill.textContent='�� �숈뒿 �덉씠��';setTimeout(showDetectorInfo,600)}}
+        if(V.candidate.strong||V.candidate.n>=2){if(state.laserLearning){if(!state.learningBest||feature.score>=state.learningBest.score||performance.now()-state.learningBest.seenAt>5500)state.learningBest={...feature,seenAt:performance.now()};V.latched=true;V.candidate=null;els.guide.textContent='학습 후보 확인 중 · 감지 시간이 끝날 때까지 기다리세요'}else if(tryRecordLaser(V.candidate.x,V.candidate.y,sw,sh,vw,vh,roi)){V.latched=true;V.candidate=null;els.fpsPill.textContent='◎ 학습 레이저';setTimeout(showDetectorInfo,600)}}
       }
     }else{
       V.candidate=null;V.clear++;if(V.clear>=(state.laserLearning?5:2))V.latched=false;
       if(motionRatio<.035&&exposureShift<8)learn(.018);
-      /* 寃쎄린 以묒뿉�� ROI�� 諛곌꼍 醫뚰몴媛� �닿툔�섏� �딅룄濡� 理쒖큹 蹂댁젙 �꾩튂瑜� 怨좎젙�쒕떎. */
+      /* 경기 중에는 ROI와 배경 좌표가 어긋나지 않도록 최초 보정 위치를 고정한다. */
     }
-    if(state.dbgTick++%6===0)els.clrPill.textContent=`ROI ${sw}px 쨌 ${Math.round(V.detectorFps||0)}fps 쨌 �좏샇 ${best?Math.round(best.score):0} 쨌 �쒓컙�곸듅 ${best?Math.round(best.onset):0} 쨌 �붾뱾由� ${Math.round(motionRatio*100)}%${valid?' ��':''}`;
+    if(state.dbgTick++%6===0)els.clrPill.textContent=`ROI ${sw}px · ${Math.round(V.detectorFps||0)}fps · 신호 ${best?Math.round(best.score):0} · 순간상승 ${best?Math.round(best.onset):0} · 흔들림 ${Math.round(motionRatio*100)}%${valid?' ✓':''}`;
     copyPrevious();
   }
 
  
   function detectLaser(){
     const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return;
-    // �묒뾽 �댁긽��(sw,sh)�� 湲곗��붾㈃�� �≪쓣 �� �� 踰덈쭔 �뺥븯怨� 怨꾩냽 洹� 媛믪쓣 �대떎.
-    // 移대찓�� 珥덉젏�� �≫엳�� �숈븞 鍮꾨뵒�� �댁긽�� 鍮꾩쑉�� �꾨젅�꾨쭏�� �꾩＜ 誘몄꽭�섍쾶 �붾뱾由щ㈃,
-    // 留� �꾨젅�� �ㅼ떆 怨꾩궛�� 寃쎌슦 洹몃븣留덈떎 湲곗��붾㈃�� 珥덇린�붾릺�� "湲곗� �붾㈃ �ㅼ젙 以�"�먯꽌 �곸썝�� 紐� �섏뼱媛� �� �덉뿀��.
+    // 작업 해상도(sw,sh)는 기준화면을 잡을 때 한 번만 정하고 계속 그 값을 쓴다.
+    // 카메라 초점이 잡히는 동안 비디오 해상도 비율이 프레임마다 아주 미세하게 흔들리면,
+    // 매 프레임 다시 계산할 경우 그때마다 기준화면이 초기화되어 "기준 화면 설정 중"에서 영원히 못 넘어갈 수 있었다.
     const sw=480;
     if(!state.workSH||!state.background)state.workSH=Math.max(270,Math.round(sw*vh/vw));
     const sh=state.workSH;
     els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh,lum=new Uint8Array(total);
-    // �ㅼ젣濡� �쏀엳�� 嫄� �쒖쟻 二쇰� 踰붿쐞肉먯씠��, 諛앷린(lum)�� 湲곗��붾㈃�� �붾㈃ �꾩껜媛� �꾨땲�� 洹� 踰붿쐞留� 怨꾩궛�쒕떎.
-    // (�쒖쟻�� �붾㈃�� �쇰�留� 李⑥��� �� 留� �꾨젅�� 怨꾩궛�됱쓣 �ш쾶 以꾩뿬, 吏㏐쾶 �ㅼ튂�� �덉씠���� �꾨젅�꾩쓣 �� �볦튂怨� 蹂� �뺣쪧�� �믪씤��.)
-    // �� 踰붿쐞(t,x0,x1,y0,y1)�� �꾨옒履� �ㅼ젣 媛먯� 濡쒖쭅�먯꽌�� 洹몃�濡� �ъ궗�⑺븳��.
+    // 실제로 읽히는 건 표적 주변 범위뿐이라, 밝기(lum)와 기준화면도 화면 전체가 아니라 그 범위만 계산한다.
+    // (표적이 화면의 일부만 차지할 때 매 프레임 계산량을 크게 줄여, 짧게 스치는 레이저도 프레임을 안 놓치고 볼 확률을 높인다.)
+    // 이 범위(t,x0,x1,y0,y1)는 아래쪽 실제 감지 로직에서도 그대로 재사용한다.
     const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*(state.paperMultiple?state.paperMultiple+.1:1.6);
     const x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
     for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;lum[p]=(data[i]*.299+data[i+1]*.587+data[i+2]*.114+.5)|0}}
@@ -891,24 +891,24 @@
       for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=lum[p];state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}}
       state.prevLum=new Uint8Array(total);state.warmupFrames=0;if(!state.warmupStart)state.warmupStart=performance.now();return
     }
-    // �덉쟾�μ튂: 臾댁뒯 �댁쑀濡쒕뱺(移대찓�� 遺덉븞�� ��) 湲곗��붾㈃ �↔린媛� 6珥� �섍쾶 �� �앸굹硫�, 洹몃븣源뚯� 紐⑥� 諛곌꼍�쇰줈 洹몃깷 �섏뼱媛꾨떎.
-    // "湲곗� �붾㈃ �ㅼ젙 以�"�먯꽌 �곸썝�� 紐� 踰쀬뼱�섎뒗 �곹솴�� 留됯린 �꾪븳 理쒗썑�� 蹂대（.
+    // 안전장치: 무슨 이유로든(카메라 불안정 등) 기준화면 잡기가 6초 넘게 안 끝나면, 그때까지 모은 배경으로 그냥 넘어간다.
+    // "기준 화면 설정 중"에서 영원히 못 벗어나는 상황을 막기 위한 최후의 보루.
     const warmupTimedOut=state.warmupStart&&(performance.now()-state.warmupStart>6000);
     const warmupLimit=Math.max(36,Math.round((state.actualFps||30)*1.2));
     if(state.warmupFrames<warmupLimit&&!warmupTimedOut){
-      // �ㅼ젣 �덉씠���덊듃 �곸긽�� 遺꾩꽍�대낫��, 移대찓�쇨� �꾩쟾�� �뺤��� �덉쓣 ��(�곗냽 �꾨젅�� 媛� 蹂��붽� 嫄곗쓽 0)
-      // 諛곌꼍 �≪쓬�� 洹뱁엳 ��븘�몄꽌 �쏀븳 �덉씠���� �⑥뵮 �� ���� 蹂댁���. 諛섎�濡� �먮뼥由� �깆쑝濡� �붾㈃�� 怨꾩냽
-      // �붾뱾由щ㈃(�곕━ �ㅼ젣 珥ъ쁺蹂몄� 洹� 李⑥씠媛� �� 90諛� �� 而몃떎) �≪쓬 湲곗��� �믪븘�� �쏀븳 �좏샇瑜� �볦튂湲� �ъ썙吏꾨떎.
-      // 洹몃옒�� �뺥빐吏� �꾨젅�� �섎쭔 梨꾩슦硫� �앸궡�� 寃껋뿉��, �붾㈃�� �ㅼ젣濡� "�덉젙�먯쓣 ��"留� 吏꾪뻾�섎룄濡� 諛붽씔��.
+      // 실제 레이저히트 영상을 분석해보니, 카메라가 완전히 정지해 있을 때(연속 프레임 간 변화가 거의 0)
+      // 배경 잡음이 극히 낮아져서 약한 레이저도 훨씬 잘 튀어 보였다. 반대로 손떨림 등으로 화면이 계속
+      // 흔들리면(우리 실제 촬영본은 그 차이가 약 90배 더 컸다) 잡음 기준이 높아져 약한 신호를 놓치기 쉬워진다.
+      // 그래서 정해진 프레임 수만 채우면 끝내던 것에서, 화면이 실제로 "안정됐을 때"만 진행되도록 바꾼다.
       let motionSum=0,motionN=0;
       for(let y=y0;y<=y1;y+=4)for(let x=x0;x<=x1;x+=4){const p=y*sw+x;motionSum+=Math.abs(lum[p]-state.prevLum[p]);motionN++}
       const stable=motionN===0||(motionSum/motionN)<2.5;
       for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=state.background[p]*.75+lum[p]*.25;state.backgroundR[p]=state.backgroundR[p]*.75+data[i]*.25;state.backgroundG[p]=state.backgroundG[p]*.75+data[i+1]*.25;state.backgroundB[p]=state.backgroundB[p]*.75+data[i+2]*.25}}
       state.prevLum.set(lum);
-      if(stable)state.warmupFrames++;   // �붾뱾由щ뒗 �숈븞�� 吏꾪뻾�� 硫덉떠�� 湲곕떎由ш퀬, �덉젙�섎㈃(�먮뒗 6珥� �덉쟾�μ튂媛� 諛쒕룞�섎㈃) �섏뼱媛꾨떎
+      if(stable)state.warmupFrames++;   // 흔들리는 동안은 진행이 멈춰서 기다리고, 안정되면(또는 6초 안전장치가 발동하면) 넘어간다
     }
     if(state.warmupFrames<warmupLimit&&!warmupTimedOut)return;
-    if(!state.detectorReady){state.detectorReady=true;if(state.detectKind!=='laser'){state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}state.objTracks=[];state.objKnown=[];state.objBusySince=0;state.objBusy=false}els.matchBtn.textContent='寃쎄린 吏꾪뻾 以�';els.guide.textContent='�덉씠�� 媛먯� ��湲� 以� 쨌 吏㏐쾶 諛쒖궗�섏꽭��.';els.livePill.textContent='�� LIVE';setStatus('�덉씠�� 媛먯� ��湲�','#ff4d66');toast('�덉씠�� 媛먯�媛� �쒖옉�섏뿀�듬땲��.');return}
+    if(!state.detectorReady){state.detectorReady=true;if(state.detectKind!=='laser'){state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}state.objTracks=[];state.objKnown=[];state.objBusySince=0;state.objBusy=false}els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');toast('레이저 감지가 시작되었습니다.');return}
     const insideScan=(x,y,margin=state.paperMultiple?state.paperMultiple+.1:1.6)=>{
       const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
       return Math.hypot(ex/t.rx,ey/t.ry)<=margin;
@@ -922,7 +922,7 @@
     if(state.detectKind!=='laser')detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan);
     if(state.detectKind==='object')return;
 
-    /* �곸쓳�� 湲곗�: 移대찓�셋룹“紐낅쭏�� �덉씠�� �됱씠 �ㅻⅤ寃� 李랁엳誘�濡�, 怨좎젙�� �レ옄 ���� "洹� �쒓컙 洹� �붾㈃ �먯껜�� �≪쓬 �섏�"�� 留� �꾨젅�� �ъ꽌 湲곗��� �ㅼ뒪濡� �몄슫��. R(�먮뒗 珥덈줉 紐⑤뱶�� G)�� 諛곌꼍蹂대떎, 洹몃━怨� �≪쓬 �섏�蹂대떎 �뺤떎��(�쒖��몄감 5諛� �댁긽) ���댁빞 �몄젙�쒕떎. */
+    /* 적응형 기준: 카메라·조명마다 레이저 색이 다르게 찍히므로, 고정된 숫자 대신 "그 순간 그 화면 자체의 잡음 수준"을 매 프레임 재서 기준을 스스로 세운다. R(또는 초록 모드는 G)이 배경보다, 그리고 잡음 수준보다 확실히(표준편차 5배 이상) 튀어야 인정한다. */
     const color=els.laserColor.value, chIdx=color==='green'?1:0;
     let sN=0,sSum=0,sSum2=0;
     for(let y=y0;y<=y1;y+=2)for(let x=x0;x<=x1;x+=2){
@@ -942,23 +942,23 @@
       if(strong){const mag=mag0;if(!coreBest||mag>coreBest.mag)coreBest={x,y,mag}}
     }
     if(peak&&(state.dbgTick++%5===0)){
-      els.clrPill.textContent=`�됱긽 dr=${peak.dr} dg=${peak.dg} db=${peak.db} (�곸쓳 湲곗� ${Math.round(adaptFloor)}, �몄감 ${Math.round(stdD)})${coreBest?' ��':''}`;
+      els.clrPill.textContent=`색상 dr=${peak.dr} dg=${peak.dg} db=${peak.db} (적응 기준 ${Math.round(adaptFloor)}, 편차 ${Math.round(stdD)})${coreBest?' ✓':''}`;
     }
     if(coreBest){
       let near=0;
       for(let oy=-7;oy<=7;oy++)for(let ox=-7;ox<=7;ox++){
         const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
         const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
-        // �� �⑤┝�쇰줈 �덉씠��媛� �댁쭩 �ㅼ튂�� 踰덉�硫� �� �먯쓽 諛앷린�� �쏀빐吏�誘�濡�, 湲곗��� 議곌툑 �� �먯뒯�섍쾶 �〓뒗��.
+        // 손 떨림으로 레이저가 살짝 스치듯 번지면 한 점의 밝기는 약해지므로, 기준을 조금 더 느슨하게 잡는다.
         const colorOk=color==='green'?(dg>adaptFloor*.4&&dg>dr+adaptMargin*.35&&dg>db+adaptMargin*.35):(dr>adaptFloor*.4&&dr>dg+adaptMargin*.35&&dr>db+adaptMargin*.3);
-        // �덉씠��媛� �덈Т 諛앹쑝硫� 以묒떖遺�媛� �섏뼏寃� �ы솕�섏뼱(R,G,B媛� �� 援щ텇 �놁씠 �� 媛숈씠 �� ��) �� �먯젙�� 紐� �듦낵�� �� �덈떎.
-        // �대� �뺤씤�� �됱긽 �쇳겕(coreBest) 諛붾줈 �놁씠�쇰㈃, �대윴 �곗깋 �ы솕�� 媛숈� �덉씠���� �쇰�濡� 蹂닿퀬 �뺤씤�⑹쑝濡� �몄젙�쒕떎.
+        // 레이저가 너무 밝으면 중심부가 하얗게 포화되어(R,G,B가 색 구분 없이 다 같이 확 튐) 색 판정을 못 통과할 수 있다.
+        // 이미 확인된 색상 피크(coreBest) 바로 옆이라면, 이런 흰색 포화도 같은 레이저의 일부로 보고 확인용으로 인정한다.
         const satOk=dr>adaptFloor*1.5&&dg>adaptFloor*1.2&&db>adaptFloor*1.2;
         if(colorOk||satOk)near++;
       }
       if(near>=2){
         state.releaseFrames=0;if(state.laserBlocked)return;
-        if(tryRecordLaser(coreBest.x,coreBest.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;els.fpsPill.textContent='�� �ㅼ젣 �덉씠��';setTimeout(showDetectorInfo,700)}
+        if(tryRecordLaser(coreBest.x,coreBest.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
         return;
       }
     }
@@ -972,7 +972,7 @@
       const warmMixed=dr>5&&dr>=dg-8&&dr>=db-8,redHalo=currentWarm>9&&warmBoost>3&&dr>5,whitePink=r>180&&dr>8&&dr>=dg-10&&dr>=db-10;
       const greenMixed=dg>7&&dg>=dr-6&&dg>=db-6;
       const blackRed=blackSurface&&dr>5&&dr>=dg-10&&dr>=db-10;
-      const colorMargin=Math.max(1,5-state.sensitivity/25);   // 媛먮룄媛� �믪쓣�섎줉(湲곕낯 98) 嫄곗쓽 �듦낵, 媛먮룄瑜� ��텧�섎줉 �뚯깋 諛앷린蹂��붾� �� �꾧꺽�� 嫄곕쫫
+      const colorMargin=Math.max(1,5-state.sensitivity/25);   // 감도가 높을수록(기본 98) 거의 통과, 감도를 낮출수록 회색 밝기변화를 더 엄격히 거름
       const redDominant=dr>dg+colorMargin&&dr>db+colorMargin,greenDominant=dg>dr+colorMargin&&dg>db+colorMargin;
       const colorMatch=color==='green'?(greenDominant&&greenMixed):(redDominant&&(warmMixed||redHalo||whitePink||blackRed));
       if(!colorMatch||maxRise<(blackSurface?Math.max(6,signalThreshold-1):signalThreshold)||lumRise<(blackSurface?1:2))continue;
@@ -993,13 +993,13 @@
     else state.pendingLaser={x:px,y:py,frames:1,maxSignal:strongest.delta,maxContrast:localContrast,maxColorBoost:clusterColorBoost,maxBright:strongest.bright,maxRedRise:strongest.redRise};
   }
 
-  function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='寃쎄린 吏꾪뻾 以�';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='留덉�留� 湲곕줉�� 痍⑥냼�덉뒿�덈떎. 怨꾩냽 �ш꺽�섏꽭��.';setStatus('寃쎄린 吏꾪뻾','#ff4d66');updateScore();drawOverlay();pushLive(true)}
-  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'寃쎄린 �쒖옉 ��湲� 以�':'寃쎄린 �쒖옉';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'�� CAMERA':'�� OFF';els.guide.textContent=state.center?'�쇱씠釉� �섏씠吏��먯꽌 寃쎄린 �쒖옉�� �꾨Ⅴ�몄슂.':'移대찓�� �쒖옉 �� �쒖쟻�� �먮룞 蹂댁젙�섏꽭��.';setStatus(state.center?'寃쎄린 �쒖옉 ��湲� 以�':'以�鍮�');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
+  function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
+  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
   function loadLeaderboard(){
-    els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='湲곕줉�� 遺덈윭�ㅻ뒗 以묒엯�덈떎.';
-    if(!isServerConfigured()){els.leaderList.textContent='index.html�� Apps Script /exec 二쇱냼瑜� 癒쇱� �ｌ뼱 二쇱꽭��.';return}
-    const callback='laserLeaderboard_'+Date.now();const script=document.createElement('script');const timer=setTimeout(()=>finish(new Error('�쒓컙 珥덇낵')),10000);
-    function finish(error,rows){clearTimeout(timer);delete window[callback];script.remove();if(error){els.leaderList.className='empty';els.leaderList.textContent='�쒖쐞�쒕� 遺덈윭�ㅼ� 紐삵뻽�듬땲��.';return}if(!rows.length){els.leaderList.className='empty';els.leaderList.textContent='�꾩쭅 ���λ맂 寃쎄린 湲곕줉�� �놁뒿�덈떎.';return}els.leaderList.className='';els.leaderList.innerHTML=rows.map((r,i)=>`<div class="leader-row"><span class="rank">${i+1}</span><span>${escapeHtml(r.player)} <small>쨌 ${r.firingLane||'-'}�щ줈</small></span><strong>${r.totalScore}��</strong><small>10�� ${r.tens}</small></div>`).join('')}
+    els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
+    if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
+    const callback='laserLeaderboard_'+Date.now();const script=document.createElement('script');const timer=setTimeout(()=>finish(new Error('시간 초과')),10000);
+    function finish(error,rows){clearTimeout(timer);delete window[callback];script.remove();if(error){els.leaderList.className='empty';els.leaderList.textContent='순위표를 불러오지 못했습니다.';return}if(!rows.length){els.leaderList.className='empty';els.leaderList.textContent='아직 저장된 경기 기록이 없습니다.';return}els.leaderList.className='';els.leaderList.innerHTML=rows.map((r,i)=>`<div class="leader-row"><span class="rank">${i+1}</span><span>${escapeHtml(r.player)} <small>· ${r.firingLane||'-'}사로</small></span><strong>${r.totalScore}점</strong><small>10점 ${r.tens}</small></div>`).join('')}
     window[callback]=rows=>finish(null,rows);script.onerror=()=>finish(new Error('network'));script.src=`${APPS_SCRIPT_URL}?action=leaderboard&eventName=${encodeURIComponent(els.eventName.value.trim())}&callback=${callback}&t=${Date.now()}`;document.head.appendChild(script);
   }
   function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
@@ -1010,26 +1010,26 @@
       else{const root=document.documentElement,request=root.requestFullscreen||root.webkitRequestFullscreen;if(!request)return;await request.call(root,{navigationUI:'hide'})}
     }catch(e){console.warn(e)}
   }
-  function updateFullscreenButton(){const active=!!document.fullscreenElement;els.fullscreenBtn.textContent=active?'�� �꾩껜�붾㈃ 醫낅즺':'�� �꾩껜�붾㈃';els.fullscreenBtn.setAttribute('aria-label',active?'�꾩껜�붾㈃ 醫낅즺':'�꾩껜�붾㈃ 耳쒓린');setTimeout(resize,120)}
+  function updateFullscreenButton(){const active=!!document.fullscreenElement;els.fullscreenBtn.textContent=active?'⛶ 전체화면 종료':'⛶ 전체화면';els.fullscreenBtn.setAttribute('aria-label',active?'전체화면 종료':'전체화면 켜기');setTimeout(resize,120)}
 
   function syncLocalLearningButtons(){
     els.cameraLearningButtons.hidden=!state.laserLearning;
     if(!state.laserLearning)return;
     els.learnArmLocal.disabled=!state.learningArmed;
     els.learnSaveLocal.disabled=!state.learningCaptureBest;
-    els.learnSaveLocal.textContent=state.learningCaptureBest?'�뮶 諛⑷툑 �� �숈뒿�� ����':'�뮶 �숈뒿�� ���� (愿묒젏 ��湲�)';
+    els.learnSaveLocal.textContent=state.learningCaptureBest?'💾 방금 쏜 학습탄 저장':'💾 학습탄 저장 (광점 대기)';
   }
   els.learnArmLocal.onclick=()=>confirmLaserLearningSample();
   els.learnSaveLocal.onclick=()=>{
-    if(saveLaserLearningSample())toast('�숈뒿�꾩쓣 ���ν뻽�듬땲��.');
-    else toast('愿묒젏 �꾨낫媛� �놁뒿�덈떎. 諛쒖궗 �� �ㅼ떆 �뚮윭 二쇱꽭��.');
+    if(saveLaserLearningSample())toast('학습탄을 저장했습니다.');
+    else toast('광점 후보가 없습니다. 발사 후 다시 눌러 주세요.');
     syncLocalLearningButtons();
     pushLive(true);
   };
   setInterval(syncLocalLearningButtons,250);
-  els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.learnBtn.onclick=beginLaserLearning;els.matchBtn.title='�덉씠�� 3諛� �숈뒿 �� �쇱씠釉� 愿��� �섏씠吏��먯꽌 寃쎄린瑜� �쒖옉�섏꽭��.';els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
-  function showDetectorInfo(){els.fpsPill.textContent='怨좉컧�� �덉씠�� '+state.sensitivity+(state.actualFps?' 쨌 '+Math.round(state.actualFps)+'fps':'')}
-  els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('媛먮룄瑜� ��톬�듬땲��.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('媛먮룄瑜� �믪��듬땲��.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
+  els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.learnBtn.onclick=beginLaserLearning;els.matchBtn.title='레이저 3발 학습 후 라이브 관전 페이지에서 경기를 시작하세요.';els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
+  function showDetectorInfo(){els.fpsPill.textContent='고감도 레이저 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')}
+  els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
   window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
 })();
 </script>
