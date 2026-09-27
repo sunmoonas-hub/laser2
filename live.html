@@ -34,8 +34,6 @@
   .metric strong{font-size:1.6rem}
   .metric:first-child strong{color:var(--lime);font-size:2rem}
   .updated{text-align:center;color:var(--muted);font-size:.72rem;margin-top:6px}
-  .learningBanner{margin:0;padding:11px 14px;background:#30270d;border:1px solid #d8ad27;color:#ffe373;font-weight:900;text-align:center;font-size:.92rem}
-  .learningBanner.done{background:#0c3119;border-color:#20dc60;color:#6dff9d}
   .watchRow{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;font-size:.82rem;color:var(--muted)}
   .watchRow select{background:#091426;color:#fff;border:1px solid #29415e;border-radius:8px;padding:6px 10px;font-size:.85rem}
   .otherLane{text-align:center;color:var(--muted);padding:40px 16px;font-size:.9rem;line-height:1.7}
@@ -46,9 +44,6 @@
   .startPanel .field input,.startPanel .field select{width:100%;min-height:50px;border:1px solid #29415e;border-radius:10px;background:#091426;color:#fff;padding:10px 12px;font-size:.92rem}
   .startRow{display:flex;gap:10px}
   .startBtn{flex:1;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
-  .learnBtn{flex:1;min-height:54px;border:1px solid var(--gold);border-radius:12px;background:#2b2412;color:var(--gold);font-weight:850;font-size:.94rem}
-  .learnBtn:disabled{opacity:.5}
-  .saveLearnBtn{width:100%;min-height:54px;margin-top:10px;border:2px solid #fff;border-radius:3px;background:#e3b91f;color:#171100;font-weight:950;font-size:1rem}
   .startBtn:disabled{opacity:.5}
   .endBtn{flex:none;min-width:110px;min-height:54px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:850;font-size:.92rem}
   .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
@@ -111,7 +106,6 @@
       <div id="idleHint" class="idle"><b>대기 중…</b>선택한 사로에서 아직 경기가 시작되지 않았어요.</div>
       <div id="otherLaneBox" class="otherLane" hidden></div>
       <div id="liveBox" hidden>
-        <div class="learningBanner" id="learningBanner" hidden></div>
         <div class="who">
           <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
           <span class="status" id="statusPill"><i class="dot"></i><span id="statusText">대기</span></span>
@@ -136,12 +130,9 @@
           <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
         </div>
         <div class="startRow">
-          <button class="learnBtn" id="rLearn">🎯 레이저 3발 학습</button>
           <button class="startBtn" id="rStart">🕹️ 경기 시작</button>
           <button class="endBtn" id="rEnd">🛑 경기 종료</button>
         </div>
-        <button class="saveLearnBtn" id="rSaveLearn">🎯 학습탄 1발 감지 준비</button>
-        <button class="saveLearnBtn" id="rConfirmSave" disabled>💾 방금 쏜 학습탄 저장</button>
         <p class="startMsg" id="rMsg"></p>
       </section>
       <section class="shotPanel" id="shotPanel" hidden>
@@ -198,8 +189,8 @@
       ctx.beginPath();
       if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}
       else ctx.arc(px,py,10,0,Math.PI*2);
-      const learning=s.kind==='learning';ctx.fillStyle=learning?'#ffd641':(s.score?'#ffffff':'#e11b24');ctx.fill();
-      ctx.strokeStyle=learning?'#ffffff':'#d71922';ctx.lineWidth=learning?3:2;ctx.stroke();
+      ctx.fillStyle=s.score?'#ffffff':'#e11b24';ctx.fill();
+      ctx.strokeStyle='#d71922';ctx.lineWidth=2;ctx.stroke();
       ctx.fillStyle = '#111111'; ctx.font = 'bold 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(String(s.no||i+1), px, py);
     });
@@ -216,45 +207,33 @@
   // 단, 연결이 끊기거나 페이지를 닫는 바람에 "진행 중"으로 멈춰버린 죽은 기록이면 60초 뒤 자동으로 풀어준다.
   function syncStartLock(){
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
-    const busy = !!(lastState && (lastState.running||lastState.learning) && !stale);
+    const busy = !!(lastState && lastState.running && !stale);
     $('rStart').disabled = busy;
-    $('rLearn').disabled = busy;
-    // 서버의 학습 상태 수신이 늦어져도 버튼이 사라지지 않도록 항상 표시한다.
-    // 경기 중에만 잠그고, 그 외에는 사용자가 직접 학습탄 저장 명령을 보낼 수 있다.
-    $('rSaveLearn').hidden = false;
-    const canSave=!!(lastState&&lastState.learningCandidateReady),canArm=!!(lastState&&lastState.learningArmed);
-    $('rSaveLearn').disabled=!canArm;
-    $('rConfirmSave').hidden=false;
-    $('rConfirmSave').disabled=!canSave;
-    $('rConfirmSave').textContent=canSave?'💾 방금 쏜 학습탄 저장':'💾 학습탄 저장 (광점 대기)';
   }
   function applyView(){
     const state = lastState;
     const watch = Number($('watchLane').value) || 1;
     if(!state){ show('idle'); return; }
     const shots = Array.isArray(state.shots) ? state.shots : [];
-    const learningShots=Array.isArray(state.learningShots)?state.learningShots:[];
-    const learning=!!state.learning,learningArmed=!!state.learningArmed,learningCaptureActive=!!state.learningCaptureActive,learningSettling=!!state.learningSettling,learningCandidateReady=!!state.learningCandidateReady,learningReady=!!state.learningReady;
-    const hasResult = !!(learning||learningReady||state.player||shots.length);
+    const hasResult = !!(state.running||state.player||shots.length);
     if(!hasResult){ show('idle'); return; }
     const lane = state.firingLane || 1;
     if(lane !== watch){
-      $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">다른 사로에서 진행 중</b>${lane}사로에서 ${state.learning?'레이저 학습 중':(`"${state.player||''}" 선수가 ${state.running?'사격 중':'경기를 마쳤어요'}`)}.<br>${watch}사로를 보려면 위에서 사로를 바꿔서 기다려 주세요.`;
+      $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">다른 사로에서 진행 중</b>${lane}사로에서 "${state.player||''}" 선수가 ${state.running?'사격 중':'경기를 마쳤어요'}.<br>${watch}사로를 보려면 위에서 사로를 바꿔서 기다려 주세요.`;
       show('other'); return;
     }
     show('live');
-    $('pName').textContent = learning||learningReady&&!state.running&&!shots.length ? '레이저 3발 학습' : (state.player || '이름 없음');
+    $('pName').textContent = state.player || '이름 없음';
     $('pLane').textContent = state.eventName ? `${state.eventName} · ${lane}사로` : `${lane}사로`;
     const pill = $('statusPill');
-    pill.className = 'status ' + (state.running||learning ? 'live' : 'done');
-    $('statusText').textContent = learning?`학습 ${state.learningCount||0}/3`:(learningReady&&!state.running&&!shots.length?'학습 완료':(state.running?'사격 중':(shots.length?'완료':'대기')));
-    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?(learningSettling?'⏳ 카메라 안정화 중 · 아직 쏘지 마세요':(learningCandidateReady?'💾 광점 후보 포착 · 실제로 발사했다면 「방금 쏜 학습탄 저장」을 누르세요':(learningCaptureActive?'🔴 감지 준비 완료 · 지금 레이저를 한 발 쏘세요':(!learningArmed?'카메라폰 연결·기준 화면 준비 중 · 아직 쏘지 마세요':((state.learningCount||0)?`학습 ${state.learningCount}/3 완료 · 감지 준비 버튼을 누른 뒤 다음 발을 쏘세요`:'발사 가능 · 감지 준비 버튼을 누르고 「감지 준비 완료」를 기다리세요'))))):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
+    pill.className = 'status ' + (state.running ? 'live' : 'done');
+    $('statusText').textContent = state.running?'사격 중':(shots.length?'완료':'대기');
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
-    $('cnt').textContent = learning||learningReady&&!state.running&&!shots.length ? (state.learningCount||0) : shots.length;
-    $('maxS').textContent = learning||learningReady&&!state.running&&!shots.length ? 3 : (state.maxShots || 10);
+    $('cnt').textContent = shots.length;
+    $('maxS').textContent = state.maxShots || 10;
     $('avg').textContent = shots.length ? (total/shots.length).toFixed(1) : '0.0';
-    drawTarget(learning||learningReady&&!state.running&&!shots.length ? learningShots : shots);
+    drawTarget(shots);
     renderScores(shots, state.maxShots);
     $('undoBtnLive').disabled = !shots.length;
     if(state.updatedAt){
@@ -302,7 +281,7 @@
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
-        msg.textContent = cmd.mode==='learn'?'✅ 학습 시작 요청 전송 · 카메라폰의 준비 완료를 기다리세요.':(cmd.mode==='confirmLearn'?'⏳ 감지 요청 전송됨 · 「감지 준비 완료」가 나오면 쏘세요.':(cmd.mode==='saveLearn'?'✅ 방금 쏜 학습탄 저장 요청을 보냈습니다.':'✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.'));
+        msg.textContent = '✅ 전송했어요. 사대 화면에서 시작합니다.';
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
         if(onOk) onOk();
@@ -327,20 +306,6 @@
     if(!cmd.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
     sendCmd(cmd, $('rStart'), $('rMsg'));
   }
-  function sendRemoteLearn(){
-    const cmd={mode:'learn',firingLane:Number($('rLane').value),laserColor:$('rColor').value,detectKind:'laser'};
-    sendCmd(cmd,$('rLearn'),$('rMsg'));
-  }
-  function armRemoteLearnShot(){
-    sendCmd({mode:'confirmLearn',firingLane:Number($('rLane').value)},$('rSaveLearn'),$('rMsg'));
-  }
-  function saveRemoteLearnShot(){
-    if(!lastState||!lastState.learningCandidateReady)return;
-    sendCmd({mode:'saveLearn',firingLane:Number($('rLane').value)},$('rConfirmSave'),$('rMsg'));
-  }
-  $('rSaveLearn').addEventListener('click',armRemoteLearnShot);
-  $('rConfirmSave').addEventListener('click',saveRemoteLearnShot);
-  $('rLearn').addEventListener('click',sendRemoteLearn);
   $('rStart').addEventListener('click', sendRemoteStart);
   $('undoBtnLive').addEventListener('click', () => {
     const btn = $('undoBtnLive'), msg = $('undoMsg');
