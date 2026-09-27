@@ -25,7 +25,6 @@
     .camera{grid-area:camera;position:relative;width:100%;height:clamp(440px,68svh,780px);background:#02060c;border-radius:14px;overflow:hidden;border:1px solid var(--line)}video,.overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.overlay{touch-action:none}.camera-msg{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:22px;color:var(--muted);background:radial-gradient(circle,#10243a,#050a12);font-size:1rem;line-height:1.6}.camera-msg b{color:white;font-size:1.25rem;margin-bottom:8px}.hud{position:absolute;left:9px;right:9px;top:9px;display:flex;justify-content:space-between;pointer-events:none}.pill{border:1px solid #ffffff28;background:#06101dcc;backdrop-filter:blur(9px);border-radius:999px;padding:9px 12px;font-size:.78rem}.live{color:var(--red)}
     .zoom-controls{position:absolute;z-index:5;right:10px;top:56px;display:grid;grid-template-columns:46px 58px 46px;align-items:center;border:1px solid #ffffff32;border-radius:14px;overflow:hidden;background:#06101de8;backdrop-filter:blur(10px)}.zoom-controls button{width:46px;height:46px;border:0;background:#142941;color:white;font-size:1.45rem;font-weight:800}.zoom-controls button:active{background:var(--cyan);color:#07111f}.zoom-controls button:disabled{opacity:.35}.zoom-controls span{font-size:.72rem;text-align:center;color:var(--cyan);font-weight:800}
     .guide{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:max-content;max-width:94%;padding:9px 12px;border-radius:10px;background:#06101dee;color:white;text-align:center;font-size:.75rem;line-height:1.35;pointer-events:none}.flash{position:absolute;inset:0;display:grid;place-items:center;background:#07111faa;opacity:0;pointer-events:none;transition:.15s}.flash.show{opacity:1}.score-pop{font-size:clamp(4.5rem,25vw,7rem);font-weight:900;color:var(--lime);text-shadow:0 0 30px #b7ff3c99}.miss{color:var(--red)}
-    .match-countdown{position:absolute;z-index:8;inset:0;display:grid;place-items:center;background:#0008;color:#fff;font-size:clamp(6rem,30vw,13rem);font-weight:1000;line-height:1;text-align:center;text-shadow:0 5px 0 #000,0 0 32px #fff8;pointer-events:none}.match-countdown[hidden]{display:none}.match-countdown.go{font-size:clamp(2.6rem,13vw,6rem);color:#36f06f;background:#000a;text-shadow:0 4px 0 #063,0 0 34px #20e66d}
     .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:11px 0}.btn{min-height:62px;border:0;border-radius:14px;padding:13px 9px;font-size:1rem;font-weight:850;color:#08111d;background:var(--cyan)}.btn.secondary{background:#1b2c43;color:white;border:1px solid #34506f}.btn.danger{background:#ff526a;color:white}.btn:disabled{opacity:.45;cursor:not-allowed}.wide{grid-column:1/-1}
     #matchBtn{pointer-events:none}
     .scoreboard{grid-area:score;display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:var(--line);margin-bottom:12px}.metric{background:#0e1b2d;padding:14px 6px;text-align:center}.metric small{display:block;color:var(--muted);font-size:.7rem;margin-bottom:5px}.metric strong{font-size:1.5rem}.metric:first-child strong{color:var(--lime);font-size:1.9rem}
@@ -37,30 +36,7 @@
     @media(max-width:520px){.shot-grid{grid-template-columns:repeat(5,1fr)}}
     @media(max-width:420px){.status{display:none}.fullscreen-btn{padding:7px 9px;font-size:.68rem}}
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
-    @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.72fr) minmax(300px,.78fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side";gap:0;padding:0}.camera{height:100%;min-height:0;position:relative;top:auto;border-radius:0}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 0 18px;scrollbar-gutter:stable}.setup{margin:0;padding:10px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0;padding:7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0}.metric{padding:9px 3px}.metric strong{font-size:1.2rem}.metric:first-child strong{font-size:1.75rem}.shots{margin:0;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
-
-    /* LaserHIT 경기 화면에서 영감을 받은 고대비 사격장 UI */
-    :root{--bg:#050505;--panel:#151515;--line:#383838;--text:#fff;--muted:#b8b8b8;--cyan:#21dc63;--lime:#20e66d;--red:#d51b24;--gold:#ffd441}
-    html,body{background:#050505}
-    .camera{background:#000;border-color:#343434;box-shadow:inset 0 0 0 1px #000}
-    .camera-msg{background:radial-gradient(circle,#242424,#050505)}
-    .panel,.setup{background:#171717;border-color:#383838;box-shadow:none}
-    .mini-brand{padding:4px 2px 8px;border-bottom:3px solid #20d95d}
-    .brand-mark{border-color:#20d95d;box-shadow:0 0 16px #20d95d55}.brand-mark:before{border-color:#e3272f;box-shadow:inset 0 0 0 4px #111}
-    .status{color:#23e466}.dot{box-shadow:0 0 9px currentColor}
-    .field input,.field select{background:#0b0b0b;border-color:#4b4b4b;border-radius:4px}.field input:focus,.field select:focus{border-color:#20df62}
-    .fullscreen-btn{background:#222;border-color:#555;border-radius:4px}
-    .btn{border-radius:3px;background:#20db5e;color:#041408;text-transform:none;box-shadow:inset 0 -2px 0 #0b8d36}
-    .btn.secondary{background:#292929;color:#fff;border-color:#585858;box-shadow:none}
-    #matchBtn{background:#20db5e;color:#041408}
-    .scoreboard{background:#760b10;border:1px solid #ee3740;border-radius:0;gap:1px}
-    .metric{background:#b6141c;color:#fff;border-right:1px solid #e84a50}
-    .metric:last-child{border-right:0}.metric small{color:#ffd7d9;text-transform:uppercase;letter-spacing:.06em}.metric strong,.metric:first-child strong{color:#fff;text-shadow:0 2px 0 #700;font-weight:950}
-    .pill{background:#050505db;border-color:#777;border-radius:3px}.hud .live{color:#ff3038}
-    .guide{background:#050505eb;border:1px solid #555;border-radius:3px}
-    .zoom-controls{background:#080808e8;border-color:#666;border-radius:3px}.zoom-controls button{background:#242424}.zoom-controls span{color:#29e56a}
-    .flash{background:#a90000de}.score-pop{color:#fff;text-shadow:0 4px 0 #600,0 0 24px #fff}.score-pop.miss{color:#fff}
-    .shot{background:#111;border-color:#555}.shot.hit{background:#fff;border-color:#fff;color:#121212}.shot.miss{background:#d51b24;border-color:#ff545b}
+    @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side";gap:8px;padding:4px 8px 8px}.camera{height:100%;min-height:0;position:relative;top:auto}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 3px 18px 0;scrollbar-gutter:stable}.setup{margin:0 0 7px;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0 0 7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0 0 7px}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0 0 7px;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
   </style>
 </head>
 <body>
@@ -75,8 +51,7 @@
       <span id="zoomValue">1.0×</span>
       <button id="zoomIn" type="button" disabled aria-label="확대">＋</button>
     </div>
-    <div class="guide" id="guide">① 카메라 → ② 표적 보정 → ③ 경기</div>
-    <div class="match-countdown" id="matchCountdown" hidden>5</div>
+    <div class="guide" id="guide">① 카메라 시작 → ② 표적 자동 보정 → ③ 경기 시작</div>
     <div class="pill" id="clrPill" style="position:absolute;left:9px;bottom:9px;font-size:.66rem;opacity:.9">–</div>
     <div class="pill" id="liveStatus" style="position:absolute;left:9px;bottom:34px;font-size:.66rem;opacity:.9">📡 관전 연결 안 됨</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
@@ -86,7 +61,7 @@
 
   <section class="panel setup">
     <div class="mini-brand">
-      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH <small style="font-size:.55em;color:#ffd441">v34</small></h1></div>
+      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH</h1></div>
       <div class="status" id="status"><i class="dot"></i><span>준비</span></div>
       <button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶</button>
     </div>
@@ -98,7 +73,7 @@
       <input id="eventName" value="교내 레이저 사격대회" maxlength="80">
       <input id="player" placeholder="선수 이름" maxlength="40">
       <select id="laserColor"><option value="red">빨간색</option><option value="green">초록색</option></select>
-      <select id="detectKind"><option value="laser" selected>레이저만 (권장)</option><option value="both">레이저 + 물체·자국</option><option value="object">물체·자국만</option></select>
+      <select id="detectKind"><option value="both" selected>레이저 + 물체·자국</option><option value="laser">레이저만</option><option value="object">물체·자국만</option></select>
       <select id="maxShots"><option>5</option><option selected>10</option><option>20</option></select>
     </div>
   </section>
@@ -138,15 +113,16 @@
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
-  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','matchCountdown','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
+  const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,matchArmAt:0,countdownTimer:0,lastHit:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,detectorReady:false,autoCalibrating:false,calibrationFailReason:'',zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'laser',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,paperMultiple:null};
+  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null};
 
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
   function uid(){return 'M-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
-  function clearDetectorBackground(){state.background=null;state.backgroundR=null;state.backgroundG=null;state.backgroundB=null;state.pulseV2=null;state.objRef=null;state.objTracks=[];state.objKnown=[];state.objBusy=false;state.objBusySince=0}
+  function clearDetectorBackground(){state.background=null;state.backgroundR=null;state.backgroundG=null;state.backgroundB=null;state.prevLum=null;state.pendingLaser=null;state.haloCandidate=null;state.laserBlocked=false;state.releaseFrames=0;state.stableFrames=0;state.objRef=null;state.objTracks=[];state.objKnown=[];state.objBusy=false;state.objBusySince=0;state.workSH=null}
+  function blendBackground(data,lum,sw,x0,x1,y0,y1,alpha){if(!state.backgroundR)return;for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=state.background[p]*(1-alpha)+lum[p]*alpha;state.backgroundR[p]=state.backgroundR[p]*(1-alpha)+data[i]*alpha;state.backgroundG[p]=state.backgroundG[p]*(1-alpha)+data[i+1]*alpha;state.backgroundB[p]=state.backgroundB[p]*(1-alpha)+data[i+2]*alpha}}}
   function resize(){const r=els.overlay.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);els.overlay.width=Math.round(r.width*d);els.overlay.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);restoreTargetFromVideo();drawOverlay()}
 
   async function startCamera(){
@@ -155,7 +131,6 @@
       // 카메라를 다시 시작하면 예전 보정값을 확실히 비운다 - 그래야 매번 새로 보정해야 하고,
       // 낡은(어쩌면 지금 화면과 안 맞는) 보정 상태 때문에 미리 와있던 원격 명령이 갑자기 실행되는 일이 없다.
       state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetVideo=null;state.paperMultiple=null;state.running=false;lastCmdId=null;lastNotifiedCmdId=null;
-      clearInterval(state.countdownTimer);state.countdownTimer=0;state.matchArmAt=0;els.matchCountdown.hidden=true;
       document.body.classList.remove('match-live');
       els.matchBtn.disabled=true;els.matchBtn.textContent='경기 시작';
       try{state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280,min:640},height:{ideal:720,min:480},frameRate:{ideal:60,min:30,max:60}}})}
@@ -191,7 +166,7 @@
 
   async function beginCalibration(){
     if(!state.stream||els.video.readyState<2||state.autoCalibrating)return;state.autoCalibrating=true;
-    state.running=false;state.calibrationFailReason='';state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetAngle=0;state.targetVideo=null;state.paperMultiple=null;state.shots=[];state.calibrationMode=0;clearDetectorBackground();updateScore();drawOverlay();
+    state.running=false;state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetAngle=0;state.targetVideo=null;state.paperMultiple=null;state.shots=[];state.calibrationMode=0;clearDetectorBackground();updateScore();drawOverlay();
     els.calibrateBtn.disabled=true;els.matchBtn.disabled=true;els.guide.textContent='표적의 동심원과 중심을 분석하고 있습니다…';setStatus('자동 보정 중','#ffc940');
     // 카메라 초점·노출이 막 켜진 직후엔 아직 안 안정된 경우가 많아, 한 번에 실패로 끝내지 않고
     // 짧은 간격을 두고 몇 번 더 시도해서 그사이 안정된 화면으로 다시 인식을 시도한다.
@@ -204,11 +179,11 @@
     if(target){
       state.center={x:target.x,y:target.y};state.radiusX=target.radiusX;state.radiusY=target.radiusY;state.radius=Math.max(target.radiusX,target.radiusY);state.targetAngle=target.angle;state.calibrationMode=0;state.calibratedAt=performance.now();saveTargetToVideo();
       els.guide.textContent='표적 자동 보정 완료 · 라이브 페이지에서 경기 시작을 누르세요.';
-      els.calibrationInfo.textContent=`가운데 원·최외곽 원 감지 · 원 중심 기준선 보정 · 표적 ${Math.round(target.radiusX)}×${Math.round(target.radiusY)}px`;
-      els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';setStatus('경기 시작 대기 중','var(--lime)');drawOverlay();toast('표적 자동 보정이 완료되었습니다.');
+      els.calibrationInfo.textContent=`자동 보정 완료: 카메라 표적 형태 ${Math.round(target.radiusX)}×${Math.round(target.radiusY)}px · 기울기 ${Math.round(target.angle*180/Math.PI)}°`;
+      els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';setStatus('경기 시작 대기 중');drawOverlay();toast('표적을 자동으로 인식했습니다. 라이브 페이지에서 경기를 시작하세요.');
     }else{
       els.guide.textContent='표적 자동 인식 실패 · 표적 자동 보정을 다시 눌러 주세요.';
-      els.calibrationInfo.textContent=`표적 경계 확인 실패 · ${state.calibrationFailReason||'화면 대비가 약함'} · 표적에 가까이 대고 다시 보정해 보세요.`;
+      els.calibrationInfo.textContent='표적을 화면 중앙에 더 크게, 정면으로 맞춘 뒤 표적 자동 보정을 다시 눌러 보세요.';
       setStatus('인식 실패','#ff4d66');toast('표적을 더 크게, 정면으로 맞춘 뒤 표적 자동 보정을 다시 눌러 주세요.');
     }
   }
@@ -221,39 +196,18 @@
 
   function videoToScreen(vx,vy){const g=videoGeometry();return{x:g.offX+vx*g.scale,y:g.offY+vy*g.scale,scale:g.scale}}
 
-  function saveTargetToVideo(){if(!state.center||!state.radius||!els.video.videoWidth)return;const g=videoGeometry(),vx=(state.center.x-g.offX)/g.scale,vy=(state.center.y-g.offY)/g.scale;state.targetVideo={x:vx/g.vw,y:vy/g.vh,rx:state.radiusX/g.scale/g.vw,ry:state.radiusY/g.scale/g.vh,a:state.targetAngle,pm:state.paperMultiple||null}}
+  function saveTargetToVideo(){if(!state.center||!state.radius||!els.video.videoWidth)return;const g=videoGeometry(),vx=(state.center.x-g.offX)/g.scale,vy=(state.center.y-g.offY)/g.scale;state.targetVideo={x:vx/g.vw,y:vy/g.vh,rx:state.radiusX/g.scale/g.vw,ry:state.radiusY/g.scale/g.vw,a:state.targetAngle,pm:state.paperMultiple||null}}
 
-  function restoreTargetFromVideo(){if(!state.targetVideo||!els.video.videoWidth)return;const g=videoGeometry(),mapped=videoToScreen(state.targetVideo.x*g.vw,state.targetVideo.y*g.vh);state.center={x:mapped.x,y:mapped.y};state.radiusX=(state.targetVideo.rx||state.targetVideo.r)*g.vw*g.scale;state.radiusY=(state.targetVideo.ry||state.targetVideo.r)*g.vh*g.scale;state.radius=Math.max(state.radiusX,state.radiusY);state.targetAngle=state.targetVideo.a||0;state.paperMultiple=state.targetVideo.pm||null}
+  function restoreTargetFromVideo(){if(!state.targetVideo||!els.video.videoWidth)return;const g=videoGeometry(),mapped=videoToScreen(state.targetVideo.x*g.vw,state.targetVideo.y*g.vh);state.center={x:mapped.x,y:mapped.y};state.radiusX=(state.targetVideo.rx||state.targetVideo.r)*g.vw*g.scale;state.radiusY=(state.targetVideo.ry||state.targetVideo.r)*g.vw*g.scale;state.radius=Math.max(state.radiusX,state.radiusY);state.targetAngle=state.targetVideo.a||0;state.paperMultiple=state.targetVideo.pm||null}
 
-  /* 현재 표적의 검은 중앙부를 기준으로 중심을 조금씩 따라간다. 새 표적을 만들어내지 않고,
-     최초 동심원 보정값에서 벗어나지 않는 작은 이동만 허용한다. */
-  function trackTargetCenter(data,sw,sh,t,roi){
-    if(!state.targetVideo)return;
-    const x0=Math.max(1,Math.floor(t.x-t.rx*.48)),x1=Math.min(sw-2,Math.ceil(t.x+t.rx*.48)),y0=Math.max(1,Math.floor(t.y-t.ry*.48)),y1=Math.min(sh-2,Math.ceil(t.y+t.ry*.48));
-    let mean=0,n=0;for(let y=y0;y<=y1;y+=2)for(let x=x0;x<=x1;x+=2){const dx=(x-t.x)/(t.rx*.48),dy=(y-t.y)/(t.ry*.48);if(dx*dx+dy*dy>1)continue;const i=(y*sw+x)*4;mean+=(data[i]+data[i+1]*2+data[i+2])*.25;n++}if(!n)return;mean/=n;
-    const threshold=Math.min(112,mean-18);let sx=0,sy=0,wSum=0,count=0;
-    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const dx=(x-t.x)/(t.rx*.48),dy=(y-t.y)/(t.ry*.48);if(dx*dx+dy*dy>1)continue;const i=(y*sw+x)*4,l=(data[i]+data[i+1]*2+data[i+2])*.25;if(l>=threshold)continue;const w=threshold-l+1;sx+=x*w;sy+=y*w;wSum+=w;count++}
-    if(!wSum||count<20)return;const cx=sx/wSum,cy=sy/wSum,dx=cx-t.x,dy=cy-t.y;
-    if(Math.hypot(dx/Math.max(1,t.rx),dy/Math.max(1,t.ry))>.10)return;
-    const stepX=Math.max(-1,Math.min(1,dx)),stepY=Math.max(-1,Math.min(1,dy));if(Math.hypot(stepX,stepY)<.2)return;
-    state.targetVideo.x+=roi?stepX/sw*roi.sWidth/roi.vw:stepX/sw;state.targetVideo.y+=roi?stepY/sh*roi.sHeight/roi.vh:stepY/sh;restoreTargetFromVideo();drawOverlay();
-  }
-
-  function refineRingCenter(edge,sw,sh,cx,cy,innerR,outerR){
-    if(!(innerR>3&&outerR>innerR*3))return null;
-    const angles=72,reach=Math.min(20,Math.max(6,outerR*.16));
-    const ringScore=(x,y,r)=>{let sum=0,covered=0,n=0;for(let a=0;a<angles;a++){const th=a*Math.PI*2/angles,cs=Math.cos(th),sn=Math.sin(th);let peak=0;for(const dr of [-1,0,1]){const px=Math.round(x+cs*(r+dr)),py=Math.round(y+sn*(r+dr));if(px<1||px>=sw-1||py<1||py>=sh-1)continue;peak=Math.max(peak,edge[py*sw+px]);n++}sum+=peak;if(peak>18)covered++}return{mean:sum/angles,coverage:covered/angles}};
-    const scoreAt=(x,y)=>{const a=ringScore(x,y,innerR),b=ringScore(x,y,outerR);return{score:a.mean*.8+b.mean*1.7+(a.coverage*35)+(b.coverage*70),innerCoverage:a.coverage,outerCoverage:b.coverage}};
-    let best={x:cx,y:cy,...scoreAt(cx,cy)};
-    // Coarse-to-fine search keeps the detected center on the common center of the two circles.
-    for(let step of [2,1]){const baseX=best.x,baseY=best.y;for(let dy=-reach;dy<=reach;dy+=step)for(let dx=-reach;dx<=reach;dx+=step){const x=baseX+dx,y=baseY+dy;if(x<4||x>=sw-4||y<4||y>=sh-4)continue;const q=scoreAt(x,y);if(q.score>best.score)best={x,y,...q}}}
-    if(best.innerCoverage<.08||best.outerCoverage<.10)return null;
-    return best;
+  function screenTargetToWork(sw,sh){
+    const g=videoGeometry();
+    return{x:(state.center.x-g.offX)/g.scale/g.vw*sw,y:(state.center.y-g.offY)/g.scale/g.vh*sh,rx:state.radiusX/g.scale/g.vw*sw,ry:state.radiusY/g.scale/g.vw*sw,r:state.radius/g.scale/g.vw*sw,a:state.targetAngle};
   }
 
   function detectTarget(){
-    const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh){state.calibrationFailReason='카메라 영상 없음';return null}
-    const sw=480,sh=Math.max(260,Math.round(sw*vh/vw));els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);
+    const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return null;
+    const sw=360,sh=Math.max(200,Math.round(sw*vh/vw));els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);
     const data=wctx.getImageData(0,0,sw,sh).data,gray=new Uint8Array(sw*sh);let mean=0;
     for(let p=0,i=0;p<gray.length;p++,i+=4){const v=Math.round(data[i]*.299+data[i+1]*.587+data[i+2]*.114);gray[p]=v;mean+=v}mean/=gray.length;
     // 조명이 밝거나 어두우면 임계값 하나로는 검은 중심부를 못 찾는 경우가 많아, 몇 가지 임계값을 순서대로 시도한다.
@@ -264,7 +218,7 @@
       for(let y=Math.round(sh*.08);y<sh*.92;y++)for(let x=Math.round(sw*.08);x<sw*.92;x++){const p=y*sw+x;if(gray[p]<threshold)m[p]=1}
       const stack=[];
       for(let y=2;y<sh-2;y+=2)for(let x=2;x<sw-2;x+=2){const start=y*sw+x;if(!m[start]||seen[start])continue;stack.length=0;stack.push(start);seen[start]=1;let area=0,sumX=0,sumY=0,minX=x,maxX=x,minY=y,maxY=y;
-        while(stack.length&&area<24000){const p=stack.pop(),px=p%sw,py=(p/sw)|0;area++;sumX+=px;sumY+=py;if(px<minX)minX=px;if(px>maxX)maxX=px;if(py<minY)minY=py;if(py>maxY)maxY=py;const n=[p-1,p+1,p-sw,p+sw];for(const q of n){if(q>0&&q<m.length&&m[q]&&!seen[q]){seen[q]=1;stack.push(q)}}}
+        while(stack.length&&area<12000){const p=stack.pop(),px=p%sw,py=(p/sw)|0;area++;sumX+=px;sumY+=py;if(px<minX)minX=px;if(px>maxX)maxX=px;if(py<minY)minY=py;if(py>maxY)maxY=py;const n=[p-1,p+1,p-sw,p+sw];for(const q of n){if(q>0&&q<m.length&&m[q]&&!seen[q]){seen[q]=1;stack.push(q)}}}
         const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh;if(area<25||ratio<.4||ratio>2.5||bw>sw*.58||bh>sh*.72)continue;const cx=sumX/area,cy=sumY/area,dist=Math.hypot(cx-sw/2,cy-sh/2),fill=area/(bw*bh),score=area*(.4+fill)/(1+dist*.025);if(!best||score>best.score){best={cx,cy,bw,bh,fill,score};mask=m}
       }
       if(best)break;   // 후보를 찾았으면 더 느슨한 임계값은 시도하지 않는다
@@ -279,44 +233,20 @@
     let fit=null;const fits=[];
     /* 서로 다른 선만 한 번씩 사용하고, 바깥쪽 원까지 맞는 후보 중 큰 표적을 우선한다. */
     for(let step=4;step<=maxR/10;step+=.25){let strength=0,hits=0,outerHits=0,error=0;const used=new Set(),tolerance=Math.max(2,step*.18);for(let ring=1;ring<=10;ring++){let pick=-1,pickError=Infinity;for(let i=0;i<ringPeaks.length;i++){if(used.has(i))continue;const e=Math.abs(ringPeaks[i].r-step*ring);if(e<=tolerance&&e<pickError){pick=i;pickError=e}}if(pick<0)continue;used.add(pick);hits++;if(ring>=8)outerHits++;error+=pickError/tolerance;strength+=ringPeaks[pick].strength*(ring>=8?1.25:1)}if(hits>=4&&outerHits>=1){const quality=hits*12+outerHits*5+strength/Math.max(1,avg)-error*2;fits.push({step,hits,outerHits,quality})}}
-    if(fits.length){fit=fits.sort((a,b)=>b.quality-a.quality||b.outerHits-a.outerHits||b.hits-a.hits)[0]}
+    if(fits.length){const bestQuality=Math.max(...fits.map(v=>v.quality)),bestHits=Math.max(...fits.filter(v=>v.quality>=bestQuality*.82).map(v=>v.hits));fit=fits.filter(v=>v.quality>=bestQuality*.82&&v.hits>=bestHits-1).sort((a,b)=>b.step-a.step)[0]}
     let outerR=fit?fit.step*10:0,rings=fit?fit.hits:0;
-    if(!fit){const peaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.08&&v.score>avg*1.12&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score);if(peaks.length<3){state.calibrationFailReason='동심원 경계 신호가 약함';return null;}const outer=peaks.sort((a,b)=>b.r-a.r)[0];outerR=outer.r;rings=peaks.length}
-    // 검은 중심 덩어리는 중심 위치를 잡는 기준으로만 쓴다. 검은 지름에 고정 비율을 곱해
-    // 표적 크기를 덮어쓰면 다른 표적지에서는 바깥 링 반지름이 크게 잘릴 수 있다.
-    const blackRadius=best?(best.bw+best.bh)*.25:0;
-    // 검은 중심을 기준으로 바깥쪽을 따라가며 흰 종이에서 주변 배경으로 바뀌는 경계를 찾는다.
-    // 사방의 흰 경계 중심과 검은 중심이 가까울 때만 둘을 함께 써서 중심을 조금 보정한다.
-    const whiteBoundaryPoints=[],whiteSectors=new Set(),minWhiteR=Math.max(outerR*1.06,blackRadius*2.4,Math.min(sw,sh)*.15),maxWhiteR=Math.floor(Math.min(sw,sh)*.47);
-    for(let a=0;a<72;a++){
-      const angle=a*Math.PI*2/72,ca=Math.cos(angle),sa=Math.sin(angle);let edgePoint=null;
-      for(let r=Math.ceil(minWhiteR);r<=maxWhiteR-4;r+=2){
-        let inner=0,outer=0;for(const d of [-2,-1,0]){const x=Math.round(cx+ca*(r+d)),y=Math.round(cy+sa*(r+d));if(x<1||x>=sw-1||y<1||y>=sh-1)continue;inner+=gray[y*sw+x]}
-        for(const d of [1,2,3]){const x=Math.round(cx+ca*(r+d)),y=Math.round(cy+sa*(r+d));if(x<1||x>=sw-1||y<1||y>=sh-1)continue;outer+=gray[y*sw+x]}
-        const drop=inner/3-outer/3;if(drop>=14&&inner/3>=55)edgePoint={x:cx+ca*r,y:cy+sa*r,angle};
-      }
-      if(edgePoint){whiteBoundaryPoints.push(edgePoint);whiteSectors.add(Math.floor(a/6))}
-    }
-    let whiteBoundaryFound=false;
-    if(whiteBoundaryPoints.length>=24&&whiteSectors.size>=8){
-      const median=values=>{values.sort((a,b)=>a-b);return values[Math.floor(values.length/2)]};
-      const whiteCx=median(whiteBoundaryPoints.map(p=>p.x)),whiteCy=median(whiteBoundaryPoints.map(p=>p.y));
-      if(Math.hypot(whiteCx-cx,whiteCy-cy)<=outerR*.18)whiteBoundaryFound=true
-    }
+    if(!fit){const peaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.08&&v.score>avg*1.12&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score);if(peaks.length<3)return null;const outer=peaks.sort((a,b)=>b.r-a.r)[0];outerR=outer.r;rings=peaks.length}
+    /* 실제 표적 사진(25M PRECISION 표적)에서 직접 측정: 바깥 반지름은 검은 중심부 지름의 약 1.06배였다.
+       (예전 추정치는 이보다 약 18% 크게 잡고 있어서 바로잡음) 여러 개의 링을 하나하나 맞추는 것보다, 뚜렷한
+       검은 중심 하나를 찾아 이 비율을 적용하는 쪽이 훨씬 안정적이라, 검은 중심이 뚜렷할 땐 이 값을 우선한다. */
+    if(best&&best.fill>.28){const blackAnchor=Math.max(best.bw,best.bh)*1.06;if(blackAnchor>=38&&blackAnchor<=maxR*1.08)outerR=outerR?(best.fill>.4?blackAnchor:Math.max(outerR,blackAnchor)):blackAnchor}
     const edge=new Uint8Array(sw*sh);for(let y=1;y<sh-1;y++)for(let x=1;x<sw-1;x++){const p=y*sw+x;edge[p]=Math.min(255,Math.abs(gray[p+1]-gray[p-1])+Math.abs(gray[p+sw]-gray[p-sw]))}
-    const innerCircleR=fit?fit.step:(ringPeaks[0]?.r||0),outerCircleR=fit?fit.step*10:(ringPeaks[ringPeaks.length-1]?.r||outerR);
-    const ringCenter=refineRingCenter(edge,sw,sh,cx,cy,innerCircleR,outerCircleR);
-    if(!ringCenter){state.calibrationFailReason='가운데 원과 최외곽 원을 함께 확인하지 못함';return null}
-    cx=ringCenter.x;cy=ringCenter.y;
-    let ellipse=null;const majorMin=Math.max(12,outerR*.88),majorMax=Math.min(Math.min(sw,sh)*.49,outerR*1.12);
-    // 타원 후보는 4~10점 전체를 한꺼번에 점수화하지 않는다. 잘못된 작은 타원이 여러 안쪽 링에
-    // 우연히 걸리는 것을 막기 위해, 검은 중심과 흰 바깥 링 사이의 가장 큰 닫힘 경계(10점 외곽)를 우선 맞춘다.
-    for(let major=majorMin;major<=majorMax;major+=2)for(let ratio=.82;ratio<=1.001;ratio+=.02)for(let deg=0;deg<180;deg+=10){const minor=major*ratio,a=deg*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);let sum=0,covered=0,n=0;for(let j=0;j<120;j++){const t=j*Math.PI*2/120,ex=major*Math.cos(t),ey=minor*Math.sin(t),x=Math.round(cx+ex*ca-ey*sa),y=Math.round(cy+ex*sa+ey*ca);if(x<2||x>=sw-2||y<2||y>=sh-2)continue;const e=edge[y*sw+x];sum+=Math.min(100,e);if(e>24)covered++;n++}const coverage=covered/Math.max(1,n),score=sum/Math.max(1,n)+coverage*60+major*.015;if(coverage>.48&&(!ellipse||score>ellipse.score))ellipse={major,minor,a,score,coverage}}
+    let ellipse=null;const majorMin=Math.max(38,outerR*.82),majorMax=Math.min(Math.min(sw,sh)*.49,outerR*1.38);
+    for(let major=majorMin;major<=majorMax;major+=3)for(let ratio=.58;ratio<=1.001;ratio+=.06)for(let deg=0;deg<180;deg+=15){const minor=major*ratio,a=deg*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);let sum=0,covered=0,n=0;for(let ring=4;ring<=10;ring++){const k=ring/10,ringWeight=ring>=8?1.25:1;for(let j=0;j<48;j++){const t=j*Math.PI*2/48,ex=major*k*Math.cos(t),ey=minor*k*Math.sin(t),x=Math.round(cx+ex*ca-ey*sa),y=Math.round(cy+ex*sa+ey*ca);if(x<2||x>=sw-2||y<2||y>=sh-2)continue;const e=edge[y*sw+x];sum+=Math.min(100,e)*ringWeight;if(e>24)covered+=ringWeight;n+=ringWeight}}const coverage=covered/Math.max(1,n),score=sum/Math.max(1,n)+coverage*34+major*.015;if(coverage>.1&&(!ellipse||score>ellipse.score))ellipse={major,minor,a,score,coverage}}
     if(!ellipse)ellipse={major:outerR,minor:outerR,a:0};
-    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadiusX=ellipse.major/sw*vw*mapped.scale,screenRadiusY=ellipse.minor/sw*vw*mapped.scale,overlayMin=Math.min(els.overlay.clientWidth,els.overlay.clientHeight),minTargetRadius=Math.max(8,overlayMin*.025);
-    if(screenRadiusX<minTargetRadius||screenRadiusX>overlayMin*.55||screenRadiusY<minTargetRadius*.5){state.calibrationFailReason=`표적 크기 기준 미달(${Math.round(screenRadiusX)}×${Math.round(screenRadiusY)}px)`;return null;}
-    state.calibrationFailReason='';
-    return{x:mapped.x,y:mapped.y,radius:screenRadiusX,radiusX:screenRadiusX,radiusY:screenRadiusY,angle:ellipse.a,rings:Math.min(10,rings),centerRingFound:ringCenter.innerCoverage>=.08,outerRingFound:ringCenter.outerCoverage>=.10,blackBoundaryFound:!!best,whiteBoundaryFound};
+    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadiusX=ellipse.major/sw*vw*mapped.scale,screenRadiusY=ellipse.minor/sw*vw*mapped.scale;
+    if(screenRadiusX<45||screenRadiusX>Math.min(els.overlay.clientWidth,els.overlay.clientHeight)*.55||screenRadiusY<32)return null;
+    return{x:mapped.x,y:mapped.y,radius:screenRadiusX,radiusX:screenRadiusX,radiusY:screenRadiusY,angle:ellipse.a,rings:Math.min(10,rings)};
   }
 
   function canvasPoint(ev){const r=els.overlay.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top}}
@@ -324,39 +254,25 @@
     const width=els.overlay.clientWidth,height=els.overlay.clientHeight;ctx.clearRect(0,0,width,height);
     if(!state.center)return;
     ctx.save();ctx.lineWidth=1.2;
-    if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#20e66d':'#20e66d99';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
-    ctx.beginPath();ctx.arc(state.center.x,state.center.y,6,0,Math.PI*2);ctx.strokeStyle='#b7ff3c';ctx.lineWidth=2;ctx.stroke();
+    if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#29e7d6cc':'#ffffff55';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
+    ctx.beginPath();ctx.arc(state.center.x,state.center.y,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
     state.shots.forEach((s,i)=>{if(s.manual||s.screenX==null)return;let px=s.screenX,py=s.screenY;if(Number.isFinite(s.videoX)&&Number.isFinite(s.videoY)){const g=videoGeometry(),mapped=videoToScreen(s.videoX*g.vw,s.videoY*g.vh);px=mapped.x;py=mapped.y}s.screenX=px;s.screenY=py;ctx.beginPath();if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}else ctx.arc(px,py,9,0,Math.PI*2);ctx.fillStyle=s.score?'#b7ff3c':'#ff4d66';ctx.fill();ctx.fillStyle='#07111f';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),px,py)});ctx.restore();
   }
 
   function startMatch(){
     if(!state.center||!state.radius)return;if(!els.player.value.trim()){toast('선수 이름을 입력해 주세요.');els.player.focus();return}
-    state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.matchArmAt=performance.now()+5000;state.lastHit=0;clearDetectorBackground();state.detectorReady=false;
+    state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.warmupStart=performance.now();state.detectorReady=false;
     state.detectKind=els.detectKind.value;
     // 표적지 모서리 탭(선택 단계)을 건너뛴 채로 남아있으면, 사격 중 화면을 잘못 건드렸을 때
     // 그 자리가 표적지 경계로 저장돼 스캔 범위가 잘못 좁아질 수 있어 여기서 확실히 종료한다.
     if(state.calibrationMode===3)state.calibrationMode=0;
-    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='카메라 안정화 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 5초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('노출·초점 안정화','#ffc940');updateScore();drawOverlay();pushLive(true);
+    els.player.disabled=true;els.maxShots.disabled=true;els.eventName.disabled=true;els.detectKind.disabled=true;els.manualBtn.disabled=false;els.undoBtn.disabled=true;els.matchBtn.textContent='기준 화면 설정 중';els.matchBtn.disabled=true;els.guide.textContent=`${els.firingLane.value}사로 · 2초 동안 레이저를 쏘지 마세요`;els.livePill.textContent='● READY';setStatus('감지 준비','#ffc940');updateScore();drawOverlay();pushLive(true);
     document.body.classList.add('match-live');setTimeout(resize,60);
-    startMatchCountdown();
     // 전체화면은 사람이 직접 탭했을 때만 브라우저가 허용해 주는 경우가 많아, 원격 명령으로 시작된 경우엔 실패할 수 있다(무해하게 무시).
     try{const root=document.documentElement,req=root.requestFullscreen||root.webkitRequestFullscreen;if(req&&!document.fullscreenElement)req.call(root,{navigationUI:'hide'}).catch(()=>{})}catch(e){}
   }
 
-  function startMatchCountdown(){
-    clearInterval(state.countdownTimer);els.matchCountdown.hidden=false;els.matchCountdown.classList.remove('go');
-    const tick=()=>{const left=Math.ceil((state.matchArmAt-performance.now())/1000);if(left>0)els.matchCountdown.textContent=String(Math.min(5,left));else els.matchCountdown.textContent='준비 완료'};
-    tick();state.countdownTimer=setInterval(tick,100);
-  }
-
-  function activateMatchDetection(){
-    if(state.detectorReady)return;state.detectorReady=true;clearInterval(state.countdownTimer);state.countdownTimer=0;
-    els.matchCountdown.hidden=false;els.matchCountdown.classList.add('go');els.matchCountdown.textContent='사격 시작';
-    els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');
-    setTimeout(()=>{if(state.running&&state.detectorReady)els.matchCountdown.hidden=true},1100);
-  }
-
-  function finishMatch(){state.running=false;clearInterval(state.countdownTimer);state.countdownTimer=0;els.matchCountdown.hidden=true;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
+  function finishMatch(){state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
   async function saveMatch(){
     const payload={matchId:state.matchId,eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),maxShots:state.maxShots,totalScore:state.shots.reduce((a,s)=>a+s.score,0),device:navigator.userAgent,shots:state.shots};
     localStorage.setItem('laserMatchLast',JSON.stringify(payload));
@@ -494,28 +410,24 @@
     document.head.appendChild(script);
   }
 
-  function recordShot(x,y,manualScore=null,kind,laserRadiusPx=0){
+  function recordShot(x,y,manualScore=null,kind){
     if(!state.running||state.shots.length>=state.maxShots)return;
     const dx=x==null?0:x-state.center.x,dy=y==null?0:y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nr=manualScore==null?Math.hypot(ex/state.radiusX,ey/state.radiusY):0;
-    // 링 선 판정: 레이저 자국 원의 안쪽 가장자리가 더 높은 점수 링에 닿으면 그 점수를 준다.
-    // 타원 보정 화면에서도 방향별 반지름 변화량을 미분값으로 환산한다.
-    const radialGradient=nr>1e-9?Math.hypot(ex/(state.radiusX*state.radiusX),ey/(state.radiusY*state.radiusY))/nr:0;
-    const edgeNr=manualScore==null?Math.max(0,nr-Math.max(0,laserRadiusPx)*radialGradient):0;
-    const score=manualScore==null?(edgeNr>1?0:Math.min(10,Math.max(1,10-Math.floor(edgeNr*10-1e-7)))):Number(manualScore);
+    const score=manualScore==null?(nr>1?0:Math.max(1,10-Math.floor(nr*10))):Number(manualScore);
     const xMm=ex/state.radiusX*80,yMm=ey/state.radiusY*80;
     let videoX=null,videoY=null;if(x!=null&&y!=null){const g=videoGeometry();videoX=((x-g.offX)/g.scale)/g.vw;videoY=((y-g.offY)/g.scale)/g.vh}
     const k=manualScore!=null?'manual':(kind||'laser');
-    state.shots.push({score,screenX:x,screenY:y,videoX,videoY,xMm:+xMm.toFixed(1),yMm:+yMm.toFixed(1),normalizedRadius:+nr.toFixed(4),scoringEdgeRadius:+edgeNr.toFixed(4),laserRadiusPx:+(laserRadiusPx||0).toFixed(2),manual:manualScore!=null,kind:k,time:new Date().toLocaleTimeString('ko-KR',{hour12:false})});
+    state.shots.push({score,screenX:x,screenY:y,videoX,videoY,xMm:+xMm.toFixed(1),yMm:+yMm.toFixed(1),normalizedRadius:+nr.toFixed(4),manual:manualScore!=null,kind:k,time:new Date().toLocaleTimeString('ko-KR',{hour12:false})});
     state.lastHit=performance.now();showScore(score);updateScore();drawOverlay();els.undoBtn.disabled=false;pushLive(true);
     if(state.shots.length>=state.maxShots)setTimeout(finishMatch,650)
   }
 
-  function showScore(score){els.scorePop.textContent=score?String(score):'MISS';els.scorePop.classList.toggle('miss',!score);clearTimeout(state.scoreFlashTimer);els.flash.classList.add('show');state.scoreFlashTimer=setTimeout(()=>els.flash.classList.remove('show'),920)}
+  function showScore(score){els.scorePop.textContent=score?String(score):'MISS';els.scorePop.classList.toggle('miss',!score);els.flash.classList.add('show');setTimeout(()=>els.flash.classList.remove('show'),420)}
   function updateScore(){const total=state.shots.reduce((a,s)=>a+s.score,0);els.totalScore.textContent=total;els.shotCount.textContent=state.shots.length;els.shotMax.textContent=state.running?state.maxShots:Number(els.maxShots.value);els.average.textContent=state.shots.length?(total/state.shots.length).toFixed(1):'0.0';els.shotGrid.innerHTML='';const count=state.running?state.maxShots:Number(els.maxShots.value);for(let i=0;i<count;i++){const d=document.createElement('div'),s=state.shots[i];d.className='shot'+(s?(s.score?' hit':' miss'):'')+(s&&s.kind==='object'?' obj':'');d.textContent=s?s.score:(i+1);els.shotGrid.appendChild(d)}}
 
   function processFrames(){
     cancelAnimationFrame(state.raf);const token=++state.frameLoopToken;
-    const loop=()=>{if(token!==state.frameLoopToken)return;if(state.running&&!state.processing&&els.video.readyState>=2){state.processing=true;try{detectLaserV2()}catch(err){console.error('laser detector',err);els.clrPill.textContent='감지기 자동 복구 중';}finally{state.processing=false}}schedule()};
+    const loop=()=>{if(token!==state.frameLoopToken)return;if(state.running&&!state.processing&&els.video.readyState>=2){state.processing=true;try{detectLaser()}finally{state.processing=false}}schedule()};
     const schedule=()=>{if(token!==state.frameLoopToken)return;if(typeof els.video.requestVideoFrameCallback==='function')els.video.requestVideoFrameCallback(loop);else state.raf=requestAnimationFrame(loop)};schedule();
   }
 
@@ -604,145 +516,139 @@
     }
   }
 
-  function tryRecordLaser(wx,wy,sw,sh,vw,vh,roi,spotRadiusWorkPx=0){
+  function tryRecordLaser(wx,wy,sw,sh,vw,vh){
     if(performance.now()-state.lastHit<=140)return false;
     if(state.objKnown&&state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-wx,k.y-wy)<(k.r||10)+18))return false;
-    const videoX=roi?roi.sx+wx/sw*roi.sWidth:wx/sw*vw,videoY=roi?roi.sy+wy/sh*roi.sHeight:wy/sh*vh;
-    const mapped=videoToScreen(videoX,videoY),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
+    const mapped=videoToScreen(wx/sw*vw,wy/sh*vh),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
     const nx=ex/state.radiusX,ny=ey/state.radiusY;
-    /* 표적 아래쪽 미스는 종이 여백까지 포함해 더 넓게 받는다. 휴대폰 화면의 아래 방향은
-       보정된 표적 좌표에서도 ny>0이므로, 아래쪽만 추가 여유를 주고 다른 방향은 제한한다. */
-    const distance=Math.hypot(nx,ny),baseLimit=state.paperMultiple||1.55,limit=baseLimit+(ny>0?.52:.18);if(distance>limit)return false;
-    // 검출된 광점 픽셀 크기를 화면 좌표의 반지름으로 환산해 선 접촉 판정에 사용한다.
-    const spotPx=Math.max(0,Math.min(4,Number(spotRadiusWorkPx)||0));let screenSpotRadius=0;
-    if(spotPx>0){const dxVideo=spotPx*(roi?roi.sWidth/sw:vw/sw),dyVideo=spotPx*(roi?roi.sHeight/sh:vh/sh),mx=videoToScreen(videoX+dxVideo,videoY),my=videoToScreen(videoX,videoY+dyVideo);screenSpotRadius=(Math.hypot(mx.x-mapped.x,mx.y-mapped.y)+Math.hypot(my.x-mapped.x,my.y-mapped.y))/2}
-    recordShot(mapped.x,mapped.y,null,'laser',screenSpotRadius);return true;
+    if(Math.hypot(nx,ny)>(state.paperMultiple||1.5))return false;
+    recordShot(mapped.x,mapped.y,null,'laser');return true;
   }
 
-  /*
-   * 짧은 레이저 펄스 감지기.
-   * 흰 중심+색 테두리, 빨간 점만 보이는 경우, 흰 점만 보이는 경우, 약한 점과 넓은 점을
-   * 각각 판정하되 모든 경로에서 프레임 간 국소 밝기 변화와 화면 안정성을 검사한다.
-   * 각 프레임을 독립적으로 판정하므로 점 위치가 조금씩 흔들려도 고정 좌표를 요구하지 않는다.
-   */
-  function detectLaserV2(){
+  function detectLaser(){
     const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return;
-    /* 전체 카메라를 480px로 줄이지 않고, 보정된 표적과 아래쪽 미스 영역만 원본 영상에서 직접 자른다.
-       같은 계산량으로 표적의 실제 픽셀을 더 많이 보존해 1~2px짜리 짧은 레이저가 축소 중 사라지는 것을 줄인다. */
-    const tv=state.targetVideo;if(!tv)return;
-    const vcx=tv.x*vw,vcy=tv.y*vh,vrx=(tv.rx||tv.r)*vw,vry=(tv.ry||tv.r)*vh,baseScan=state.paperMultiple?state.paperMultiple+.12:1.68;
-    const halfW=vrx*(baseScan+.55),topH=vry*(baseScan+.28),bottomH=vry*(baseScan+.7);
-    let sx=Math.max(0,vcx-halfW),sy=Math.max(0,vcy-topH),ex=Math.min(vw,vcx+halfW),ey=Math.min(vh,vcy+bottomH);
-    // 표적 ROI를 480px 경량 분석 영상으로 처리한다.
-    const sWidth=Math.max(64,ex-sx),sHeight=Math.max(64,ey-sy),sw=480,sh=Math.max(260,Math.round(sw*sHeight/sWidth)),roi={sx,sy,sWidth,sHeight,vw,vh};
-    els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,sx,sy,sWidth,sHeight,0,0,sw,sh);
-    const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh;
-    const t={x:(vcx-sx)/sWidth*sw,y:(vcy-sy)/sHeight*sh,rx:vrx/sWidth*sw,ry:vry/sHeight*sh,a:state.targetAngle},scanR=Math.max(t.rx,t.ry)*(baseScan+.5);
-    const x0=Math.max(2,Math.floor(t.x-scanR)),x1=Math.min(sw-3,Math.ceil(t.x+scanR)),y0=Math.max(2,Math.floor(t.y-scanR)),y1=Math.min(sh-3,Math.ceil(t.y+scanR));
-    // 각 픽셀마다 삼각함수와 제곱근을 다시 계산하지 않도록 경기 프레임 바깥에서 한 번만 구한다.
-    const ca=Math.cos(t.a),sa=Math.sin(t.a),invRx=1/Math.max(1,t.rx),invRy=1/Math.max(1,t.ry);
-    const inside=(x,y,margin=baseScan)=>{const dx=x-t.x,dy=y-t.y,nx=(dx*ca+dy*sa)*invRx,ny=(-dx*sa+dy*ca)*invRy,extra=ny>0?.48:.12,limit=margin+extra;return nx*nx+ny*ny<=limit*limit};
-    let V=state.pulseV2;
-    if(!V||V.total!==total){
-      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),trailLum:new Float32Array(total),trailWarm:new Float32Array(total),warmUntil:state.matchArmAt||performance.now()+5000,ready:false,armedAt:0,latched:false,clear:0,frames:0,fpsAt:performance.now(),detectorFps:0};
-      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]=V.prevR[p]=data[i];V.bgG[p]=V.prevG[p]=data[i+1];V.bgB[p]=V.prevB[p]=data[i+2]}
-      return;
+    // 작업 해상도(sw,sh)는 기준화면을 잡을 때 한 번만 정하고 계속 그 값을 쓴다.
+    // 카메라 초점이 잡히는 동안 비디오 해상도 비율이 프레임마다 아주 미세하게 흔들리면,
+    // 매 프레임 다시 계산할 경우 그때마다 기준화면이 초기화되어 "기준 화면 설정 중"에서 영원히 못 넘어갈 수 있었다.
+    const sw=480;
+    if(!state.workSH||!state.background)state.workSH=Math.max(270,Math.round(sw*vh/vw));
+    const sh=state.workSH;
+    els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh,lum=new Uint8Array(total);
+    // 실제로 읽히는 건 표적 주변 범위뿐이라, 밝기(lum)와 기준화면도 화면 전체가 아니라 그 범위만 계산한다.
+    // (표적이 화면의 일부만 차지할 때 매 프레임 계산량을 크게 줄여, 짧게 스치는 레이저도 프레임을 안 놓치고 볼 확률을 높인다.)
+    // 이 범위(t,x0,x1,y0,y1)는 아래쪽 실제 감지 로직에서도 그대로 재사용한다.
+    const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*(state.paperMultiple?state.paperMultiple+.1:1.6);
+    const x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
+    for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;lum[p]=(data[i]*.299+data[i+1]*.587+data[i+2]*.114+.5)|0}}
+    if(!state.background||state.background.length!==total){
+      state.background=new Float32Array(total);state.backgroundR=new Float32Array(total);state.backgroundG=new Float32Array(total);state.backgroundB=new Float32Array(total);
+      for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=lum[p];state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}}
+      state.prevLum=new Uint8Array(total);state.warmupFrames=0;if(!state.warmupStart)state.warmupStart=performance.now();return
     }
-    const copyPrevious=()=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.prevR[p]=data[i];V.prevG[p]=data[i+1];V.prevB[p]=data[i+2]}};
-    if(!V.trailLum){V.trailLum=new Float32Array(total);V.trailWarm=new Float32Array(total)}
-    const updateBackground=(a)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]+=a*(data[i]-V.bgR[p]);V.bgG[p]+=a*(data[i+1]-V.bgG[p]);V.bgB[p]+=a*(data[i+2]-V.bgB[p])}};
-    V.frames++;const fpsNow=performance.now();if(fpsNow-V.fpsAt>=1000){V.detectorFps=V.frames*1000/(fpsNow-V.fpsAt);V.frames=0;V.fpsAt=fpsNow}
-    // 경기의 5초 카운트다운 전체를 배경 안정화에 사용하고, 0이 된 순간에만 감지기를 무장한다.
-    if(performance.now()<V.warmUntil){updateBackground(.28);copyPrevious();return}
-    if(!V.ready){V.ready=true;V.armedAt=performance.now();activateMatchDetection();copyPrevious();return}
-
-    // 기준 프레임과 직전 프레임을 비교해 카메라 흔들림·자동 노출 변화를 감지한다.
-    // 레이저 광점은 국소 변화이므로 화면 전체 변화가 큰 프레임은 점수로 기록하지 않는다.
-    let motion=0,samples=0,shift=0;
-    for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){
-      if(!inside(x,y))continue;
-      const p=y*sw+x,i=p*4;
-      const now=(data[i]+data[i+1]*2+data[i+2])*.25;
-      const old=(V.prevR[p]+V.prevG[p]*2+V.prevB[p])*.25;
-      const base=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25;
-      samples++;if(Math.abs(now-old)>20)motion++;shift+=now-base;
+    // 안전장치: 무슨 이유로든(카메라 불안정 등) 기준화면 잡기가 6초 넘게 안 끝나면, 그때까지 모은 배경으로 그냥 넘어간다.
+    // "기준 화면 설정 중"에서 영원히 못 벗어나는 상황을 막기 위한 최후의 보루.
+    const warmupTimedOut=state.warmupStart&&(performance.now()-state.warmupStart>6000);
+    const warmupLimit=Math.max(36,Math.round((state.actualFps||30)*1.2));
+    if(state.warmupFrames<warmupLimit&&!warmupTimedOut){
+      // 실제 레이저히트 영상을 분석해보니, 카메라가 완전히 정지해 있을 때(연속 프레임 간 변화가 거의 0)
+      // 배경 잡음이 극히 낮아져서 약한 레이저도 훨씬 잘 튀어 보였다. 반대로 손떨림 등으로 화면이 계속
+      // 흔들리면(우리 실제 촬영본은 그 차이가 약 90배 더 컸다) 잡음 기준이 높아져 약한 신호를 놓치기 쉬워진다.
+      // 그래서 정해진 프레임 수만 채우면 끝내던 것에서, 화면이 실제로 "안정됐을 때"만 진행되도록 바꾼다.
+      let motionSum=0,motionN=0;
+      for(let y=y0;y<=y1;y+=4)for(let x=x0;x<=x1;x+=4){const p=y*sw+x;motionSum+=Math.abs(lum[p]-state.prevLum[p]);motionN++}
+      const stable=motionN===0||(motionSum/motionN)<2.5;
+      for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=state.background[p]*.75+lum[p]*.25;state.backgroundR[p]=state.backgroundR[p]*.75+data[i]*.25;state.backgroundG[p]=state.backgroundG[p]*.75+data[i+1]*.25;state.backgroundB[p]=state.backgroundB[p]*.75+data[i+2]*.25}}
+      state.prevLum.set(lum);
+      if(stable)state.warmupFrames++;   // 흔들리는 동안은 진행이 멈춰서 기다리고, 안정되면(또는 6초 안전장치가 발동하면) 넘어간다
     }
-    const motionRatio=motion/Math.max(1,samples);
-    const exposureShift=Math.abs(shift/Math.max(1,samples));
+    if(state.warmupFrames<warmupLimit&&!warmupTimedOut)return;
+    if(!state.detectorReady){state.detectorReady=true;if(state.detectKind!=='laser'){state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}state.objTracks=[];state.objKnown=[];state.objBusySince=0;state.objBusy=false}els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');toast('레이저 감지가 시작되었습니다.');return}
+    const insideScan=(x,y,margin=state.paperMultiple?state.paperMultiple+.1:1.6)=>{
+      const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
+      return Math.hypot(ex/t.rx,ey/t.ry)<=margin;
+    };
 
-    if(state.detectKind!=='laser'){
-      const lum=new Uint8Array(total);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;lum[p]=(data[i]*.299+data[i+1]*.587+data[i+2]*.114+.5)|0}
-      if(!state.background||state.background.length!==total){state.background=new Float32Array(total);state.backgroundR=new Float32Array(total);state.backgroundG=new Float32Array(total);state.backgroundB=new Float32Array(total);for(let p=0,i=0;p<total;p++,i+=4){state.background[p]=lum[p];state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}}
-      detectObjectPass(data,total,sw,sh,vw,vh,t,inside);if(state.detectKind==='object'){copyPrevious();return}
+    let motionPixels=0,motionSamples=0,meanNow=0,meanBase=0;
+    for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!insideScan(x,y))continue;const p=y*sw+x;motionSamples++;meanNow+=lum[p];meanBase+=state.background[p];if(Math.abs(lum[p]-state.prevLum[p])>18)motionPixels++}
+    const motionRatio=motionPixels/Math.max(1,motionSamples),exposureShift=Math.abs(meanNow-meanBase)/Math.max(1,motionSamples);state.prevLum.set(lum);
+    if(motionRatio>.035||exposureShift>11){state.pendingLaser=null;state.laserBlocked=true;state.stableFrames=0;blendBackground(data,lum,sw,x0,x1,y0,y1,.14);return}
+    state.stableFrames++;if(state.stableFrames<2)return;
+    if(state.detectKind!=='laser')detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan);
+    if(state.detectKind==='object')return;
+
+    /* 적응형 기준: 카메라·조명마다 레이저 색이 다르게 찍히므로, 고정된 숫자 대신 "그 순간 그 화면 자체의 잡음 수준"을 매 프레임 재서 기준을 스스로 세운다. R(또는 초록 모드는 G)이 배경보다, 그리고 잡음 수준보다 확실히(표준편차 5배 이상) 튀어야 인정한다. */
+    const color=els.laserColor.value, chIdx=color==='green'?1:0;
+    let sN=0,sSum=0,sSum2=0;
+    for(let y=y0;y<=y1;y+=2)for(let x=x0;x<=x1;x+=2){
+      if(!insideScan(x,y))continue;
+      const p=y*sw+x,i=p*4,bg=chIdx===0?state.backgroundR[p]:state.backgroundG[p],d=data[i+chIdx]-bg;
+      sN++;sSum+=d;sSum2+=d*d;
     }
-
-    const green=els.laserColor.value==='green',baseMin=Math.max(5,12-(state.sensitivity-35)*.105);
-    let best=null;
+    const meanD=sN?sSum/sN:0,stdD=sN?Math.sqrt(Math.max(0,sSum2/sN-meanD*meanD)):0;
+    const adaptFloor=Math.max(7,meanD+2.2*stdD),adaptMargin=Math.max(7.5,.85*stdD);
+    let coreBest=null,peak=null,peakMag=-1e9;
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-      if(!inside(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-V.bgR[p],dg=g-V.bgG[p],db=b-V.bgB[p],pr=r-V.prevR[p],pg=g-V.prevG[p],pb=b-V.prevB[p];
-      const rawLumRise=(dr+dg*2+db)*.25,rawOnset=Math.max(pr,pg,pb),rawWarmRise=green?(g-Math.max(r,b))-(V.bgG[p]-Math.max(V.bgR[p],V.bgB[p])):(r-Math.max(g,b))-(V.bgR[p]-Math.max(V.bgG[p],V.bgB[p]));
-      // 몇 프레임에 걸친 희미한 잔광은 감쇠 누적으로 모으고, 오래된 흔적은 빠르게 지운다.
-      const trailLum=V.trailLum[p]=Math.min(18,Math.max(0,V.trailLum[p]*.58+Math.max(0,rawLumRise))),trailWarm=V.trailWarm[p]=Math.min(18,Math.max(0,V.trailWarm[p]*.58+Math.max(0,rawWarmRise)));
-      const lumRise=Math.max(rawLumRise,trailLum*.48),onset=Math.max(rawOnset,trailLum*.75),warmRise=Math.max(rawWarmRise,trailWarm*.48),surfaceLum=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25,brightSurface=surfaceLum>128,localMin=baseMin*(brightSurface?.55:1);
-      let colored,whiteCore,score;
-      const colorFloor=Math.max(.9,localMin*.25),coreFloor=brightSurface?1.2:2.0,traceFloor=Math.max(.4,Math.min(coreFloor*.7,trailLum*.12));
-      if(green){colored=dg>colorFloor&&dg>=dr+.35&&dg>=db+.35;whiteCore=lumRise>(brightSurface?1.5:2.5)&&dg>traceFloor&&dr>traceFloor&&db>traceFloor;score=dg+Math.max(0,dg-Math.max(dr,db))*1.7+Math.max(0,lumRise)*(brightSurface?1.5:1)+Math.max(0,onset)*.3}
-      else{colored=dr>colorFloor&&dr>=dg-2&&dr>=db-2&&warmRise>.2;whiteCore=lumRise>(brightSurface?1.5:2.5)&&dr>traceFloor&&dg>traceFloor&&db>traceFloor;score=dr+Math.max(0,warmRise)*1.8+Math.max(0,lumRise)*(brightSurface?1.5:1)+Math.max(0,onset)*.3}
-      // 약한 광점도 이전 프레임에서 생긴 국소 변화일 때 후보로 올린다.
-      if(!(colored||whiteCore)||onset<.8&&lumRise<3)continue;
-      if(!best||score>best.score)best={x,y,score,dr,dg,db,lumRise,onset,trailLum,colored,whiteCore};
+      if(!insideScan(x,y))continue;
+      const p=y*sw+x,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
+      const mag0=color==='green'?dg:dr;
+      if(mag0>peakMag){peakMag=mag0;peak={dr:Math.round(dr),dg:Math.round(dg),db:Math.round(db)}}
+      const strong=color==='green'?(dg>adaptFloor&&dg>dr+adaptMargin&&dg>db+adaptMargin):(dr>adaptFloor&&dr>dg+adaptMargin&&dr>db+adaptMargin*.8);
+      if(strong){const mag=mag0;if(!coreBest||mag>coreBest.mag)coreBest={x,y,mag}}
     }
-    let valid=false,cx=0,cy=0,feature=null,detectionMode="";
-    if(best){
-      let n=0,redN=0,whiteN=0,sx=0,sy=0,wt=0,coreN=0,coreSx=0,coreSy=0,coreWt=0,minX=999,maxX=0,minY=999,maxY=0,sur=0,surN=0;const coloredPoints=[];
-      // 작은 점부터 옆으로 번진 점까지 읽도록 중심 탐색 반경과 바깥 밝기 기준을 넓힌다.
-      for(let oy=-18;oy<=18;oy++)for(let ox=-18;ox<=18;ox++){
-        const d=Math.hypot(ox,oy),x=best.x+ox,y=best.y+oy;if(x<x0||x>x1||y<y0||y>y1)continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-V.bgR[p],dg=g-V.bgG[p],db=b-V.bgB[p],rawLr=(dr+dg*2+db)*.25,lr=Math.max(rawLr,V.trailLum[p]*.48),rawWarm=(r-Math.max(g,b))-(V.bgR[p]-Math.max(V.bgG[p],V.bgB[p])),warm=Math.max(rawWarm,V.trailWarm[p]*.48);
-        if(d>=14&&d<=18){sur+=(r+g*2+b)*.25;surN++;continue}
-        if(d>14)continue;const surface=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25,bright=surface>128,nearMin=baseMin*(bright?.52:1),edgeFloor=Math.max(.8,nearMin*.24),coreFloor=bright?1.2:2.0,traceFloor=Math.max(.4,Math.min(coreFloor*.7,V.trailLum[p]*.12)),red=green?(Math.max(dg,V.trailWarm[p]*.48)>edgeFloor&&dg>=dr-.5&&dg>=db-.5):(Math.max(dr,V.trailWarm[p]*.48)>edgeFloor&&warm>.2&&dr>=dg-5&&dr>=db-5),white=lr>(bright?1.5:2.5)&&dr>traceFloor&&dg>traceFloor&&db>traceFloor;
-        if(red||white){const w=Math.max(.5,lr+Math.max(dr,dg,db));n++;if(red){redN++;coloredPoints.push({x,y})}if(white){whiteN++;if(d<=6){coreN++;coreSx+=x*w;coreSy+=y*w;coreWt+=w}}sx+=x*w;sy+=y*w;wt+=w;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+    if(peak&&(state.dbgTick++%5===0)){
+      els.clrPill.textContent=`색상 dr=${peak.dr} dg=${peak.dg} db=${peak.db} (적응 기준 ${Math.round(adaptFloor)}, 편차 ${Math.round(stdD)})${coreBest?' ✓':''}`;
+    }
+    if(coreBest){
+      let near=0;
+      for(let oy=-7;oy<=7;oy++)for(let ox=-7;ox<=7;ox++){
+        const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
+        const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
+        // 손 떨림으로 레이저가 살짝 스치듯 번지면 한 점의 밝기는 약해지므로, 기준을 조금 더 느슨하게 잡는다.
+        const colorOk=color==='green'?(dg>adaptFloor*.4&&dg>dr+adaptMargin*.35&&dg>db+adaptMargin*.35):(dr>adaptFloor*.4&&dr>dg+adaptMargin*.35&&dr>db+adaptMargin*.3);
+        // 레이저가 너무 밝으면 중심부가 하얗게 포화되어(R,G,B가 색 구분 없이 다 같이 확 튐) 색 판정을 못 통과할 수 있다.
+        // 이미 확인된 색상 피크(coreBest) 바로 옆이라면, 이런 흰색 포화도 같은 레이저의 일부로 보고 확인용으로 인정한다.
+        const satOk=dr>adaptFloor*1.5&&dg>adaptFloor*1.2&&db>adaptFloor*1.2;
+        if(colorOk||satOk)near++;
       }
-      const bw=maxX-minX+1,bh=maxY-minY+1,centerLum=(data[(best.y*sw+best.x)*4]+data[(best.y*sw+best.x)*4+1]*2+data[(best.y*sw+best.x)*4+2])*.25,contrast=centerLum-sur/Math.max(1,surN);
-      const colorRise=green?best.dg:best.dr;
-      const coreX=coreWt?coreSx/coreWt:best.x,coreY=coreWt?coreSy/coreWt:best.y;let colorEdgeN=0;
-      for(const q of coloredPoints){const d=Math.hypot(q.x-coreX,q.y-coreY);if(d>=1&&d<=14)colorEdgeN++}
-      const ratio=bw/Math.max(1,bh),pulseCompact=n>=2&&n<=220&&bw>=1&&bh>=1&&bw<=26&&bh<=26&&ratio>.16&&ratio<6;
-      const pulseSpread=n>=2&&n<=520&&bw>=1&&bh>=1&&bw<=36&&bh<=36&&ratio>.10&&ratio<10;
-      const pulseShape=pulseCompact||pulseSpread,stableFrame=motionRatio<.025&&exposureShift<5;
-      // 흰 중심+색 테두리, 빨간 점만, 흰 점만, 약한 점, 넓은 점을 별도로 판정한다.
-      const strongPulse=pulseShape&&coreN>=1&&colorEdgeN>=1&&best.score>=12&&best.onset>=8&&best.lumRise>=3&&colorRise>=4&&contrast>=2&&motionRatio<.05&&exposureShift<8;
-      const weakPulse=pulseShape&&n<=300&&coreN>=1&&colorEdgeN>=1&&best.score>=5&&best.onset>=1.5&&best.lumRise>=1&&colorRise>=1&&contrast>=.4&&stableFrame;
-      const redOnlyPulse=pulseShape&&redN>=3&&coreN===0&&best.score>=8&&best.onset>=2&&best.lumRise>=1.2&&colorRise>=2&&contrast>=.6&&stableFrame;
-      const dimRedPulse=pulseCompact&&n<=70&&redN>=2&&coreN===0&&best.score>=5&&best.onset>=1.5&&best.lumRise>=.8&&colorRise>=1.2&&contrast>=.35&&motionRatio<.015&&exposureShift<3.5;
-      const whiteOnlyPulse=pulseShape&&coreN>=1&&colorEdgeN===0&&best.score>=11&&best.onset>=5&&best.lumRise>=2.5&&contrast>=1.2&&stableFrame;
-      const dimWhitePulse=pulseCompact&&n<=70&&coreN>=1&&colorEdgeN===0&&best.score>=5&&best.onset>=1.5&&best.lumRise>=1&&contrast>=.35&&motionRatio<.015&&exposureShift<3.5;
-      const singleWhitePixelPulse=n===1&&whiteN===1&&coreN===1&&best.score>=16&&best.onset>=9&&best.lumRise>=4&&contrast>=2.5&&motionRatio<.01&&exposureShift<2.5;
-      const persistentWhiteTrace=n===1&&whiteN===1&&coreN===1&&best.trailLum>=2.5&&best.score>=5&&best.lumRise>=.8&&contrast>=.3&&motionRatio<.01&&exposureShift<3;
-      valid=strongPulse||weakPulse||redOnlyPulse||dimRedPulse||whiteOnlyPulse||dimWhitePulse||singleWhitePixelPulse||persistentWhiteTrace;
-      detectionMode=strongPulse?'표준':weakPulse?'약신호':redOnlyPulse?'빨간점':dimRedPulse?'약한빨강':whiteOnlyPulse?'흰점':dimWhitePulse?'작은약광':singleWhitePixelPulse?'1픽셀':persistentWhiteTrace?'흔적':(!pulseCompact&&pulseSpread?'넓은점':'');
-      const rawFeature={score:best.score,contrast,dr:best.dr,dg:best.dg,db:best.db,onset:best.onset,lumRise:best.lumRise,n,bw,bh,redN,whiteN,coreN,colorEdgeN,u:((coreWt?coreX:(wt?sx/wt:best.x))-t.x)/Math.max(1,t.rx),v:((coreWt?coreY:(wt?sy/wt:best.y))-t.y)/Math.max(1,t.ry),spotRadiusPx:Math.max(.65,Math.min(4,Math.sqrt(n/Math.PI)))};
-      if(motionRatio>.065||exposureShift>9)valid=false;
-      if(performance.now()<V.armedAt)valid=false;
-      if(valid){cx=coreWt?coreX:(wt?sx/wt:best.x);cy=coreWt?coreY:(wt?sy/wt:best.y);feature=rawFeature}
-    }
-    if(valid){
-      V.clear=0;
-      if(!V.latched&&tryRecordLaser(cx,cy,sw,sh,vw,vh,roi,feature?.spotRadiusPx||.65)){
-        V.latched=true;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,600)
+      if(near>=2){
+        state.releaseFrames=0;if(state.laserBlocked)return;
+        if(tryRecordLaser(coreBest.x,coreBest.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
+        return;
       }
-    }else{
-      V.clear++;if(V.clear>=2)V.latched=false;
-      if(motionRatio<.035&&exposureShift<8)updateBackground(.018);
-      /* 경기 중에는 ROI와 배경 좌표가 어긋나지 않도록 최초 보정 위치를 고정한다. */
     }
-    if(state.dbgTick++%6===0)els.clrPill.textContent=`ROI ${sw}px · ${Math.round(V.detectorFps||0)}fps · 신호 ${best?Math.round(best.score):0} · 순간상승 ${best?Math.round(best.onset):0} · 흔들림 ${Math.round(motionRatio*100)}%${valid?' ✓'+detectionMode:''}`;
-    copyPrevious();
-  }
+    if(state.laserBlocked){state.releaseFrames++;if(state.releaseFrames<2)return;state.laserBlocked=false;state.releaseFrames=0;state.pendingLaser=null}
 
- 
+    const points=[];let strongest=null;const signalThreshold=Math.max(7,30-state.sensitivity*.22);
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+      if(!insideScan(x,y))continue;
+      const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],baseLum=state.background[p],blackSurface=baseLum<125,dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],lumRise=lum[p]-baseLum,maxRise=Math.max(dr,dg,db);
+      const currentWarm=r-Math.max(g,b),baseWarm=state.backgroundR[p]-Math.max(state.backgroundG[p],state.backgroundB[p]),warmBoost=currentWarm-baseWarm;
+      const warmMixed=dr>5&&dr>=dg-8&&dr>=db-8,redHalo=currentWarm>9&&warmBoost>3&&dr>5,whitePink=r>180&&dr>8&&dr>=dg-10&&dr>=db-10;
+      const greenMixed=dg>7&&dg>=dr-6&&dg>=db-6;
+      const blackRed=blackSurface&&dr>5&&dr>=dg-10&&dr>=db-10;
+      const colorMargin=Math.max(1,5-state.sensitivity/25);   // 감도가 높을수록(기본 98) 거의 통과, 감도를 낮출수록 회색 밝기변화를 더 엄격히 거름
+      const redDominant=dr>dg+colorMargin&&dr>db+colorMargin,greenDominant=dg>dr+colorMargin&&dg>db+colorMargin;
+      const colorMatch=color==='green'?(greenDominant&&greenMixed):(redDominant&&(warmMixed||redHalo||whitePink||blackRed));
+      if(!colorMatch||maxRise<(blackSurface?Math.max(6,signalThreshold-1):signalThreshold)||lumRise<(blackSurface?1:2))continue;
+      const colorBoost=color==='green'?dg-Math.max(dr,db):Math.max(warmBoost,dr-Math.max(dg,db)),signal=maxRise+Math.max(0,lumRise)*(blackSurface?.8:1.15)+Math.max(0,colorBoost)*.65,point={x,y,wt:signal,delta:signal,bright:Math.max(r,g,b),redRise:dr,colorBoost,lumRise,blackSurface};points.push(point);if(!strongest||signal>strongest.wt)strongest=point;
+    }
+    if(!points.length){
+      state.laserBlocked=false;state.releaseFrames=0;
+      if(state.pendingLaser){const pending=state.pendingLaser;state.pendingLaser=null;const colorOrWhite=pending.maxColorBoost>=2||(pending.maxBright>=195&&pending.maxRedRise>=8),confirmed=pending.frames>=2&&pending.frames<=20&&pending.maxSignal>=20&&pending.maxContrast>=6&&colorOrWhite;if(confirmed)tryRecordLaser(pending.x,pending.y,sw,sh,vw,vh)}
+      blendBackground(data,lum,sw,x0,x1,y0,y1,.025);return;
+    }
+    if(points.length>2500){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,sw,x0,x1,y0,y1,.16);return}
+    let sx=0,sy=0,weight=0,localCount=0,clusterColorBoost=strongest.colorBoost,minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;for(const point of points){if(Math.hypot(point.x-strongest.x,point.y-strongest.y)<=9){sx+=point.x*point.wt;sy+=point.y*point.wt;weight+=point.wt;localCount++;clusterColorBoost=Math.max(clusterColorBoost,point.colorBoost);if(point.x<minX)minX=point.x;if(point.x>maxX)maxX=point.x;if(point.y<minY)minY=point.y;if(point.y>maxY)maxY=point.y}}
+    const clusterW=maxX-minX+1,clusterH=maxY-minY+1,shape=clusterW/Math.max(1,clusterH);let surround=0,surroundN=0;for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){const distance=Math.hypot(ox,oy);if(distance<6||distance>10)continue;const nx=strongest.x+ox,ny=strongest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;surround+=lum[ny*sw+nx];surroundN++}const localContrast=strongest.bright-surround/Math.max(1,surroundN);
+    if(localCount>220||shape<.2||shape>5||(localCount<2&&strongest.delta<25)||localContrast<4){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,sw,x0,x1,y0,y1,.04);return}
+    if(state.laserBlocked)return;
+    const px=weight?sx/weight:strongest.x,py=weight?sy/weight:strongest.y;
+    if(state.pendingLaser&&Math.hypot(px-state.pendingLaser.x,py-state.pendingLaser.y)<12){const n=state.pendingLaser.frames;state.pendingLaser.x=(state.pendingLaser.x*n+px)/(n+1);state.pendingLaser.y=(state.pendingLaser.y*n+py)/(n+1);state.pendingLaser.frames++;state.pendingLaser.maxSignal=Math.max(state.pendingLaser.maxSignal,strongest.delta);state.pendingLaser.maxContrast=Math.max(state.pendingLaser.maxContrast,localContrast);state.pendingLaser.maxColorBoost=Math.max(state.pendingLaser.maxColorBoost,clusterColorBoost);state.pendingLaser.maxBright=Math.max(state.pendingLaser.maxBright,strongest.bright);state.pendingLaser.maxRedRise=Math.max(state.pendingLaser.maxRedRise,strongest.redRise);if(state.pendingLaser.frames>=2&&state.pendingLaser.maxSignal>=20&&state.pendingLaser.maxContrast>=6&&(state.pendingLaser.maxColorBoost>=2||state.pendingLaser.maxRedRise>=8)&&tryRecordLaser(state.pendingLaser.x,state.pendingLaser.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;return}if(state.pendingLaser.frames>20){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0}}
+    else state.pendingLaser={x:px,y:py,frames:1,maxSignal:strongest.delta,maxContrast:localContrast,maxColorBoost:clusterColorBoost,maxBright:strongest.bright,maxRedRise:strongest.redRise};
+  }
 
   function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
-  function reset(){state.running=false;state.shots=[];state.matchId=null;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
+  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
@@ -760,10 +666,10 @@
   }
   function updateFullscreenButton(){const active=!!document.fullscreenElement;els.fullscreenBtn.textContent=active?'⛶ 전체화면 종료':'⛶ 전체화면';els.fullscreenBtn.setAttribute('aria-label',active?'전체화면 종료':'전체화면 켜기');setTimeout(resize,120)}
 
-  els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.matchBtn.title='표적 보정 후 경기를 시작하세요.';els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
+  els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.matchBtn.title='라이브 관전 페이지에서 사로를 맞춰 경기 시작 명령을 보내면 자동으로 시작돼요.';els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
   function showDetectorInfo(){els.fpsPill.textContent='고감도 레이저 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')}
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
-  window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.pulseV2){state.pulseV2.latched=false;state.pulseV2.clear=0}});updateScore();
+  window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
 })();
 </script>
 </body>
