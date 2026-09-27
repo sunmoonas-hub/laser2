@@ -587,7 +587,7 @@
       sN++;sSum+=d;sSum2+=d*d;
     }
     const meanD=sN?sSum/sN:0,stdD=sN?Math.sqrt(Math.max(0,sSum2/sN-meanD*meanD)):0;
-    const adaptFloor=Math.max(7,meanD+2.2*stdD),adaptMargin=Math.max(7.5,.85*stdD);
+    const adaptFloor=Math.max(5,meanD+2*stdD),adaptMargin=Math.max(5,.7*stdD);
     let coreBest=null,peak=null,peakMag=-1e9;
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!insideScan(x,y))continue;
