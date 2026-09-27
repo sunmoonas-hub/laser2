@@ -310,10 +310,10 @@
 
   function confirmLaserLearningSample(){
     if(!state.laserLearning||!state.learningArmed)return false;
-    const now=performance.now(),ignoreUntil=now+1000;
-    state.learningBest=null;state.learningCaptureBest=null;state.learningArmed=false;state.learningIgnoreUntil=ignoreUntil;state.learningCaptureUntil=ignoreUntil+6000;state.learningNextAllowed=ignoreUntil;VResetLatch();
+    const now=performance.now(),ignoreUntil=now+1250;
+    state.learningBest=null;state.learningCaptureBest=null;state.learningArmed=false;state.learningIgnoreUntil=ignoreUntil;state.learningCaptureUntil=ignoreUntil+7000;state.learningNextAllowed=ignoreUntil;VResetLatch();
     els.guide.textContent='카메라 안정화 중 · 아직 쏘지 마세요';els.livePill.textContent='● STABILIZING';toast('1초간 안정화합니다 · 아직 쏘지 마세요');pushLive(true);
-    setTimeout(()=>{if(state.laserLearning&&state.learningIgnoreUntil===ignoreUntil&&state.learningCaptureUntil>performance.now()){els.guide.textContent='● 감지 시작됨 · 지금 레이저를 한 발 쏘세요';els.livePill.textContent='● SHOOT NOW';toast('지금 한 발 쏘세요');pushLive(true)}},1000);
+    setTimeout(()=>{if(state.laserLearning&&state.learningIgnoreUntil===ignoreUntil&&state.learningCaptureUntil>performance.now()){els.guide.textContent='● 감지 시작됨 · 지금 레이저를 한 발 쏘세요';els.livePill.textContent='● SHOOT NOW';toast('지금 한 발 쏘세요');pushLive(true)}},1250);
     return true;
   }
 
@@ -336,7 +336,7 @@
     // 학습은 약한 신호도 받아 주지만, 경기에서는 학습탄 세 발 중 가장 약한 값의
     // 약 절반 이상을 요구한다. 카메라 노출 변화가 학습값의 20%만 넘어도 탄착으로
     // 확정되던 이전 설정을 제거한다.
-    state.laserProfile={scoreFloor:Math.max(5,median('score')*.16),onsetFloor:Math.max(4,median('onset')*.16),contrastFloor:Math.max(.6,median('lumRise')*.09),colorFloor:Math.max(.03,median('colorRatio')*.3),drFloor:Math.max(2,median('dr')*.15),clusterMin:1,sizeMax:Math.min(320,Math.max(28,median('n')*4)),widthMax:Math.min(38,Math.max(16,median('bw')*2.8)),learnedAt:Date.now()};
+    state.laserProfile={scoreFloor:Math.max(9,median('score')*.32),onsetFloor:Math.max(10,median('onset')*.32),contrastFloor:Math.max(3,median('lumRise')*.30),colorFloor:Math.max(.03,median('colorRatio')*.3),drFloor:Math.max(2,median('dr')*.15),clusterMin:1,sizeMax:Math.min(320,Math.max(28,median('n')*4)),widthMax:Math.min(38,Math.max(16,median('bw')*2.8)),learnedAt:Date.now()};
     state.laserLearning=false;state.learningArmed=false;clearDetectorBackground();els.learnBtn.disabled=false;els.learnBtn.textContent='레이저 다시 학습';els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';els.livePill.textContent='● READY';els.guide.textContent='레이저 학습 완료 · 라이브 페이지에서 경기를 시작하세요.';setStatus('레이저 학습 완료','var(--lime)');toast('레이저 특성 3발 학습이 완료되었습니다.');pushLive(true);
   }
 
@@ -697,7 +697,7 @@
     if((learningCaptureOpen||matchSimpleOpen)&&performance.now()>=state.learningNextAllowed){
       let peak=null,simpleSignal=false;
       for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-        if(matchSimpleOpen&&!inside(x,y))continue;
+        if(!inside(x,y))continue;
         const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25;
         // 학습에서도 센서 잡음(.5 수준)을 후보로 만들지 않는다. 실제 레이저의 순간 상승을
         // 놓치지 않을 만큼은 낮게 두되, 자동 노출의 미세한 출렁임은 여기서 먼저 제거한다.
@@ -707,45 +707,77 @@
       }
       if(peak&&(learningCaptureOpen||(motionRatio<.08&&exposureShift<10))){
         let n=0,colorN=0,wt=0,pxs=0,pys=0,minX=999,maxX=0,minY=999,maxY=0;
-        const neighborRise=Math.max(2,peak.rise*.08);
-        for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){
-          if(Math.hypot(ox,oy)>10)continue;const x=peak.x+ox,y=peak.y+oy;if(x<x0||x>x1||y<y0||y>y1||(matchSimpleOpen&&!inside(x,y)))continue;const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25;
-          if(rise>=neighborRise&&lum>0){const w=rise+Math.max(0,lum),colorLike=els.laserColor.value==='green'?(pg>=pr+1&&pg>=pb):(pr>=pg+1&&pr>=pb-1);n++;if(colorLike)colorN++;wt+=w;pxs+=x*w;pys+=y*w;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+        const neighborRise=Math.max(3,peak.rise*.16);
+        let whitePixels=0, coreContrast=0;
+        for(let oy=-8;oy<=8;oy++)for(let ox=-8;ox<=8;ox++){
+          if(ox*ox+oy*oy>64)continue;
+          const x=peak.x+ox,y=peak.y+oy;
+          if(x<x0||x>x1||y<y0||y>y1||!inside(x,y))continue;
+          const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2];
+          const pr=r-V.prevR[p],pg=g-V.prevG[p],pb=b-V.prevB[p];
+          const rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25;
+          if(rise<neighborRise||lum<.7)continue;
+          const w=rise+Math.max(0,lum);
+          const dominant=els.laserColor.value==='green'?(pg>=pr+2&&pg>=pb+2):(pr>=pg+2&&pr>=pb+2);
+          const white=r>=170&&g>=150&&b>=150&&pr>=8&&pg>=7&&pb>=7;
+          n++;if(dominant)colorN++;if(white)whitePixels++;
+          wt+=w;pxs+=x*w;pys+=y*w;
+          minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
         }
         const bw=maxX-minX+1,bh=maxY-minY+1;
-        if(n>=1&&n<=320&&bw<=38&&bh<=38){const cx=wt?pxs/wt:peak.x,cy=wt?pys/wt:peak.y,candidate={score:peak.score,contrast:peak.lum,dr:peak.pr,dg:peak.pg,db:peak.pb,onset:peak.rise,lumRise:peak.lum,colorRatio:colorN/Math.max(1,n),n,bw:Math.max(1,bw),bh:Math.max(1,bh),redN:colorN,whiteN:0,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)};
+        // 주변의 원래 배경보다 밝은 광점인지 확인한다. 작은 센서 잡음은 이 단계에서 버린다.
+        const pp=peak.y*sw+peak.x,pi=pp*4;
+        const bgLum=(V.bgR[pp]+V.bgG[pp]*2+V.bgB[pp])*.25;
+        const nowLum=(data[pi]+data[pi+1]*2+data[pi+2])*.25;
+        coreContrast=nowLum-bgLum;
+        const coloredPeak=els.laserColor.value==='green'
+          ?peak.pg>=peak.pr+3&&peak.pg>=peak.pb+3
+          :peak.pr>=peak.pg+3&&peak.pr>=peak.pb+3;
+        const whitePeak=data[pi]>=170&&data[pi+1]>=150&&data[pi+2]>=150
+          &&peak.pr>=8&&peak.pg>=7&&peak.pb>=7;
+        const coherent=(n>=2&&n<=100&&bw<=22&&bh<=22)
+          ||(n===1&&peak.rise>=24&&coreContrast>=12&&coloredPeak);
+        const stable=motionRatio<.045&&exposureShift<6;
+        const colorEvidence=colorN>=1&&coloredPeak||whitePixels>=1&&whitePeak;
+        const onsetFloor=n===1?24:11;
+        const genuinePulse=coherent&&stable&&colorEvidence&&peak.rise>=onsetFloor
+          &&coreContrast>=Math.max(3.5,peak.rise*.17);
+        if(genuinePulse){
+          const cx=wt?pxs/wt:peak.x,cy=wt?pys/wt:peak.y;
+          const candidate={score:peak.score,contrast:coreContrast,dr:peak.pr,dg:peak.pg,db:peak.pb,
+            onset:peak.rise,lumRise:coreContrast,colorRatio:colorN/Math.max(1,n),n,
+            bw:Math.max(1,bw),bh:Math.max(1,bh),redN:colorN,whiteN:whitePixels,
+            u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)};
           if(learningCaptureOpen){
-            // 학습탄은 '짧고 국소적인 밝은/적색 펄스'만 저장한다. 흔들림·자동 노출처럼
-            // 넓게 변하는 화면과 1픽셀 센서 잡음은 최고 후보에도 넣지 않는다.
-            const compact=n>=1&&n<=260&&bw<=28&&bh<=28;
-            const stableFrame=motionRatio<.08&&exposureShift<10;
-            // 축소된 분석 영상에서는 짧은 레이저가 단 1픽셀로 남기도 한다. 1픽셀은 강한
-            // 상승을 요구하고, 2픽셀 이상 군집은 약한 광점도 허용한다. 적색 테두리뿐 아니라
-            // 흰색 포화 중심(pr/pg/pb 동시 상승)도 레이저 특징으로 인정한다.
-            const whiteCore=candidate.dr>=4&&candidate.dg>=3&&candidate.db>=3;
-            const laserColor=candidate.colorRatio>=.01||whiteCore||candidate.dr>=candidate.dg-2&&candidate.dr>=candidate.db-2;
-            const laserStrength=n===1
-              ?candidate.onset>=10&&candidate.contrast>=.2&&laserColor
-              :candidate.onset>=5&&candidate.contrast>=.2&&laserColor;
-            const qualifiedLaser=compact&&stableFrame&&laserStrength;
-            if(qualifiedLaser){
-              const firstCandidate=!state.learningCaptureBest;
-              if(!state.learningCaptureBest||candidate.score>state.learningCaptureBest.score)state.learningCaptureBest=candidate;
-              els.clrPill.textContent=`학습 광점 후보 · 상승 ${Math.round(state.learningCaptureBest.onset)} · ${n}px`;
-              // 자동 확정하지 않는다. 실제 발사 후 사용자가 라이브에서 저장을 눌러야만
-              // 학습 발수가 증가한다. 이후 더 강한 실제 레이저가 오면 이 후보를 덮어쓴다.
-              els.guide.textContent='광점 후보 포착 · 발사했다면 라이브에서 「방금 쏜 학습탄 저장」을 누르세요';
-              if(firstCandidate)pushLive(true);
-            }else{
-              els.clrPill.textContent=`잡음 제외 · 상승 ${Math.round(candidate.onset)} · ${n}px`;
+            if(!state.learningCaptureBest||candidate.score>state.learningCaptureBest.score){
+              state.learningCaptureBest=candidate;
+              els.clrPill.textContent=`학습 광점 후보 · 상승 ${Math.round(candidate.onset)} · ${n}px`;
+              els.guide.textContent='광점 후보 포착 · 실제 발사했다면 학습탄을 저장하세요';
+              pushLive(true);
+            }
+          }else{
+            // 학습 때와 경기 때 동일한 검사를 적용한다. 약한 후보를 무조건 기록하던
+            // 이전의 별도 고속 경로를 통과시키지 않는다.
+            const matched=candidate.onset>=simpleP.onsetFloor
+              &&candidate.score>=simpleP.scoreFloor
+              &&candidate.contrast>=simpleP.contrastFloor
+              &&candidate.n<=simpleP.sizeMax
+              &&candidate.bw<=simpleP.widthMax&&candidate.bh<=simpleP.widthMax;
+            simpleSignal=matched;
+            if(matched&&!V.latched&&tryRecordLaser(cx,cy,sw,sh,vw,vh,roi)){
+              V.latched=true;
+              els.clrPill.textContent=`레이저 명중 · 상승 ${Math.round(candidate.onset)} · ${n}px`;
             }
           }
-          else{const colorGate=candidate.colorRatio>=simpleP.colorFloor||candidate.onset>=simpleP.onsetFloor*2.2,learnedMatch=candidate.onset>=simpleP.onsetFloor&&candidate.score>=simpleP.scoreFloor&&candidate.contrast>=simpleP.contrastFloor&&colorGate&&n>=simpleP.clusterMin&&n<=simpleP.sizeMax&&bw<=simpleP.widthMax&&bh<=simpleP.widthMax;simpleSignal=learnedMatch;if(learnedMatch&&!V.latched&&tryRecordLaser(cx,cy,sw,sh,vw,vh,roi)){V.latched=true;els.clrPill.textContent=`레이저 명중 · 상승 ${Math.round(candidate.onset)} · 적색 ${Math.round(candidate.colorRatio*100)}%`}}
         }
       }
-      if(matchSimpleOpen){if(simpleSignal)V.clear=0;else if(++V.clear>=2){V.latched=false;V.clear=0}}
+      if(matchSimpleOpen){
+        if(simpleSignal)V.clear=0;
+        else if(++V.clear>=2){V.latched=false;V.clear=0}
+      }
       copyPrevious();return;
     }
+    if(state.laserLearning||state.detectKind==='laser'||(state.running&&!state.detectorReady)){copyPrevious();return}
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!learningCaptureOpen&&!inside(x,y))continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],pr=r-V.prevR[p],pg=g-V.prevG[p],pb=b-V.prevB[p],onset=Math.max(pr,pg,pb),lumStep=(pr+pg*2+pb)*.25,colorStep=els.laserColor.value==='green'?pg:pr;
       const colorLike=els.laserColor.value==='green'?(pg>=pr-2&&pg>=pb-2):(pr>=pg-2&&pr>=pb-2);
