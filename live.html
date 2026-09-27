@@ -46,6 +46,8 @@
   .startBtn{flex:1;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
   .startBtn:disabled{opacity:.5}
   .endBtn{flex:none;min-width:110px;min-height:54px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:850;font-size:.92rem}
+  .restartBtn{width:100%;min-height:50px;border:1px solid var(--lime);border-radius:12px;background:transparent;color:var(--lime);font-weight:850;font-size:.92rem;margin-bottom:12px}
+  .busyNote{text-align:center;color:var(--gold);font-size:.78rem;margin-bottom:10px}
   .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
   .hint{font-size:.74rem;line-height:1.6;color:var(--muted);margin:10px 0 0}
   .shotPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px;margin-top:16px}
@@ -63,29 +65,6 @@
   .undoBtnLive:disabled{opacity:.4}
   .undoMsg{text-align:center;color:var(--muted);font-size:.76rem;margin-top:8px;min-height:1.1em}
   @media(max-width:420px){.startPanel .grid{grid-template-columns:1fr}}
-
-  /* LaserHIT 경기 화면에서 영감을 받은 관전용 고대비 UI */
-  :root{--bg:#050505;--text:#fff;--muted:#b8b8b8;--cyan:#20dc60;--lime:#22df67;--red:#d51b24;--gold:#ffd441}
-  html,body{background:#050505}
-  .wrap{max-width:1280px;padding-top:max(env(safe-area-inset-top),8px)}
-  header{margin:-8px -16px 12px;padding:12px 16px;background:#16b94a;border-bottom:4px solid #08792e;text-align:left}
-  header h1{color:#fff;font-weight:950;text-shadow:0 2px 0 #08732d}
-  .watchRow{justify-content:flex-start;background:#191919;border:1px solid #3d3d3d;padding:8px 10px;margin:0;color:#ddd}
-  .watchRow select{background:#080808;border-color:#666;border-radius:3px}
-  .target-box{background:#141414;border:2px solid #4c4c4c;border-radius:0;margin:0 auto}
-  .who{background:#161616;border-left:5px solid #1ed65b;margin:0;padding:10px 12px}.who .name{font-weight:950}
-  .status{background:#050505;border-color:#666;border-radius:3px}
-  .scoreboard{border:1px solid #f24b52;border-radius:0;background:#72090e;margin:0}
-  .metric{background:#b5141b;color:#fff;border-right:1px solid #ee4b51}.metric:last-child{border-right:0}
-  .metric small{color:#ffd8da;text-transform:uppercase;letter-spacing:.06em}.metric strong,.metric:first-child strong{color:#fff;text-shadow:0 2px 0 #700;font-weight:950}
-  .startPanel,.shotPanel{background:#171717;border-color:#444;border-radius:0;box-shadow:none}
-  .startPanel h2,.shotPanel h2{border-left:5px solid #20dc60;padding-left:9px;text-transform:uppercase;letter-spacing:.04em}
-  .startPanel .field input,.startPanel .field select{background:#080808;border-color:#555;border-radius:3px}
-  .startBtn{background:#20dc60;color:#041408;border-radius:3px;box-shadow:inset 0 -3px 0 #0b8a34}
-  .endBtn{background:#a61118;color:#fff;border-color:#f04a51;border-radius:3px}
-  .scoreGrid .slot{border-radius:3px;background:#0a0a0a;border-color:#555}.scoreGrid .slot.hit{background:#fff;border-color:#fff;color:#111}.scoreGrid .slot.miss{background:#d51b24;border-color:#ff4b52}
-  .undoBtnLive{border-radius:3px;background:#2a0c0f}
-  @media(min-width:860px){.layout{grid-template-columns:minmax(0,1.55fr) minmax(330px,.7fr);gap:0}.right{border-left:4px solid #050505}.startPanel,.shotPanel{margin:0}.shotPanel{border-top:0}}
 </style>
 </head>
 <body>
@@ -120,11 +99,14 @@
     </div>
     <div class="right">
       <section class="startPanel" id="startPanel">
+        <h2>🕹️ 새 경기 시작</h2>
+        <button class="restartBtn" id="restartBtn">🔁 같은 설정으로 재시작</button>
+        <p class="busyNote" id="busyNote" hidden>⏳ 지금 사격이 진행 중이에요 - 끝나면 새 명령을 보낼 수 있어요.<br><a href="#" id="forceUnlockBtn" style="color:var(--gold)">그래도 지금 보내기</a></p>
         <div class="grid">
           <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
           <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
           <div class="field"><label>레이저 색상</label><select id="rColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
-          <div class="field"><label>감지 대상</label><select id="rKind"><option value="laser" selected>레이저만 (권장)</option><option value="both">레이저+물체</option><option value="object">물체만</option></select></div>
+          <div class="field"><label>감지 대상</label><select id="rKind"><option value="both" selected>레이저+물체</option><option value="laser">레이저만</option><option value="object">물체만</option></select></div>
           <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
           <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
         </div>
@@ -179,7 +161,7 @@
     ctx.clearRect(0,0,W,H);
     for(let i=10;i>=1;i--){
       ctx.beginPath();ctx.arc(cx,cy,R*i/10,0,Math.PI*2);
-      ctx.strokeStyle = i===10 ? '#ff242cee' : '#ef303877';
+      ctx.strokeStyle = i===10 ? '#29e7d6cc' : '#ffffff33';
       ctx.lineWidth = i===10 ? 2.5 : 1.4; ctx.stroke();
     }
     ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
@@ -188,10 +170,9 @@
       ctx.beginPath();
       if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}
       else ctx.arc(px,py,10,0,Math.PI*2);
-      ctx.fillStyle=s.score?'#ffffff':'#e11b24';ctx.fill();
-      ctx.strokeStyle='#d71922';ctx.lineWidth=2;ctx.stroke();
-      ctx.fillStyle = '#111111'; ctx.font = 'bold 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(String(s.no||i+1), px, py);
+      ctx.fillStyle = s.score ? '#b7ff3c' : '#ff4d66'; ctx.fill();
+      ctx.fillStyle = '#07111f'; ctx.font = 'bold 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(String(i+1), px, py);
     });
   }
 
@@ -201,19 +182,24 @@
     applyView();
     syncStartLock();
   }
+  let forceUnlock = false;
   // 서버 전체(사로 구분 없이)에 사격이 진행 중이면, 새 시작 명령이 밀렸다가 경기가 끝나자마자
   // 자동으로 실행되는 걸 막기 위해 시작 버튼을 잠가 둔다.
   // 단, 연결이 끊기거나 페이지를 닫는 바람에 "진행 중"으로 멈춰버린 죽은 기록이면 60초 뒤 자동으로 풀어준다.
   function syncStartLock(){
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
-    $('rStart').disabled = !!(lastState && lastState.running && !stale);
+    const busy = !!(lastState && lastState.running && !stale) && !forceUnlock;
+    $('rStart').disabled = busy;
+    $('busyNote').hidden = !busy;
+    $('forceUnlockBtn').hidden = !busy;
   }
   function applyView(){
     const state = lastState;
     const watch = Number($('watchLane').value) || 1;
     if(!state){ show('idle'); return; }
     const shots = Array.isArray(state.shots) ? state.shots : [];
-    if(!state.player&&!shots.length&&!state.running){ show('idle'); return; }
+    const hasResult = !!(state.player || shots.length);
+    if(!hasResult){ show('idle'); return; }
     const lane = state.firingLane || 1;
     if(lane !== watch){
       $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">다른 사로에서 진행 중</b>${lane}사로에서 "${state.player||''}" 선수가 ${state.running?'사격 중':'경기를 마쳤어요'}.<br>${watch}사로를 보려면 위에서 사로를 바꿔서 기다려 주세요.`;
@@ -222,8 +208,9 @@
     show('live');
     $('pName').textContent = state.player || '이름 없음';
     $('pLane').textContent = state.eventName ? `${state.eventName} · ${lane}사로` : `${lane}사로`;
-    $('statusPill').className = 'status ' + (state.running ? 'live' : 'done');
-    $('statusText').textContent = state.running?'사격 중':(shots.length?'완료':'대기');
+    const pill = $('statusPill');
+    pill.className = 'status ' + (state.running ? 'live' : 'done');
+    $('statusText').textContent = state.running ? '사격 중' : (shots.length ? '완료' : '대기');
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
     $('cnt').textContent = shots.length;
@@ -244,6 +231,7 @@
     $('shotPanel').hidden = which!=='live';
   }
   $('watchLane').addEventListener('change', applyView);
+  $('forceUnlockBtn').addEventListener('click', (e) => { e.preventDefault(); forceUnlock = true; syncStartLock(); });
 
   function poll(){
     const cb = 'liveCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
@@ -259,7 +247,7 @@
         const sig = JSON.stringify(state);
         if(sig !== lastSig){ lastSig = sig; handleState(state); }
       }
-      setTimeout(poll, 400);
+      setTimeout(poll, 1200);
     }
     window[cb] = data => finish(data);
     script.onerror = () => finish(null);
@@ -267,6 +255,7 @@
     document.head.appendChild(script);
   }
 
+  let lastSentCmd = null;
   // 명령 전송의 공통 로직: cmd에 cmdId만 새로 채워서 서버로 보낸다. onOk(cmd)는 전송이 성공했을 때 호출된다.
   function sendCmd(cmd, btn, msg, onOk){
     cmd = Object.assign({}, cmd, { cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) });
@@ -278,6 +267,7 @@
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
         msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
+        lastSentCmd = cmd; forceUnlock = false;   // 새로 보낸 이 경기는 다시 정상적으로 잠금이 걸리게 초기화
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
         if(onOk) onOk();
@@ -291,7 +281,6 @@
   }
   function sendRemoteStart(){
     const cmd = {
-      mode: 'start',
       eventName: $('rEvent').value.trim(),
       player: $('rPlayer').value.trim(),
       firingLane: Number($('rLane').value),
@@ -303,6 +292,15 @@
     sendCmd(cmd, $('rStart'), $('rMsg'));
   }
   $('rStart').addEventListener('click', sendRemoteStart);
+  $('restartBtn').addEventListener('click', () => {
+    const base = lastSentCmd || {
+      eventName: $('rEvent').value.trim(), player: $('rPlayer').value.trim(), firingLane: Number($('rLane').value),
+      laserColor: $('rColor').value, detectKind: $('rKind').value, maxShots: Number($('rMax').value)
+    };
+    if(!base.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
+    sendCmd(base, $('rStart'), $('rMsg'));
+  });
+
   $('undoBtnLive').addEventListener('click', () => {
     const btn = $('undoBtnLive'), msg = $('undoMsg');
     btn.disabled = true; msg.textContent = '📡 취소 신호를 보내는 중…';
