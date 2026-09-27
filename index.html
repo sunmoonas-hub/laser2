@@ -87,7 +87,7 @@
 
   <section class="panel setup">
     <div class="mini-brand">
-      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH <small style="font-size:.55em;color:#ffd441">v33</small></h1></div>
+      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH <small style="font-size:.55em;color:#ffd441">v34</small></h1></div>
       <div class="status" id="status"><i class="dot"></i><span>준비</span></div>
       <button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶</button>
     </div>
@@ -319,6 +319,12 @@
 
   function VResetLatch(){if(state.pulseV2){state.pulseV2.latched=false;state.pulseV2.clear=0;state.pulseV2.candidate=null}}
 
+  function saveLaserLearningSample(){
+    if(!state.laserLearning||!state.learningCaptureBest)return false;
+    const captured=state.learningCaptureBest;state.learningCaptureBest=null;state.learningCaptureUntil=0;state.learningIgnoreUntil=0;
+    acceptLaserLearningSample(captured);return true;
+  }
+
   function acceptLaserLearningSample(f){
     state.laserSamples.push(f);const count=state.laserSamples.length;
     state.learningNextAllowed=performance.now()+850;state.learningCaptureUntil=0;state.learningIgnoreUntil=0;state.learningArmed=false;els.livePill.textContent='● LEARN';
@@ -385,7 +391,7 @@
       const qs=new URLSearchParams({action:'liveUpdate',callback:cbName,payload:JSON.stringify({
         eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),
         maxShots:state.maxShots||Number(els.maxShots.value),running:state.running,
-        learning:state.laserLearning,learningArmed:state.learningArmed,learningCaptureActive:state.laserLearning&&state.learningCaptureUntil>performance.now(),learningSettling:state.laserLearning&&state.learningIgnoreUntil>performance.now(),learningReady:!!state.laserProfile,learningCount:state.laserSamples.length,
+        learning:state.laserLearning,learningArmed:state.learningArmed,learningCaptureActive:state.laserLearning&&state.learningCaptureUntil>performance.now(),learningSettling:state.laserLearning&&state.learningIgnoreUntil>performance.now(),learningCandidateReady:state.laserLearning&&!!state.learningCaptureBest,learningReady:!!state.laserProfile,learningCount:state.laserSamples.length,
         learningShots:state.laserSamples.map((s,i)=>({u:+(s.u||0).toFixed(3),v:+(s.v||0).toFixed(3),kind:'learning',no:i+1})),
         shots:state.shots.map(s=>{
           // 관전 페이지는 표적을 항상 똑바로 그리므로, 채점용으로 기울기를 보정한 좌표(xMm/yMm) 대신
@@ -430,6 +436,9 @@
     // 학습탄 저장은 경기 시작 명령이 아니므로, 보정 직후의 경기 시작 안전 대기와 관계없이 즉시 처리한다.
     if(cmd.mode==='confirmLearn'){
       const ok=confirmLaserLearningSample();lastCmdId=cmd.cmdId;if(ok)toast('📡 카메라 감지 시작 · 지금 한 발 쏘세요.');return;
+    }
+    if(cmd.mode==='saveLearn'){
+      const ok=saveLaserLearningSample();lastCmdId=cmd.cmdId;toast(ok?'📡 방금 쏜 학습탄을 저장했습니다.':'📡 저장할 레이저 후보가 없습니다. 다시 감지 준비 후 쏘세요.');pushLive(true);return;
     }
     // 보정이 끝난 직후(3초 이내)에는 어떤 명령이 와도 시작하지 않는다 - 보정 결과를 눈으로 확인할 최소한의 시간을 보장해서,
     // "카메라를 켜자마자/보정하자마자 바로 경기가 시작돼버린다"는 상황 자체가 구조적으로 생기지 않게 한다.
@@ -673,8 +682,8 @@
     for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!inside(x,y))continue;const p=y*sw+x,i=p*4,now=(data[i]+data[i+1]*2+data[i+2])*.25,old=(V.prevR[p]+V.prevG[p]*2+V.prevB[p])*.25,base=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25;samples++;if(Math.abs(now-old)>20)motion++;shift+=now-base}
     const motionRatio=motion/Math.max(1,samples),exposureShift=Math.abs(shift/Math.max(1,samples));
     if(state.laserLearning&&state.learningCaptureUntil&&performance.now()>state.learningCaptureUntil){
-      const captured=state.learningCaptureBest;state.learningCaptureUntil=0;state.learningIgnoreUntil=0;state.learningCaptureBest=null;
-      if(captured){acceptLaserLearningSample(captured);copyPrevious();return}
+      const captured=state.learningCaptureBest;state.learningCaptureUntil=0;state.learningIgnoreUntil=0;
+      if(captured){els.livePill.textContent='● REVIEW';els.guide.textContent='광점 후보가 있습니다 · 라이브에서 「방금 쏜 학습탄 저장」을 누르세요';pushLive(true);copyPrevious();return}
       state.learningArmed=true;els.livePill.textContent='● LEARN';els.guide.textContent='광점을 찾지 못했습니다 · 감지 준비를 다시 누른 뒤 한 발 쏘세요';pushLive(true)
     }
     /* 1프레임 광점 전용 고속 검출기. 배경색이나 흰 중심/테두리 모양을 먼저 요구하지 않고
@@ -720,9 +729,13 @@
               :candidate.onset>=5&&candidate.contrast>=.2&&laserColor;
             const qualifiedLaser=compact&&stableFrame&&laserStrength;
             if(qualifiedLaser){
+              const firstCandidate=!state.learningCaptureBest;
               if(!state.learningCaptureBest||candidate.score>state.learningCaptureBest.score)state.learningCaptureBest=candidate;
               els.clrPill.textContent=`학습 광점 후보 · 상승 ${Math.round(state.learningCaptureBest.onset)} · ${n}px`;
-              if(candidate.onset>=10||(n>=2&&candidate.onset>=5)){state.learningCaptureUntil=0;state.learningCaptureBest=null;copyPrevious();acceptLaserLearningSample(candidate);return}
+              // 자동 확정하지 않는다. 실제 발사 후 사용자가 라이브에서 저장을 눌러야만
+              // 학습 발수가 증가한다. 이후 더 강한 실제 레이저가 오면 이 후보를 덮어쓴다.
+              els.guide.textContent='광점 후보 포착 · 발사했다면 라이브에서 「방금 쏜 학습탄 저장」을 누르세요';
+              if(firstCandidate)pushLive(true);
             }else{
               els.clrPill.textContent=`잡음 제외 · 상승 ${Math.round(candidate.onset)} · ${n}px`;
             }
