@@ -686,12 +686,12 @@
       /* 실제 영상에서 레이저는 대부분 단 1프레임만 보였다. 연속 프레임 대신
          ① 직전 프레임 대비 급상승, ② 흰 중심 또는 강한 색 중심, ③ 빨강/초록 테두리,
          ④ 화면 전체 노출·흔들림이 아님을 한꺼번에 확인한다. */
-      const temporalPulse=pulseCompact&&best.score>=16&&best.onset>=10&&best.lumRise>=4&&colorRise>=6&&contrast>=3&&redN>=1&&(whiteN>=1||colorRise>=14)&&motionRatio<.05&&exposureShift<8;
-      const normalShape=compact&&contrast>needContrast&&(redN>=1||whiteN>=1&&best.dr>needDr);
-      valid=normalShape;
+      const temporalPulse=pulseCompact&&best.score>=12&&best.onset>=8&&best.lumRise>=3&&colorRise>=4&&contrast>=2&&redN>=1&&(whiteN>=1||colorRise>=12)&&motionRatio<.05&&exposureShift<8;
+      const normalShape=compact&&n>=3&&contrast>needContrast&&((redN>=2&&colorRise>=baseMin*.9)||(whiteN>=2&&colorRise>needDr));
+      valid=normalShape||temporalPulse;
       const rawFeature={score:best.score,contrast,dr:best.dr,dg:best.dg,db:best.db,onset:best.onset,lumRise:best.lumRise,n,bw,bh,redN,whiteN,u:((wt?sx/wt:best.x)-t.x)/Math.max(1,t.rx),v:((wt?sy/wt:best.y)-t.y)/Math.max(1,t.ry),spotRadiusPx:Math.max(.65,Math.min(4,Math.sqrt(n/Math.PI)))};
-      strong=valid&&temporalPulse;
-      if(motionRatio>.08||exposureShift>10)valid=false;
+      strong=temporalPulse;
+      if(motionRatio>.065||exposureShift>9)valid=false;
       if(performance.now()<V.armedAt)valid=false;
       if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature=rawFeature}
     }
