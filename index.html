@@ -87,7 +87,7 @@
 
   <section class="panel setup">
     <div class="mini-brand">
-      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH <small style="font-size:.55em;color:#ffd441">v28</small></h1></div>
+      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH <small style="font-size:.55em;color:#ffd441">v29</small></h1></div>
       <div class="status" id="status"><i class="dot"></i><span>준비</span></div>
       <button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶</button>
     </div>
@@ -693,7 +693,13 @@
         }
         const bw=maxX-minX+1,bh=maxY-minY+1;
         if(learningCaptureOpen||n>=1&&n<=320&&bw<=38&&bh<=38){if(n<1){n=1;wt=1;pxs=peak.x;pys=peak.y;minX=maxX=peak.x;minY=maxY=peak.y}const cx=wt?pxs/wt:peak.x,cy=wt?pys/wt:peak.y,candidate={score:peak.score,contrast:peak.lum,dr:peak.pr,dg:peak.pg,db:peak.pb,onset:peak.rise,lumRise:peak.lum,colorRatio:colorN/Math.max(1,n),n,bw:Math.max(1,maxX-minX+1),bh:Math.max(1,maxY-minY+1),redN:colorN,whiteN:0,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)};
-          if(learningCaptureOpen){if(!state.learningCaptureBest||candidate.score>state.learningCaptureBest.score)state.learningCaptureBest=candidate;els.clrPill.textContent=`학습 스캔 · 최고상승 ${Math.round(state.learningCaptureBest.onset)} · ${n}px`}
+          if(learningCaptureOpen){
+            if(!state.learningCaptureBest||candidate.score>state.learningCaptureBest.score)state.learningCaptureBest=candidate;
+            els.clrPill.textContent=`학습 스캔 · 최고상승 ${Math.round(state.learningCaptureBest.onset)} · ${n}px`;
+            // 실제 발사 수준의 순간상승은 기다리지 않고 즉시 확정한다. 약한 변화만 감지창 끝까지 비교한다.
+            const immediateLaser=candidate.onset>=15||(candidate.onset>=8&&candidate.colorRatio>=.03);
+            if(immediateLaser){state.learningCaptureUntil=0;state.learningCaptureBest=null;copyPrevious();acceptLaserLearningSample(candidate);return}
+          }
           else{const colorGate=candidate.colorRatio>=simpleP.colorFloor||candidate.onset>=simpleP.onsetFloor*2.2,learnedMatch=candidate.onset>=simpleP.onsetFloor&&candidate.score>=simpleP.scoreFloor&&candidate.contrast>=simpleP.contrastFloor&&colorGate&&n>=simpleP.clusterMin&&n<=simpleP.sizeMax&&bw<=simpleP.widthMax&&bh<=simpleP.widthMax;simpleSignal=learnedMatch;if(learnedMatch&&!V.latched&&tryRecordLaser(cx,cy,sw,sh,vw,vh,roi)){V.latched=true;els.clrPill.textContent=`레이저 명중 · 상승 ${Math.round(candidate.onset)} · 적색 ${Math.round(candidate.colorRatio*100)}%`}}
         }
       }
