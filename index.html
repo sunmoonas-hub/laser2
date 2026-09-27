@@ -626,7 +626,7 @@
     const inside=(x,y,margin=baseScan)=>{const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nx=ex/t.rx,ny=ey/t.ry,extra=ny>0?.48:.12;return Math.hypot(nx,ny)<=margin+extra};
     let V=state.pulseV2;
     if(!V||V.total!==total){
-      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warmUntil:state.matchArmAt||performance.now()+5000,ready:false,armedAt:0,candidate:null,latched:false,clear:0,frames:0,fpsAt:performance.now(),detectorFps:0};
+      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warmUntil:state.matchArmAt||performance.now()+5000,ready:false,armedAt:0,latched:false,clear:0,frames:0,fpsAt:performance.now(),detectorFps:0};
       for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]=V.prevR[p]=data[i];V.bgG[p]=V.prevG[p]=data[i+1];V.bgB[p]=V.prevB[p]=data[i+2]}
       return;
     }
@@ -668,7 +668,7 @@
       if(!(colored||whiteCore)||onset<2&&lumRise<15)continue;
       if(!best||score>best.score)best={x,y,score,dr,dg,db,lumRise,onset,colored,whiteCore};
     }
-    let valid=false,strong=false,cx=0,cy=0,feature=null;
+    let valid=false,cx=0,cy=0,feature=null;
     if(best){
       let n=0,redN=0,whiteN=0,sx=0,sy=0,wt=0,minX=999,maxX=0,minY=999,maxY=0,sur=0,surN=0;
       for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){
@@ -678,31 +678,27 @@
         if(red||white){const w=Math.max(1,lr+Math.max(dr,dg,db));n++;if(red)redN++;if(white)whiteN++;sx+=x*w;sy+=y*w;wt+=w;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
       }
       const bw=maxX-minX+1,bh=maxY-minY+1,centerLum=(data[(best.y*sw+best.x)*4]+data[(best.y*sw+best.x)*4+1]*2+data[(best.y*sw+best.x)*4+2])*.25,contrast=centerLum-sur/Math.max(1,surN);
-      const bestP=best.y*sw+best.x,bestSurface=(V.bgR[bestP]+V.bgG[bestP]*2+V.bgB[bestP])*.25,bestBright=bestSurface>128;
-      const maxN=150,maxW=18,compact=n>=1&&n<=maxN&&bw<=maxW&&bh<=maxW&&bw/Math.max(1,bh)>.18&&bw/Math.max(1,bh)<5.5;
-      const needContrast=5*(bestBright?.74:1),needDr=7*(bestBright?.7:1);
       const colorRise=green?best.dg:best.dr;
       const pulseCompact=n>=2&&n<=220&&bw>=1&&bh>=1&&bw<=26&&bh<=26&&bw/Math.max(1,bh)>.16&&bw/Math.max(1,bh)<6;
       /* 실제 영상에서 레이저는 대부분 단 1프레임만 보였다. 연속 프레임 대신
          ① 직전 프레임 대비 급상승, ② 흰 중심 또는 강한 색 중심, ③ 빨강/초록 테두리,
          ④ 화면 전체 노출·흔들림이 아님을 한꺼번에 확인한다. */
+      // 한 프레임만 보여도 기록하되, 그 프레임 안에 작은 색 점 무리와 직전 프레임 대비 급상승이 함께 있어야 한다.
+      // 두 프레임에 걸쳐 모양만 비슷하다는 이유로 기록하던 경로는 조명 잡음을 오인식할 수 있어 사용하지 않는다.
       const temporalPulse=pulseCompact&&best.score>=12&&best.onset>=8&&best.lumRise>=3&&colorRise>=4&&contrast>=2&&redN>=1&&(whiteN>=1||colorRise>=12)&&motionRatio<.05&&exposureShift<8;
-      const normalShape=compact&&n>=3&&contrast>needContrast&&((redN>=2&&colorRise>=baseMin*.9)||(whiteN>=2&&colorRise>needDr));
-      valid=normalShape||temporalPulse;
+      valid=temporalPulse;
       const rawFeature={score:best.score,contrast,dr:best.dr,dg:best.dg,db:best.db,onset:best.onset,lumRise:best.lumRise,n,bw,bh,redN,whiteN,u:((wt?sx/wt:best.x)-t.x)/Math.max(1,t.rx),v:((wt?sy/wt:best.y)-t.y)/Math.max(1,t.ry),spotRadiusPx:Math.max(.65,Math.min(4,Math.sqrt(n/Math.PI)))};
-      strong=temporalPulse;
       if(motionRatio>.065||exposureShift>9)valid=false;
       if(performance.now()<V.armedAt)valid=false;
       if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature=rawFeature}
     }
-      if(valid){
+    if(valid){
       V.clear=0;
-      if(!V.latched){
-        if(V.candidate&&Math.hypot(cx-V.candidate.x,cy-V.candidate.y)<14){const oldN=V.candidate.n;V.candidate.x=(V.candidate.x*oldN+cx)/(oldN+1);V.candidate.y=(V.candidate.y*oldN+cy)/(oldN+1);V.candidate.spotRadiusPx=((V.candidate.spotRadiusPx||.65)*oldN+(feature?.spotRadiusPx||.65))/(oldN+1);V.candidate.n++;V.candidate.strong=V.candidate.strong||strong}else V.candidate={x:cx,y:cy,n:1,strong,spotRadiusPx:feature?.spotRadiusPx||.65};
-        if(V.candidate.strong||V.candidate.n>=2){if(tryRecordLaser(V.candidate.x,V.candidate.y,sw,sh,vw,vh,roi,V.candidate.spotRadiusPx)){V.latched=true;V.candidate=null;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,600)}}
+      if(!V.latched&&tryRecordLaser(cx,cy,sw,sh,vw,vh,roi,feature?.spotRadiusPx||.65)){
+        V.latched=true;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,600)
       }
     }else{
-      V.candidate=null;V.clear++;if(V.clear>=2)V.latched=false;
+      V.clear++;if(V.clear>=2)V.latched=false;
       if(motionRatio<.035&&exposureShift<8)updateBackground(.018);
       /* 경기 중에는 ROI와 배경 좌표가 어긋나지 않도록 최초 보정 위치를 고정한다. */
     }
@@ -734,7 +730,7 @@
   els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.matchBtn.title='표적 보정 후 경기를 시작하세요.';els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
   function showDetectorInfo(){els.fpsPill.textContent='고감도 레이저 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')}
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
-  window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.pulseV2){state.pulseV2.latched=false;state.pulseV2.clear=0;state.pulseV2.candidate=null}});updateScore();
+  window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.pulseV2){state.pulseV2.latched=false;state.pulseV2.clear=0}});updateScore();
 })();
 </script>
 </body>
