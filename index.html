@@ -575,7 +575,9 @@
       const bw=maxX-minX+1,bh=maxY-minY+1,centerLum=(data[(best.y*sw+best.x)*4]+data[(best.y*sw+best.x)*4+1]*2+data[(best.y*sw+best.x)*4+2])*.25,contrast=centerLum-sur/Math.max(1,surN);
       const compact=n>=1&&n<=150&&bw<=18&&bh<=18&&bw/Math.max(1,bh)>.18&&bw/Math.max(1,bh)<5.5;
       valid=compact&&contrast>5&&(redN>=1||whiteN>=1&&best.dr>7);
-      strong=valid&&((best.score>=34&&contrast>=8)||(redN>=2&&whiteN>=1)||(best.dr>=28&&contrast>=10));
+      // 한 프레임만 보이는 약한 탄착도 흰색 중심과 빨간색 가장자리가 함께 확인되면 통과시킨다.
+      // 화면 흔들림/노출 차단과 크기·대비 검사는 그대로 유지해 오인식을 억제한다.
+      strong=valid&&((best.score>=34&&contrast>=8)||(redN>=1&&whiteN>=1)||(best.dr>=28&&contrast>=10));
       if(motionRatio>.035||exposureShift>8)valid=false;
       if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y}
     }
