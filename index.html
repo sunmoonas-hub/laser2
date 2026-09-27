@@ -606,7 +606,7 @@
   /*
    * LaserHIT 방식에 가깝게 만든 펄스 감지기.
    * 색 하나만 검사하지 않고 ① 직전 프레임에서 갑자기 생긴 밝기, ② 기준 화면 대비 상승,
-   * ③ 흰색 포화 중심과 그 주변의 붉은 테두리, ④ 작고 둥근 크기를 함께 검사한다.
+   * ③ 흰색 중심과 그 바깥의 선택 색 테두리, ④ 작고 둥근 크기를 한 프레임 안에서 함께 검사한다.
    * 강한 펄스는 한 프레임만 보여도 기록하므로 30/60fps 카메라에서 짧은 발광을 놓치지 않는다.
    */
   function detectLaserV2(){
@@ -670,27 +670,28 @@
     }
     let valid=false,cx=0,cy=0,feature=null;
     if(best){
-      let n=0,redN=0,whiteN=0,sx=0,sy=0,wt=0,minX=999,maxX=0,minY=999,maxY=0,sur=0,surN=0;
+      let n=0,redN=0,whiteN=0,sx=0,sy=0,wt=0,coreN=0,coreSx=0,coreSy=0,coreWt=0,minX=999,maxX=0,minY=999,maxY=0,sur=0,surN=0;const coloredPoints=[];
       for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){
         const d=Math.hypot(ox,oy),x=best.x+ox,y=best.y+oy;if(x<x0||x>x1||y<y0||y>y1)continue;const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],dr=r-V.bgR[p],dg=g-V.bgG[p],db=b-V.bgB[p],lr=(dr+dg*2+db)*.25,warm=(r-Math.max(g,b))-(V.bgR[p]-Math.max(V.bgG[p],V.bgB[p]));
         if(d>=7&&d<=10){sur+=(r+g*2+b)*.25;surN++;continue}
         if(d>7)continue;const surface=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25,bright=surface>128,nearMin=baseMin*(bright?.52:1),red=green?(dg>nearMin*.55&&dg>=dr&&dg>=db):(dr>nearMin*.55&&warm>.5&&dr>=dg-5&&dr>=db-5),white=(bright?lr>4:Math.max(r,g,b)>180&&lr>7)&&dr>4&&dg>3&&db>3;
-        if(red||white){const w=Math.max(1,lr+Math.max(dr,dg,db));n++;if(red)redN++;if(white)whiteN++;sx+=x*w;sy+=y*w;wt+=w;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+        if(red||white){const w=Math.max(1,lr+Math.max(dr,dg,db));n++;if(red){redN++;coloredPoints.push({x,y})}if(white){whiteN++;if(d<=7){coreN++;coreSx+=x*w;coreSy+=y*w;coreWt+=w}}sx+=x*w;sy+=y*w;wt+=w;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
       }
       const bw=maxX-minX+1,bh=maxY-minY+1,centerLum=(data[(best.y*sw+best.x)*4]+data[(best.y*sw+best.x)*4+1]*2+data[(best.y*sw+best.x)*4+2])*.25,contrast=centerLum-sur/Math.max(1,surN);
       const colorRise=green?best.dg:best.dr;
+      const coreX=coreWt?coreSx/coreWt:best.x,coreY=coreWt?coreSy/coreWt:best.y;let colorEdgeN=0;
+      for(const q of coloredPoints){const d=Math.hypot(q.x-coreX,q.y-coreY);if(d>=1.2&&d<=7.5)colorEdgeN++}
       const pulseCompact=n>=2&&n<=220&&bw>=1&&bh>=1&&bw<=26&&bh<=26&&bw/Math.max(1,bh)>.16&&bw/Math.max(1,bh)<6;
-      /* 실제 영상에서 레이저는 대부분 단 1프레임만 보였다. 연속 프레임 대신
-         ① 직전 프레임 대비 급상승, ② 흰 중심 또는 강한 색 중심, ③ 빨강/초록 테두리,
-         ④ 화면 전체 노출·흔들림이 아님을 한꺼번에 확인한다. */
+      /* 실제 영상의 짧은 발광을 위해 프레임을 기다리지 않고, 현재 프레임에서
+         ① 흰 중심 ② 그 바깥 색 테두리 ③ 갑작스러운 밝기 상승 ④ 화면 전체 노출·흔들림이 아님을 함께 확인한다. */
       // 한 프레임만 보여도 기록하되, 그 프레임 안에 작은 색 점 무리와 직전 프레임 대비 급상승이 함께 있어야 한다.
       // 두 프레임에 걸쳐 모양만 비슷하다는 이유로 기록하던 경로는 조명 잡음을 오인식할 수 있어 사용하지 않는다.
-      const temporalPulse=pulseCompact&&best.score>=12&&best.onset>=8&&best.lumRise>=3&&colorRise>=4&&contrast>=2&&redN>=1&&(whiteN>=1||colorRise>=12)&&motionRatio<.05&&exposureShift<8;
+      const temporalPulse=pulseCompact&&coreN>=1&&colorEdgeN>=1&&best.score>=12&&best.onset>=8&&best.lumRise>=3&&colorRise>=4&&contrast>=2&&motionRatio<.05&&exposureShift<8;
       valid=temporalPulse;
-      const rawFeature={score:best.score,contrast,dr:best.dr,dg:best.dg,db:best.db,onset:best.onset,lumRise:best.lumRise,n,bw,bh,redN,whiteN,u:((wt?sx/wt:best.x)-t.x)/Math.max(1,t.rx),v:((wt?sy/wt:best.y)-t.y)/Math.max(1,t.ry),spotRadiusPx:Math.max(.65,Math.min(4,Math.sqrt(n/Math.PI)))};
+      const rawFeature={score:best.score,contrast,dr:best.dr,dg:best.dg,db:best.db,onset:best.onset,lumRise:best.lumRise,n,bw,bh,redN,whiteN,coreN,colorEdgeN,u:((coreWt?coreX:(wt?sx/wt:best.x))-t.x)/Math.max(1,t.rx),v:((coreWt?coreY:(wt?sy/wt:best.y))-t.y)/Math.max(1,t.ry),spotRadiusPx:Math.max(.65,Math.min(4,Math.sqrt(n/Math.PI)))};
       if(motionRatio>.065||exposureShift>9)valid=false;
       if(performance.now()<V.armedAt)valid=false;
-      if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y;feature=rawFeature}
+      if(valid){cx=coreWt?coreX:(wt?sx/wt:best.x);cy=coreWt?coreY:(wt?sy/wt:best.y);feature=rawFeature}
     }
     if(valid){
       V.clear=0;
