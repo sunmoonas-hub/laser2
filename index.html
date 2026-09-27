@@ -295,7 +295,7 @@
     let ellipse=null;const majorMin=Math.max(12,outerR*.88),majorMax=Math.min(Math.min(sw,sh)*.49,outerR*1.12);
     // 타원 후보는 4~10점 전체를 한꺼번에 점수화하지 않는다. 잘못된 작은 타원이 여러 안쪽 링에
     // 우연히 걸리는 것을 막기 위해, 검은 중심과 흰 바깥 링 사이의 가장 큰 닫힘 경계(10점 외곽)를 우선 맞춘다.
-    for(let major=majorMin;major<=majorMax;major+=2)for(let ratio=.58;ratio<=1.001;ratio+=.04)for(let deg=0;deg<180;deg+=10){const minor=major*ratio,a=deg*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);let sum=0,covered=0,n=0;for(let j=0;j<120;j++){const t=j*Math.PI*2/120,ex=major*Math.cos(t),ey=minor*Math.sin(t),x=Math.round(cx+ex*ca-ey*sa),y=Math.round(cy+ex*sa+ey*ca);if(x<2||x>=sw-2||y<2||y>=sh-2)continue;const e=edge[y*sw+x];sum+=Math.min(100,e);if(e>24)covered++;n++}const coverage=covered/Math.max(1,n),score=sum/Math.max(1,n)+coverage*60+major*.015;if(coverage>.12&&(!ellipse||score>ellipse.score))ellipse={major,minor,a,score,coverage}}
+    for(let major=majorMin;major<=majorMax;major+=2)for(let ratio=.82;ratio<=1.001;ratio+=.02)for(let deg=0;deg<180;deg+=10){const minor=major*ratio,a=deg*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);let sum=0,covered=0,n=0;for(let j=0;j<120;j++){const t=j*Math.PI*2/120,ex=major*Math.cos(t),ey=minor*Math.sin(t),x=Math.round(cx+ex*ca-ey*sa),y=Math.round(cy+ex*sa+ey*ca);if(x<2||x>=sw-2||y<2||y>=sh-2)continue;const e=edge[y*sw+x];sum+=Math.min(100,e);if(e>24)covered++;n++}const coverage=covered/Math.max(1,n),score=sum/Math.max(1,n)+coverage*60+major*.015;if(coverage>.48&&(!ellipse||score>ellipse.score))ellipse={major,minor,a,score,coverage}}
     if(!ellipse)ellipse={major:outerR,minor:outerR,a:0};
     const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadiusX=ellipse.major/sw*vw*mapped.scale,screenRadiusY=ellipse.minor/sw*vw*mapped.scale,overlayMin=Math.min(els.overlay.clientWidth,els.overlay.clientHeight),minTargetRadius=Math.max(8,overlayMin*.025);
     if(screenRadiusX<minTargetRadius||screenRadiusX>overlayMin*.55||screenRadiusY<minTargetRadius*.5){state.calibrationFailReason=`표적 크기 기준 미달(${Math.round(screenRadiusX)}×${Math.round(screenRadiusY)}px)`;return null;}
@@ -308,8 +308,8 @@
     const width=els.overlay.clientWidth,height=els.overlay.clientHeight;ctx.clearRect(0,0,width,height);
     if(!state.center)return;
     ctx.save();ctx.lineWidth=1.2;
-    if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#ff222bee':'#ff303888';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
-    ctx.beginPath();ctx.arc(state.center.x,state.center.y,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
+    if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#20e66d':'#20e66d99';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
+    ctx.beginPath();ctx.arc(state.center.x,state.center.y,6,0,Math.PI*2);ctx.strokeStyle='#b7ff3c';ctx.lineWidth=2;ctx.stroke();
     state.shots.forEach((s,i)=>{if(s.manual||s.screenX==null)return;let px=s.screenX,py=s.screenY;if(Number.isFinite(s.videoX)&&Number.isFinite(s.videoY)){const g=videoGeometry(),mapped=videoToScreen(s.videoX*g.vw,s.videoY*g.vh);px=mapped.x;py=mapped.y}s.screenX=px;s.screenY=py;ctx.beginPath();if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}else ctx.arc(px,py,9,0,Math.PI*2);ctx.fillStyle=s.score?'#b7ff3c':'#ff4d66';ctx.fill();ctx.fillStyle='#07111f';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),px,py)});ctx.restore();
   }
 
