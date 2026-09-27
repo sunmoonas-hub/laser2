@@ -82,7 +82,6 @@
   .startPanel h2,.shotPanel h2{border-left:5px solid #20dc60;padding-left:9px;text-transform:uppercase;letter-spacing:.04em}
   .startPanel .field input,.startPanel .field select{background:#080808;border-color:#555;border-radius:3px}
   .startBtn{background:#20dc60;color:#041408;border-radius:3px;box-shadow:inset 0 -3px 0 #0b8a34}
-  .learnBtn{background:#30290f;color:#ffe468;border-color:#877321;border-radius:3px}
   .endBtn{background:#a61118;color:#fff;border-color:#f04a51;border-radius:3px}
   .scoreGrid .slot{border-radius:3px;background:#0a0a0a;border-color:#555}.scoreGrid .slot.hit{background:#fff;border-color:#fff;color:#111}.scoreGrid .slot.miss{background:#d51b24;border-color:#ff4b52}
   .undoBtnLive{border-radius:3px;background:#2a0c0f}
@@ -207,16 +206,14 @@
   // 단, 연결이 끊기거나 페이지를 닫는 바람에 "진행 중"으로 멈춰버린 죽은 기록이면 60초 뒤 자동으로 풀어준다.
   function syncStartLock(){
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
-    const busy = !!(lastState && lastState.running && !stale);
-    $('rStart').disabled = busy;
+    $('rStart').disabled = !!(lastState && lastState.running && !stale);
   }
   function applyView(){
     const state = lastState;
     const watch = Number($('watchLane').value) || 1;
     if(!state){ show('idle'); return; }
     const shots = Array.isArray(state.shots) ? state.shots : [];
-    const hasResult = !!(state.running||state.player||shots.length);
-    if(!hasResult){ show('idle'); return; }
+    if(!state.player&&!shots.length&&!state.running){ show('idle'); return; }
     const lane = state.firingLane || 1;
     if(lane !== watch){
       $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">다른 사로에서 진행 중</b>${lane}사로에서 "${state.player||''}" 선수가 ${state.running?'사격 중':'경기를 마쳤어요'}.<br>${watch}사로를 보려면 위에서 사로를 바꿔서 기다려 주세요.`;
@@ -225,8 +222,7 @@
     show('live');
     $('pName').textContent = state.player || '이름 없음';
     $('pLane').textContent = state.eventName ? `${state.eventName} · ${lane}사로` : `${lane}사로`;
-    const pill = $('statusPill');
-    pill.className = 'status ' + (state.running ? 'live' : 'done');
+    $('statusPill').className = 'status ' + (state.running ? 'live' : 'done');
     $('statusText').textContent = state.running?'사격 중':(shots.length?'완료':'대기');
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
@@ -281,7 +277,7 @@
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
-        msg.textContent = '✅ 전송했어요. 사대 화면에서 시작합니다.';
+        msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
         if(onOk) onOk();
