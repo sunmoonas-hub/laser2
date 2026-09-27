@@ -5,7 +5,7 @@
 <meta name="google" content="notranslate">
 <meta name="theme-color" content="#07111f">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
-<title>LASER MATCH · 실시간 관전</title>
+<title>LASER MATCH 쨌 �ㅼ떆媛� 愿���</title>
 <style>
   :root{--bg:#07111f;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
   *{box-sizing:border-box}
@@ -69,7 +69,7 @@
   .undoMsg{text-align:center;color:var(--muted);font-size:.76rem;margin-top:8px;min-height:1.1em}
   @media(max-width:420px){.startPanel .grid{grid-template-columns:1fr}}
 
-  /* LaserHIT 경기 화면에서 영감을 받은 관전용 고대비 UI */
+  /* LaserHIT 寃쎄린 �붾㈃�먯꽌 �곴컧�� 諛쏆� 愿��꾩슜 怨좊�鍮� UI */
   :root{--bg:#050505;--text:#fff;--muted:#b8b8b8;--cyan:#20dc60;--lime:#22df67;--red:#d51b24;--gold:#ffd441}
   html,body{background:#050505}
   .wrap{max-width:1280px;padding-top:max(env(safe-area-inset-top),8px)}
@@ -97,30 +97,30 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>🎯 LASER MATCH · 실시간 관전</h1>
+    <h1>�렞 LASER MATCH 쨌 �ㅼ떆媛� 愿���</h1>
 
   </header>
   <div class="layout">
     <div class="left">
-      <div class="watchRow">지금 보는 사로
+      <div class="watchRow">吏�湲� 蹂대뒗 �щ줈
         <select id="watchLane">
-          <option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option>
-          <option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option>
+          <option value="1">1�щ줈</option><option value="2">2�щ줈</option><option value="3">3�щ줈</option><option value="4">4�щ줈</option>
+          <option value="5">5�щ줈</option><option value="6">6�щ줈</option><option value="7">7�щ줈</option><option value="8">8�щ줈</option>
         </select>
       </div>
-      <div id="idleHint" class="idle"><b>대기 중…</b>선택한 사로에서 아직 경기가 시작되지 않았어요.</div>
+      <div id="idleHint" class="idle"><b>��湲� 以묅��</b>�좏깮�� �щ줈�먯꽌 �꾩쭅 寃쎄린媛� �쒖옉�섏� �딆븯�댁슂.</div>
       <div id="otherLaneBox" class="otherLane" hidden></div>
       <div id="liveBox" hidden>
         <div class="learningBanner" id="learningBanner" hidden></div>
         <div class="who">
-          <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
-          <span class="status" id="statusPill"><i class="dot"></i><span id="statusText">대기</span></span>
+          <div><div class="name" id="pName">��</div><div class="lane" id="pLane"></div></div>
+          <span class="status" id="statusPill"><i class="dot"></i><span id="statusText">��湲�</span></span>
         </div>
         <div class="target-box"><canvas id="cv" width="600" height="600"></canvas></div>
         <div class="scoreboard">
-          <div class="metric"><small>총점</small><strong id="total">0</strong></div>
-          <div class="metric"><small>발수</small><strong><span id="cnt">0</span>/<span id="maxS">10</span></strong></div>
-          <div class="metric"><small>평균</small><strong id="avg">0.0</strong></div>
+          <div class="metric"><small>珥앹젏</small><strong id="total">0</strong></div>
+          <div class="metric"><small>諛쒖닔</small><strong><span id="cnt">0</span>/<span id="maxS">10</span></strong></div>
+          <div class="metric"><small>�됯퇏</small><strong id="avg">0.0</strong></div>
         </div>
         <p class="updated" id="updatedAt"></p>
       </div>
@@ -128,25 +128,26 @@
     <div class="right">
       <section class="startPanel" id="startPanel">
         <div class="grid">
-          <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
-          <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
-          <div class="field"><label>레이저 색상</label><select id="rColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
-          <div class="field"><label>감지 대상</label><select id="rKind"><option value="laser" selected>레이저만 (권장)</option><option value="both">레이저+물체</option><option value="object">물체만</option></select></div>
-          <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
-          <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
+          <div class="field"><label>�좎닔紐�</label><input id="rPlayer" placeholder="�좎닔 �대쫫" maxlength="40"></div>
+          <div class="field"><label>�щ줈</label><select id="rLane"><option value="1">1�щ줈</option><option value="2">2�щ줈</option><option value="3">3�щ줈</option><option value="4">4�щ줈</option><option value="5">5�щ줈</option><option value="6">6�щ줈</option><option value="7">7�щ줈</option><option value="8">8�щ줈</option></select></div>
+          <div class="field"><label>�덉씠�� �됱긽</label><select id="rColor"><option value="red">鍮④컙��</option><option value="green">珥덈줉��</option></select></div>
+          <div class="field"><label>媛먯� ����</label><select id="rKind"><option value="laser" selected>�덉씠��留� (沅뚯옣)</option><option value="both">�덉씠��+臾쇱껜</option><option value="object">臾쇱껜留�</option></select></div>
+          <div class="field"><label>���뚮챸</label><input id="rEvent" placeholder="��: 援먮궡 �ш꺽����" maxlength="80"></div>
+          <div class="field"><label>寃쎄린 諛쒖닔</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
         </div>
         <div class="startRow">
-          <button class="learnBtn" id="rLearn">🎯 레이저 3발 학습</button>
-          <button class="startBtn" id="rStart">🕹️ 경기 시작</button>
-          <button class="endBtn" id="rEnd">🛑 경기 종료</button>
+          <button class="learnBtn" id="rLearn">�렞 �덉씠�� 3諛� �숈뒿</button>
+          <button class="startBtn" id="rStart">�빘截� 寃쎄린 �쒖옉</button>
+          <button class="endBtn" id="rEnd">�썞 寃쎄린 醫낅즺</button>
         </div>
-        <button class="saveLearnBtn" id="rSaveLearn">🎯 학습탄 1발 감지 준비</button>
+        <button class="saveLearnBtn" id="rSaveLearn">�렞 �숈뒿�� 1諛� 媛먯� 以�鍮�</button>
+        <button class="saveLearnBtn" id="rConfirmSave" disabled>�뮶 諛⑷툑 �� �숈뒿�� ����</button>
         <p class="startMsg" id="rMsg"></p>
       </section>
       <section class="shotPanel" id="shotPanel" hidden>
-        <h2>🎯 획득 점수</h2>
+        <h2>�렞 �띾뱷 �먯닔</h2>
         <div class="scoreGrid" id="scoreGrid"></div>
-        <button class="undoBtnLive" id="undoBtnLive">↩️ 마지막 발 취소</button>
+        <button class="undoBtnLive" id="undoBtnLive">�⑼툘 留덉�留� 諛� 痍⑥냼</button>
         <p class="undoMsg" id="undoMsg"></p>
       </section>
     </div>
@@ -155,7 +156,7 @@
 <script>
 (() => {
   'use strict';
-  // index.html의 APPS_SCRIPT_URL과 반드시 같은 주소를 넣으세요.
+  // index.html�� APPS_SCRIPT_URL怨� 諛섎뱶�� 媛숈� 二쇱냼瑜� �ｌ쑝�몄슂.
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d');
@@ -169,9 +170,9 @@
       const s = shots[i];
       if(s){
         const miss = !s.score;
-        html.push(`<div class="slot ${miss?'miss':'hit'}"><span class="num">${i+1}발</span><span class="val">${miss?'0':s.score}</span></div>`);
+        html.push(`<div class="slot ${miss?'miss':'hit'}"><span class="num">${i+1}諛�</span><span class="val">${miss?'0':s.score}</span></div>`);
       } else {
-        html.push(`<div class="slot"><span class="num">${i+1}발</span><span class="val">–</span></div>`);
+        html.push(`<div class="slot"><span class="num">${i+1}諛�</span><span class="val">��</span></div>`);
       }
     }
     $('scoreGrid').innerHTML = html.join('');
@@ -204,26 +205,28 @@
     });
   }
 
-  // 서버 상태가 새로 올 때마다 호출됨. "지금 보는 사로"와 실제 사로가 같을 때만 화면을 갱신한다.
+  // �쒕쾭 �곹깭媛� �덈줈 �� �뚮쭏�� �몄텧��. "吏�湲� 蹂대뒗 �щ줈"�� �ㅼ젣 �щ줈媛� 媛숈쓣 �뚮쭔 �붾㈃�� 媛깆떊�쒕떎.
   function handleState(state){
     lastState = state;
     applyView();
     syncStartLock();
   }
-  // 서버 전체(사로 구분 없이)에 사격이 진행 중이면, 새 시작 명령이 밀렸다가 경기가 끝나자마자
-  // 자동으로 실행되는 걸 막기 위해 시작 버튼을 잠가 둔다.
-  // 단, 연결이 끊기거나 페이지를 닫는 바람에 "진행 중"으로 멈춰버린 죽은 기록이면 60초 뒤 자동으로 풀어준다.
+  // �쒕쾭 �꾩껜(�щ줈 援щ텇 �놁씠)�� �ш꺽�� 吏꾪뻾 以묒씠硫�, �� �쒖옉 紐낅졊�� 諛��몃떎媛� 寃쎄린媛� �앸굹�먮쭏��
+  // �먮룞�쇰줈 �ㅽ뻾�섎뒗 嫄� 留됯린 �꾪빐 �쒖옉 踰꾪듉�� �좉� �붾떎.
+  // ��, �곌껐�� �딄린嫄곕굹 �섏씠吏�瑜� �ル뒗 諛붾엺�� "吏꾪뻾 以�"�쇰줈 硫덉떠踰꾨┛ 二쎌� 湲곕줉�대㈃ 60珥� �� �먮룞�쇰줈 ���댁���.
   function syncStartLock(){
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
     const busy = !!(lastState && (lastState.running||lastState.learning) && !stale);
     $('rStart').disabled = busy;
     $('rLearn').disabled = busy;
-    // 서버의 학습 상태 수신이 늦어져도 버튼이 사라지지 않도록 항상 표시한다.
-    // 경기 중에만 잠그고, 그 외에는 사용자가 직접 학습탄 저장 명령을 보낼 수 있다.
+    // �쒕쾭�� �숈뒿 �곹깭 �섏떊�� ��뼱�몃룄 踰꾪듉�� �щ씪吏�吏� �딅룄濡� ��긽 �쒖떆�쒕떎.
+    // 寃쎄린 以묒뿉留� �좉렇怨�, 洹� �몄뿉�� �ъ슜�먭� 吏곸젒 �숈뒿�� ���� 紐낅졊�� 蹂대궪 �� �덈떎.
     $('rSaveLearn').hidden = false;
     const canSave=!!(lastState&&lastState.learningCandidateReady),canArm=!!(lastState&&lastState.learningArmed);
-    $('rSaveLearn').disabled = !!(lastState&&((lastState.running&&!lastState.learning)||(!canSave&&!canArm)));
-    $('rSaveLearn').textContent=canSave?'💾 방금 쏜 학습탄 저장':'🎯 학습탄 1발 감지 준비';
+    $('rSaveLearn').disabled=!canArm;
+    $('rConfirmSave').hidden=false;
+    $('rConfirmSave').disabled=!canSave;
+    $('rConfirmSave').textContent=canSave?'�뮶 諛⑷툑 �� �숈뒿�� ����':'�뮶 �숈뒿�� ���� (愿묒젏 ��湲�)';
   }
   function applyView(){
     const state = lastState;
@@ -236,16 +239,16 @@
     if(!hasResult){ show('idle'); return; }
     const lane = state.firingLane || 1;
     if(lane !== watch){
-      $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">다른 사로에서 진행 중</b>${lane}사로에서 ${state.learning?'레이저 학습 중':(`"${state.player||''}" 선수가 ${state.running?'사격 중':'경기를 마쳤어요'}`)}.<br>${watch}사로를 보려면 위에서 사로를 바꿔서 기다려 주세요.`;
+      $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">�ㅻⅨ �щ줈�먯꽌 吏꾪뻾 以�</b>${lane}�щ줈�먯꽌 ${state.learning?'�덉씠�� �숈뒿 以�':(`"${state.player||''}" �좎닔媛� ${state.running?'�ш꺽 以�':'寃쎄린瑜� 留덉낀�댁슂'}`)}.<br>${watch}�щ줈瑜� 蹂대젮硫� �꾩뿉�� �щ줈瑜� 諛붽퓭�� 湲곕떎�� 二쇱꽭��.`;
       show('other'); return;
     }
     show('live');
-    $('pName').textContent = learning||learningReady&&!state.running&&!shots.length ? '레이저 3발 학습' : (state.player || '이름 없음');
-    $('pLane').textContent = state.eventName ? `${state.eventName} · ${lane}사로` : `${lane}사로`;
+    $('pName').textContent = learning||learningReady&&!state.running&&!shots.length ? '�덉씠�� 3諛� �숈뒿' : (state.player || '�대쫫 �놁쓬');
+    $('pLane').textContent = state.eventName ? `${state.eventName} 쨌 ${lane}�щ줈` : `${lane}�щ줈`;
     const pill = $('statusPill');
     pill.className = 'status ' + (state.running||learning ? 'live' : 'done');
-    $('statusText').textContent = learning?`학습 ${state.learningCount||0}/3`:(learningReady&&!state.running&&!shots.length?'학습 완료':(state.running?'사격 중':(shots.length?'완료':'대기')));
-    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?(learningSettling?'⏳ 카메라 안정화 중 · 아직 쏘지 마세요':(learningCandidateReady?'💾 광점 후보 포착 · 실제로 발사했다면 「방금 쏜 학습탄 저장」을 누르세요':(learningCaptureActive?'🔴 감지 준비 완료 · 지금 레이저를 한 발 쏘세요':(!learningArmed?'카메라폰 연결·기준 화면 준비 중 · 아직 쏘지 마세요':((state.learningCount||0)?`학습 ${state.learningCount}/3 완료 · 감지 준비 버튼을 누른 뒤 다음 발을 쏘세요`:'발사 가능 · 감지 준비 버튼을 누르고 「감지 준비 완료」를 기다리세요'))))):'레이저 3발 학습 완료 · 경기 시작을 기다리는 중';
+    $('statusText').textContent = learning?`�숈뒿 ${state.learningCount||0}/3`:(learningReady&&!state.running&&!shots.length?'�숈뒿 �꾨즺':(state.running?'�ш꺽 以�':(shots.length?'�꾨즺':'��湲�')));
+    const banner=$('learningBanner');banner.hidden=!(learning||learningReady&&!state.running&&!shots.length);banner.className='learningBanner'+(learningReady&&!learning?' done':'');banner.textContent=learning?(learningSettling?'�� 移대찓�� �덉젙�� 以� 쨌 �꾩쭅 �섏� 留덉꽭��':(learningCandidateReady?'�뮶 愿묒젏 �꾨낫 �ъ갑 쨌 �ㅼ젣濡� 諛쒖궗�덈떎硫� �뚮갑湲� �� �숈뒿�� ���γ�띿쓣 �꾨Ⅴ�몄슂':(learningCaptureActive?'�뵶 媛먯� 以�鍮� �꾨즺 쨌 吏�湲� �덉씠��瑜� �� 諛� �섏꽭��':(!learningArmed?'移대찓�쇳룿 �곌껐쨌湲곗� �붾㈃ 以�鍮� 以� 쨌 �꾩쭅 �섏� 留덉꽭��':((state.learningCount||0)?`�숈뒿 ${state.learningCount}/3 �꾨즺 쨌 媛먯� 以�鍮� 踰꾪듉�� �꾨Ⅸ �� �ㅼ쓬 諛쒖쓣 �섏꽭��`:'諛쒖궗 媛��� 쨌 媛먯� 以�鍮� 踰꾪듉�� �꾨Ⅴ怨� �뚭컧吏� 以�鍮� �꾨즺�띾� 湲곕떎由ъ꽭��'))))):'�덉씠�� 3諛� �숈뒿 �꾨즺 쨌 寃쎄린 �쒖옉�� 湲곕떎由щ뒗 以�';
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
     $('cnt').textContent = learning||learningReady&&!state.running&&!shots.length ? (state.learningCount||0) : shots.length;
@@ -256,7 +259,7 @@
     $('undoBtnLive').disabled = !shots.length;
     if(state.updatedAt){
       const sec = Math.max(0, Math.round((Date.now()-state.updatedAt)/1000));
-      $('updatedAt').textContent = sec < 3 ? '방금 갱신됨' : `${sec}초 전 갱신`;
+      $('updatedAt').textContent = sec < 3 ? '諛⑷툑 媛깆떊��' : `${sec}珥� �� 媛깆떊`;
     }
   }
   function show(which){
@@ -275,7 +278,7 @@
     function finish(state){
       if(done) return; done = true;
       clearTimeout(timer);
-      window[cb] = function(){};   // 응답이 늦게 와도(타임아웃 뒤) 에러 없이 그냥 무시되도록, 삭제 대신 빈 함수로 남겨둠
+      window[cb] = function(){};   // �묐떟�� ��쾶 ����(���꾩븘�� ��) �먮윭 �놁씠 洹몃깷 臾댁떆�섎룄濡�, ��젣 ���� 鍮� �⑥닔濡� �④꺼��
       script.remove();
       if(state){
         const sig = JSON.stringify(state);
@@ -289,21 +292,21 @@
     document.head.appendChild(script);
   }
 
-  // 명령 전송의 공통 로직: cmd에 cmdId만 새로 채워서 서버로 보낸다. onOk(cmd)는 전송이 성공했을 때 호출된다.
+  // 紐낅졊 �꾩넚�� 怨듯넻 濡쒖쭅: cmd�� cmdId留� �덈줈 梨꾩썙�� �쒕쾭濡� 蹂대궦��. onOk(cmd)�� �꾩넚�� �깃났�덉쓣 �� �몄텧�쒕떎.
   function sendCmd(cmd, btn, msg, onOk){
     cmd = Object.assign({}, cmd, { cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) });
-    btn.disabled = true; msg.textContent = '📡 명령을 보내는 중…';
+    btn.disabled = true; msg.textContent = '�뱻 紐낅졊�� 蹂대궡�� 以묅��';
     const cb = 'startCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     const script = document.createElement('script');
     const timer = setTimeout(() => finish(null), 8000);
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
-        msg.textContent = cmd.mode==='learn'?'✅ 학습 시작 요청 전송 · 카메라폰의 준비 완료를 기다리세요.':(cmd.mode==='confirmLearn'?'⏳ 감지 요청 전송됨 · 「감지 준비 완료」가 나오면 쏘세요.':(cmd.mode==='saveLearn'?'✅ 방금 쏜 학습탄 저장 요청을 보냈습니다.':'✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.'));
-        $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
+        msg.textContent = cmd.mode==='learn'?'�� �숈뒿 �쒖옉 �붿껌 �꾩넚 쨌 移대찓�쇳룿�� 以�鍮� �꾨즺瑜� 湲곕떎由ъ꽭��.':(cmd.mode==='confirmLearn'?'�� 媛먯� �붿껌 �꾩넚�� 쨌 �뚭컧吏� 以�鍮� �꾨즺�띻� �섏삤硫� �섏꽭��.':(cmd.mode==='saveLearn'?'�� 諛⑷툑 �� �숈뒿�� ���� �붿껌�� 蹂대깉�듬땲��.':'�� �꾩넚�덉뼱�� - �щ� �붾㈃�먯꽌 �먮룞�쇰줈 �쒖옉�쇱슂.'));
+        $('watchLane').value = String(cmd.firingLane);   // 諛⑷툑 �쒖옉�� 嫄� �щ줈瑜� �먮룞�쇰줈 蹂닿쾶 �꾪솚
         applyView();
         if(onOk) onOk();
-      } else msg.textContent = '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+      } else msg.textContent = '�좑툘 �꾩넚�� �ㅽ뙣�덉뼱��. �ㅼ떆 �쒕룄�� 二쇱꽭��.';
     }
     window[cb] = res => finish(res);
     script.onerror = () => finish(null);
@@ -321,30 +324,34 @@
       detectKind: $('rKind').value,
       maxShots: Number($('rMax').value)
     };
-    if(!cmd.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
+    if(!cmd.player){ $('rMsg').textContent = '�좎닔 �대쫫�� �낅젰�� 二쇱꽭��.'; return; }
     sendCmd(cmd, $('rStart'), $('rMsg'));
   }
   function sendRemoteLearn(){
     const cmd={mode:'learn',firingLane:Number($('rLane').value),laserColor:$('rColor').value,detectKind:'laser'};
     sendCmd(cmd,$('rLearn'),$('rMsg'));
   }
-  function saveRemoteLearnShot(){
-    const cmd={mode:lastState&&lastState.learningCandidateReady?'saveLearn':'confirmLearn',firingLane:Number($('rLane').value)};
-    sendCmd(cmd,$('rSaveLearn'),$('rMsg'));
+  function armRemoteLearnShot(){
+    sendCmd({mode:'confirmLearn',firingLane:Number($('rLane').value)},$('rSaveLearn'),$('rMsg'));
   }
-  $('rSaveLearn').addEventListener('click',saveRemoteLearnShot);
+  function saveRemoteLearnShot(){
+    if(!lastState||!lastState.learningCandidateReady)return;
+    sendCmd({mode:'saveLearn',firingLane:Number($('rLane').value)},$('rConfirmSave'),$('rMsg'));
+  }
+  $('rSaveLearn').addEventListener('click',armRemoteLearnShot);
+  $('rConfirmSave').addEventListener('click',saveRemoteLearnShot);
   $('rLearn').addEventListener('click',sendRemoteLearn);
   $('rStart').addEventListener('click', sendRemoteStart);
   $('undoBtnLive').addEventListener('click', () => {
     const btn = $('undoBtnLive'), msg = $('undoMsg');
-    btn.disabled = true; msg.textContent = '📡 취소 신호를 보내는 중…';
+    btn.disabled = true; msg.textContent = '�뱻 痍⑥냼 �좏샇瑜� 蹂대궡�� 以묅��';
     const cb = 'undoCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     const script = document.createElement('script');
     const timer = setTimeout(() => finish(null), 8000);
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove();
       btn.disabled = !(lastState && lastState.shots && lastState.shots.length);
-      msg.textContent = (res && res.ok) ? '✅ 취소 신호를 보냈어요 - 사대에 곧 반영돼요.' : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+      msg.textContent = (res && res.ok) ? '�� 痍⑥냼 �좏샇瑜� 蹂대깉�댁슂 - �щ��� 怨� 諛섏쁺�쇱슂.' : '�좑툘 �꾩넚�� �ㅽ뙣�덉뼱��. �ㅼ떆 �쒕룄�� 二쇱꽭��.';
     }
     window[cb] = res => finish(res);
     script.onerror = () => finish(null);
@@ -354,13 +361,13 @@
 
   $('rEnd').addEventListener('click', () => {
     const btn = $('rEnd'), msg = $('rMsg');
-    btn.disabled = true; msg.textContent = '📡 종료 신호를 보내는 중…';
+    btn.disabled = true; msg.textContent = '�뱻 醫낅즺 �좏샇瑜� 蹂대궡�� 以묅��';
     const cb = 'endCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     const script = document.createElement('script');
     const timer = setTimeout(() => finish(null), 8000);
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = false;
-      msg.textContent = (res && res.ok) ? '✅ 경기를 종료했어요 - 탄착군·점수가 초기화돼요.' : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+      msg.textContent = (res && res.ok) ? '�� 寃쎄린瑜� 醫낅즺�덉뼱�� - �꾩갑援걔룹젏�섍� 珥덇린�붾뤌��.' : '�좑툘 �꾩넚�� �ㅽ뙣�덉뼱��. �ㅼ떆 �쒕룄�� 二쇱꽭��.';
     }
     window[cb] = res => finish(res);
     script.onerror = () => finish(null);
