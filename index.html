@@ -617,6 +617,20 @@
     if(performance.now()<V.warmUntil){updateBackground(.28);copyPrevious();return}
     if(!V.ready){V.ready=true;V.armedAt=performance.now();activateMatchDetection();copyPrevious();return}
 
+    // 기준 프레임과 직전 프레임을 비교해 카메라 흔들림·자동 노출 변화를 감지한다.
+    // 레이저 광점은 국소 변화이므로 화면 전체 변화가 큰 프레임은 점수로 기록하지 않는다.
+    let motion=0,samples=0,shift=0;
+    for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){
+      if(!inside(x,y))continue;
+      const p=y*sw+x,i=p*4;
+      const now=(data[i]+data[i+1]*2+data[i+2])*.25;
+      const old=(V.prevR[p]+V.prevG[p]*2+V.prevB[p])*.25;
+      const base=(V.bgR[p]+V.bgG[p]*2+V.bgB[p])*.25;
+      samples++;if(Math.abs(now-old)>20)motion++;shift+=now-base;
+    }
+    const motionRatio=motion/Math.max(1,samples);
+    const exposureShift=Math.abs(shift/Math.max(1,samples));
+
     if(state.detectKind!=='laser'){
       const lum=new Uint8Array(total);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;lum[p]=(data[i]*.299+data[i+1]*.587+data[i+2]*.114+.5)|0}
       if(!state.background||state.background.length!==total){state.background=new Float32Array(total);state.backgroundR=new Float32Array(total);state.backgroundG=new Float32Array(total);state.backgroundB=new Float32Array(total);for(let p=0,i=0;p<total;p++,i+=4){state.background[p]=lum[p];state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}}
