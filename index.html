@@ -141,7 +141,7 @@
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','matchCountdown','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,matchArmAt:0,countdownTimer:0,lastHit:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'laser',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,paperMultiple:null};
+  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,matchArmAt:0,countdownTimer:0,lastHit:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,detectorReady:false,autoCalibrating:false,calibrationFailReason:'',zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'laser',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,paperMultiple:null};
 
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
@@ -191,7 +191,7 @@
 
   async function beginCalibration(){
     if(!state.stream||els.video.readyState<2||state.autoCalibrating)return;state.autoCalibrating=true;
-    state.running=false;state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetAngle=0;state.targetVideo=null;state.paperMultiple=null;state.shots=[];state.calibrationMode=0;clearDetectorBackground();updateScore();drawOverlay();
+    state.running=false;state.calibrationFailReason='';state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetAngle=0;state.targetVideo=null;state.paperMultiple=null;state.shots=[];state.calibrationMode=0;clearDetectorBackground();updateScore();drawOverlay();
     els.calibrateBtn.disabled=true;els.matchBtn.disabled=true;els.guide.textContent='표적의 동심원과 중심을 분석하고 있습니다…';setStatus('자동 보정 중','#ffc940');
     // 카메라 초점·노출이 막 켜진 직후엔 아직 안 안정된 경우가 많아, 한 번에 실패로 끝내지 않고
     // 짧은 간격을 두고 몇 번 더 시도해서 그사이 안정된 화면으로 다시 인식을 시도한다.
@@ -208,7 +208,7 @@
       els.matchBtn.disabled=false;els.matchBtn.textContent='경기 시작 대기 중';setStatus('경기 시작 대기 중','var(--lime)');drawOverlay();toast('표적 자동 보정이 완료되었습니다.');
     }else{
       els.guide.textContent='표적 자동 인식 실패 · 표적 자동 보정을 다시 눌러 주세요.';
-      els.calibrationInfo.textContent='표적을 화면 중앙에 더 크게, 정면으로 맞춘 뒤 표적 자동 보정을 다시 눌러 보세요.';
+      els.calibrationInfo.textContent=`표적 경계 확인 실패 · ${state.calibrationFailReason||'화면 대비가 약함'} · 표적에 가까이 대고 다시 보정해 보세요.`;
       setStatus('인식 실패','#ff4d66');toast('표적을 더 크게, 정면으로 맞춘 뒤 표적 자동 보정을 다시 눌러 주세요.');
     }
   }
@@ -240,7 +240,7 @@
   }
 
   function detectTarget(){
-    const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return null;
+    const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh){state.calibrationFailReason='카메라 영상 없음';return null}
     const sw=480,sh=Math.max(260,Math.round(sw*vh/vw));els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);
     const data=wctx.getImageData(0,0,sw,sh).data,gray=new Uint8Array(sw*sh);let mean=0;
     for(let p=0,i=0;p<gray.length;p++,i+=4){const v=Math.round(data[i]*.299+data[i+1]*.587+data[i+2]*.114);gray[p]=v;mean+=v}mean/=gray.length;
@@ -269,7 +269,7 @@
     for(let step=4;step<=maxR/10;step+=.25){let strength=0,hits=0,outerHits=0,error=0;const used=new Set(),tolerance=Math.max(2,step*.18);for(let ring=1;ring<=10;ring++){let pick=-1,pickError=Infinity;for(let i=0;i<ringPeaks.length;i++){if(used.has(i))continue;const e=Math.abs(ringPeaks[i].r-step*ring);if(e<=tolerance&&e<pickError){pick=i;pickError=e}}if(pick<0)continue;used.add(pick);hits++;if(ring>=8)outerHits++;error+=pickError/tolerance;strength+=ringPeaks[pick].strength*(ring>=8?1.25:1)}if(hits>=4&&outerHits>=1){const quality=hits*12+outerHits*5+strength/Math.max(1,avg)-error*2;fits.push({step,hits,outerHits,quality})}}
     if(fits.length){const bestQuality=Math.max(...fits.map(v=>v.quality)),bestHits=Math.max(...fits.filter(v=>v.quality>=bestQuality*.82).map(v=>v.hits));fit=fits.filter(v=>v.quality>=bestQuality*.82&&v.hits>=bestHits-1).sort((a,b)=>b.step-a.step)[0]}
     let outerR=fit?fit.step*10:0,rings=fit?fit.hits:0;
-    if(!fit){const peaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.08&&v.score>avg*1.12&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score);if(peaks.length<3)return null;const outer=peaks.sort((a,b)=>b.r-a.r)[0];outerR=outer.r;rings=peaks.length}
+    if(!fit){const peaks=smooth.filter((v,i)=>i>1&&i<smooth.length-2&&v.coverage>.08&&v.score>avg*1.12&&v.score>=smooth[i-1].score&&v.score>=smooth[i+1].score);if(peaks.length<3){state.calibrationFailReason='동심원 경계 신호가 약함';return null;}const outer=peaks.sort((a,b)=>b.r-a.r)[0];outerR=outer.r;rings=peaks.length}
     // 검은 중심 덩어리는 중심 위치를 잡는 기준으로만 쓴다. 검은 지름에 고정 비율을 곱해
     // 표적 크기를 덮어쓰면 다른 표적지에서는 바깥 링 반지름이 크게 잘릴 수 있다.
     const blackRadius=best?(best.bw+best.bh)*.25:0;
@@ -292,13 +292,14 @@
       if(Math.hypot(whiteCx-cx,whiteCy-cy)<=outerR*.18){cx=cx*.65+whiteCx*.35;cy=cy*.65+whiteCy*.35;whiteBoundaryFound=true}
     }
     const edge=new Uint8Array(sw*sh);for(let y=1;y<sh-1;y++)for(let x=1;x<sw-1;x++){const p=y*sw+x;edge[p]=Math.min(255,Math.abs(gray[p+1]-gray[p-1])+Math.abs(gray[p+sw]-gray[p-sw]))}
-    let ellipse=null;const majorMin=Math.max(38,outerR*.88),majorMax=Math.min(Math.min(sw,sh)*.49,outerR*1.12);
+    let ellipse=null;const majorMin=Math.max(12,outerR*.88),majorMax=Math.min(Math.min(sw,sh)*.49,outerR*1.12);
     // 타원 후보는 4~10점 전체를 한꺼번에 점수화하지 않는다. 잘못된 작은 타원이 여러 안쪽 링에
     // 우연히 걸리는 것을 막기 위해, 검은 중심과 흰 바깥 링 사이의 가장 큰 닫힘 경계(10점 외곽)를 우선 맞춘다.
     for(let major=majorMin;major<=majorMax;major+=2)for(let ratio=.58;ratio<=1.001;ratio+=.04)for(let deg=0;deg<180;deg+=10){const minor=major*ratio,a=deg*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);let sum=0,covered=0,n=0;for(let j=0;j<120;j++){const t=j*Math.PI*2/120,ex=major*Math.cos(t),ey=minor*Math.sin(t),x=Math.round(cx+ex*ca-ey*sa),y=Math.round(cy+ex*sa+ey*ca);if(x<2||x>=sw-2||y<2||y>=sh-2)continue;const e=edge[y*sw+x];sum+=Math.min(100,e);if(e>24)covered++;n++}const coverage=covered/Math.max(1,n),score=sum/Math.max(1,n)+coverage*60+major*.015;if(coverage>.12&&(!ellipse||score>ellipse.score))ellipse={major,minor,a,score,coverage}}
     if(!ellipse)ellipse={major:outerR,minor:outerR,a:0};
-    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadiusX=ellipse.major/sw*vw*mapped.scale,screenRadiusY=ellipse.minor/sw*vw*mapped.scale;
-    if(screenRadiusX<45||screenRadiusX>Math.min(els.overlay.clientWidth,els.overlay.clientHeight)*.55||screenRadiusY<32)return null;
+    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadiusX=ellipse.major/sw*vw*mapped.scale,screenRadiusY=ellipse.minor/sw*vw*mapped.scale,overlayMin=Math.min(els.overlay.clientWidth,els.overlay.clientHeight),minTargetRadius=Math.max(18,overlayMin*.045);
+    if(screenRadiusX<minTargetRadius||screenRadiusX>overlayMin*.55||screenRadiusY<minTargetRadius*.62){state.calibrationFailReason=`표적 크기 기준 미달(${Math.round(screenRadiusX)}×${Math.round(screenRadiusY)}px)`;return null;}
+    state.calibrationFailReason='';
     return{x:mapped.x,y:mapped.y,radius:screenRadiusX,radiusX:screenRadiusX,radiusY:screenRadiusY,angle:ellipse.a,rings:Math.min(10,rings),blackBoundaryFound:!!best,whiteBoundaryFound};
   }
 
