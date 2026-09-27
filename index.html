@@ -576,7 +576,7 @@
       const compact=n>=1&&n<=150&&bw<=18&&bh<=18&&bw/Math.max(1,bh)>.18&&bw/Math.max(1,bh)<5.5;
       valid=compact&&contrast>5&&(redN>=1||whiteN>=1&&best.dr>7);
       strong=valid&&((best.score>=34&&contrast>=8)||(redN>=2&&whiteN>=1)||(best.dr>=28&&contrast>=10));
-      if(motionRatio>.16||exposureShift>17||(motionRatio>.065&&!strong))valid=false;
+      if(motionRatio>.035||exposureShift>8)valid=false;
       if(valid){cx=wt?sx/wt:best.x;cy=wt?sy/wt:best.y}
     }
     if(valid){
