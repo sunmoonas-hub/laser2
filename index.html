@@ -143,13 +143,12 @@
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','learnBtn','matchBtn','manualBtn','undoBtn','guide','matchCountdown','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn'].map(id => [id,$(id)]));
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,videoTrack:null,running:false,laserLearning:false,learningArmed:false,learningCaptureUntil:0,learningIgnoreUntil:0,learningCaptureBest:null,laserSamples:[],laserProfile:null,learningBest:null,learningNextAllowed:0,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,matchArmAt:0,countdownTimer:0,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'laser',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null};
+  const state = {stream:null,videoTrack:null,running:false,laserLearning:false,learningArmed:false,learningCaptureUntil:0,learningIgnoreUntil:0,learningCaptureBest:null,laserSamples:[],laserProfile:null,learningBest:null,learningNextAllowed:0,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,matchArmAt:0,countdownTimer:0,lastHit:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'laser',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,paperMultiple:null};
 
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
   function uid(){return 'M-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
-  function clearDetectorBackground(){state.background=null;state.backgroundR=null;state.backgroundG=null;state.backgroundB=null;state.prevLum=null;state.pendingLaser=null;state.haloCandidate=null;state.pulseV2=null;state.laserBlocked=false;state.releaseFrames=0;state.stableFrames=0;state.objRef=null;state.objTracks=[];state.objKnown=[];state.objBusy=false;state.objBusySince=0;state.workSH=null}
-  function blendBackground(data,lum,sw,x0,x1,y0,y1,alpha){if(!state.backgroundR)return;for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=state.background[p]*(1-alpha)+lum[p]*alpha;state.backgroundR[p]=state.backgroundR[p]*(1-alpha)+data[i]*alpha;state.backgroundG[p]=state.backgroundG[p]*(1-alpha)+data[i+1]*alpha;state.backgroundB[p]=state.backgroundB[p]*(1-alpha)+data[i+2]*alpha}}}
+  function clearDetectorBackground(){state.background=null;state.backgroundR=null;state.backgroundG=null;state.backgroundB=null;state.pulseV2=null;state.objRef=null;state.objTracks=[];state.objKnown=[];state.objBusy=false;state.objBusySince=0}
   function resize(){const r=els.overlay.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);els.overlay.width=Math.round(r.width*d);els.overlay.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);restoreTargetFromVideo();drawOverlay()}
 
   async function startCamera(){
@@ -224,14 +223,9 @@
 
   function videoToScreen(vx,vy){const g=videoGeometry();return{x:g.offX+vx*g.scale,y:g.offY+vy*g.scale,scale:g.scale}}
 
-  function saveTargetToVideo(){if(!state.center||!state.radius||!els.video.videoWidth)return;const g=videoGeometry(),vx=(state.center.x-g.offX)/g.scale,vy=(state.center.y-g.offY)/g.scale;state.targetVideo={x:vx/g.vw,y:vy/g.vh,rx:state.radiusX/g.scale/g.vw,ry:state.radiusY/g.scale/g.vw,a:state.targetAngle,pm:state.paperMultiple||null}}
+  function saveTargetToVideo(){if(!state.center||!state.radius||!els.video.videoWidth)return;const g=videoGeometry(),vx=(state.center.x-g.offX)/g.scale,vy=(state.center.y-g.offY)/g.scale;state.targetVideo={x:vx/g.vw,y:vy/g.vh,rx:state.radiusX/g.scale/g.vw,ry:state.radiusY/g.scale/g.vh,a:state.targetAngle,pm:state.paperMultiple||null}}
 
-  function restoreTargetFromVideo(){if(!state.targetVideo||!els.video.videoWidth)return;const g=videoGeometry(),mapped=videoToScreen(state.targetVideo.x*g.vw,state.targetVideo.y*g.vh);state.center={x:mapped.x,y:mapped.y};state.radiusX=(state.targetVideo.rx||state.targetVideo.r)*g.vw*g.scale;state.radiusY=(state.targetVideo.ry||state.targetVideo.r)*g.vw*g.scale;state.radius=Math.max(state.radiusX,state.radiusY);state.targetAngle=state.targetVideo.a||0;state.paperMultiple=state.targetVideo.pm||null}
-
-  function screenTargetToWork(sw,sh){
-    const g=videoGeometry();
-    return{x:(state.center.x-g.offX)/g.scale/g.vw*sw,y:(state.center.y-g.offY)/g.scale/g.vh*sh,rx:state.radiusX/g.scale/g.vw*sw,ry:state.radiusY/g.scale/g.vw*sw,r:state.radius/g.scale/g.vw*sw,a:state.targetAngle};
-  }
+  function restoreTargetFromVideo(){if(!state.targetVideo||!els.video.videoWidth)return;const g=videoGeometry(),mapped=videoToScreen(state.targetVideo.x*g.vw,state.targetVideo.y*g.vh);state.center={x:mapped.x,y:mapped.y};state.radiusX=(state.targetVideo.rx||state.targetVideo.r)*g.vw*g.scale;state.radiusY=(state.targetVideo.ry||state.targetVideo.r)*g.vh*g.scale;state.radius=Math.max(state.radiusX,state.radiusY);state.targetAngle=state.targetVideo.a||0;state.paperMultiple=state.targetVideo.pm||null}
 
   /* 현재 표적의 검은 중앙부를 기준으로 중심을 조금씩 따라간다. 새 표적을 만들어내지 않고,
      최초 동심원 보정값에서 벗어나지 않는 작은 이동만 허용한다. */
@@ -342,7 +336,7 @@
 
   function startMatch(){
     if(!state.center||!state.radius)return;if(!state.laserProfile){toast('먼저 레이저 3발 학습을 완료해 주세요.');return}if(!els.player.value.trim()){toast('선수 이름을 입력해 주세요.');els.player.focus();return}
-    state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.matchArmAt=performance.now()+5000;state.lastHit=0;state.candidate=null;state.candidateFrames=0;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.warmupFrames=0;state.warmupStart=performance.now();state.detectorReady=false;
+    state.shots=[];state.maxShots=Number(els.maxShots.value);state.matchId=uid();state.running=true;state.matchArmAt=performance.now()+5000;state.lastHit=0;clearDetectorBackground();state.detectorReady=false;
     state.detectKind=els.detectKind.value;
     // 표적지 모서리 탭(선택 단계)을 건너뛴 채로 남아있으면, 사격 중 화면을 잘못 건드렸을 때
     // 그 자리가 표적지 경계로 저장돼 스캔 범위가 잘못 좁아질 수 있어 여기서 확실히 종료한다.
@@ -658,7 +652,7 @@
     /* 전체 카메라를 480px로 줄이지 않고, 보정된 표적과 아래쪽 미스 영역만 원본 영상에서 직접 자른다.
        같은 계산량으로 표적의 실제 픽셀을 더 많이 보존해 1~2px짜리 짧은 레이저가 축소 중 사라지는 것을 줄인다. */
     const tv=state.targetVideo;if(!tv)return;
-    const vcx=tv.x*vw,vcy=tv.y*vh,vrx=(tv.rx||tv.r)*vw,vry=(tv.ry||tv.r)*vw,baseScan=state.paperMultiple?state.paperMultiple+.12:1.68;
+    const vcx=tv.x*vw,vcy=tv.y*vh,vrx=(tv.rx||tv.r)*vw,vry=(tv.ry||tv.r)*vh,baseScan=state.paperMultiple?state.paperMultiple+.12:1.68;
     const halfW=vrx*(baseScan+.55),topH=vry*(baseScan+.28),bottomH=vry*(baseScan+.7);
     let sx=Math.max(0,vcx-halfW),sy=Math.max(0,vcy-topH),ex=Math.min(vw,vcx+halfW),ey=Math.min(vh,vcy+bottomH);
     // 1프레임짜리 레이저를 놓치지 않도록 학습과 경기 모두 480px 경량 분석을 사용한다.
@@ -670,7 +664,7 @@
     const inside=(x,y,margin=baseScan)=>{const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nx=ex/t.rx,ny=ey/t.ry,extra=ny>0?.48:.12;return Math.hypot(nx,ny)<=margin+extra};
     let V=state.pulseV2;
     if(!V||V.total!==total){
-      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warm:0,warmUntil:state.laserLearning?performance.now()+1200:(state.matchArmAt||performance.now()+5000),ready:false,armedAt:0,candidate:null,latched:false,clear:0,trackTick:0,frames:0,fpsAt:performance.now(),detectorFps:0};
+      V=state.pulseV2={total,bgR:new Float32Array(total),bgG:new Float32Array(total),bgB:new Float32Array(total),prevR:new Uint8Array(total),prevG:new Uint8Array(total),prevB:new Uint8Array(total),warmUntil:state.laserLearning?performance.now()+1200:(state.matchArmAt||performance.now()+5000),ready:false,armedAt:0,candidate:null,latched:false,clear:0,frames:0,fpsAt:performance.now(),detectorFps:0};
       for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]=V.prevR[p]=data[i];V.bgG[p]=V.prevG[p]=data[i+1];V.bgB[p]=V.prevB[p]=data[i+2]}
       return;
     }
@@ -678,7 +672,7 @@
     const learn=(a)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=y*sw+x,i=p*4;V.bgR[p]+=a*(data[i]-V.bgR[p]);V.bgG[p]+=a*(data[i+1]-V.bgG[p]);V.bgB[p]+=a*(data[i+2]-V.bgB[p])}};
     V.frames++;const fpsNow=performance.now();if(fpsNow-V.fpsAt>=1000){V.detectorFps=V.frames*1000/(fpsNow-V.fpsAt);V.frames=0;V.fpsAt=fpsNow}
     // 경기의 5초 카운트다운 전체를 배경 안정화에 사용하고, 0이 된 순간에만 감지기를 무장한다.
-    if(performance.now()<V.warmUntil){learn(state.laserLearning?.18:.28);copyPrevious();V.warm++;return}
+    if(performance.now()<V.warmUntil){learn(state.laserLearning?.18:.28);copyPrevious();return}
     if(!V.ready){V.ready=true;V.armedAt=performance.now();if(state.laserLearning){state.detectorReady=true;state.learningArmed=true;state.learningNextAllowed=performance.now();els.learnBtn.textContent=`레이저 학습 ${state.laserSamples.length}/3`;els.guide.textContent='라이브에서 「학습탄 1발 감지 준비」를 누른 뒤 레이저를 쏘세요.';setStatus('학습 감지 준비 가능','#ffc940');pushLive(true)}else activateMatchDetection();copyPrevious();return}
 
     // 감지 준비 버튼 자체로 생긴 렌더링 지연·자동 노출 변화를 레이저로 오인하지 않도록
@@ -837,130 +831,9 @@
   }
 
  
-  function detectLaser(){
-    const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return;
-    // 작업 해상도(sw,sh)는 기준화면을 잡을 때 한 번만 정하고 계속 그 값을 쓴다.
-    // 카메라 초점이 잡히는 동안 비디오 해상도 비율이 프레임마다 아주 미세하게 흔들리면,
-    // 매 프레임 다시 계산할 경우 그때마다 기준화면이 초기화되어 "기준 화면 설정 중"에서 영원히 못 넘어갈 수 있었다.
-    const sw=480;
-    if(!state.workSH||!state.background)state.workSH=Math.max(270,Math.round(sw*vh/vw));
-    const sh=state.workSH;
-    els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh,lum=new Uint8Array(total);
-    // 실제로 읽히는 건 표적 주변 범위뿐이라, 밝기(lum)와 기준화면도 화면 전체가 아니라 그 범위만 계산한다.
-    // (표적이 화면의 일부만 차지할 때 매 프레임 계산량을 크게 줄여, 짧게 스치는 레이저도 프레임을 안 놓치고 볼 확률을 높인다.)
-    // 이 범위(t,x0,x1,y0,y1)는 아래쪽 실제 감지 로직에서도 그대로 재사용한다.
-    const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*(state.paperMultiple?state.paperMultiple+.1:1.6);
-    const x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
-    for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;lum[p]=(data[i]*.299+data[i+1]*.587+data[i+2]*.114+.5)|0}}
-    if(!state.background||state.background.length!==total){
-      state.background=new Float32Array(total);state.backgroundR=new Float32Array(total);state.backgroundG=new Float32Array(total);state.backgroundB=new Float32Array(total);
-      for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=lum[p];state.backgroundR[p]=data[i];state.backgroundG[p]=data[i+1];state.backgroundB[p]=data[i+2]}}
-      state.prevLum=new Uint8Array(total);state.warmupFrames=0;if(!state.warmupStart)state.warmupStart=performance.now();return
-    }
-    // 안전장치: 무슨 이유로든(카메라 불안정 등) 기준화면 잡기가 6초 넘게 안 끝나면, 그때까지 모은 배경으로 그냥 넘어간다.
-    // "기준 화면 설정 중"에서 영원히 못 벗어나는 상황을 막기 위한 최후의 보루.
-    const warmupTimedOut=state.warmupStart&&(performance.now()-state.warmupStart>6000);
-    const warmupLimit=Math.max(36,Math.round((state.actualFps||30)*1.2));
-    if(state.warmupFrames<warmupLimit&&!warmupTimedOut){
-      // 실제 레이저히트 영상을 분석해보니, 카메라가 완전히 정지해 있을 때(연속 프레임 간 변화가 거의 0)
-      // 배경 잡음이 극히 낮아져서 약한 레이저도 훨씬 잘 튀어 보였다. 반대로 손떨림 등으로 화면이 계속
-      // 흔들리면(우리 실제 촬영본은 그 차이가 약 90배 더 컸다) 잡음 기준이 높아져 약한 신호를 놓치기 쉬워진다.
-      // 그래서 정해진 프레임 수만 채우면 끝내던 것에서, 화면이 실제로 "안정됐을 때"만 진행되도록 바꾼다.
-      let motionSum=0,motionN=0;
-      for(let y=y0;y<=y1;y+=4)for(let x=x0;x<=x1;x+=4){const p=y*sw+x;motionSum+=Math.abs(lum[p]-state.prevLum[p]);motionN++}
-      const stable=motionN===0||(motionSum/motionN)<2.5;
-      for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=state.background[p]*.75+lum[p]*.25;state.backgroundR[p]=state.backgroundR[p]*.75+data[i]*.25;state.backgroundG[p]=state.backgroundG[p]*.75+data[i+1]*.25;state.backgroundB[p]=state.backgroundB[p]*.75+data[i+2]*.25}}
-      state.prevLum.set(lum);
-      if(stable)state.warmupFrames++;   // 흔들리는 동안은 진행이 멈춰서 기다리고, 안정되면(또는 6초 안전장치가 발동하면) 넘어간다
-    }
-    if(state.warmupFrames<warmupLimit&&!warmupTimedOut)return;
-    if(!state.detectorReady){state.detectorReady=true;if(state.detectKind!=='laser'){state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}state.objTracks=[];state.objKnown=[];state.objBusySince=0;state.objBusy=false}els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');toast('레이저 감지가 시작되었습니다.');return}
-    const insideScan=(x,y,margin=state.paperMultiple?state.paperMultiple+.1:1.6)=>{
-      const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
-      return Math.hypot(ex/t.rx,ey/t.ry)<=margin;
-    };
-
-    let motionPixels=0,motionSamples=0,meanNow=0,meanBase=0;
-    for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!insideScan(x,y))continue;const p=y*sw+x;motionSamples++;meanNow+=lum[p];meanBase+=state.background[p];if(Math.abs(lum[p]-state.prevLum[p])>18)motionPixels++}
-    const motionRatio=motionPixels/Math.max(1,motionSamples),exposureShift=Math.abs(meanNow-meanBase)/Math.max(1,motionSamples);state.prevLum.set(lum);
-    if(motionRatio>.035||exposureShift>11){state.pendingLaser=null;state.laserBlocked=true;state.stableFrames=0;blendBackground(data,lum,sw,x0,x1,y0,y1,.14);return}
-    state.stableFrames++;if(state.stableFrames<2)return;
-    if(state.detectKind!=='laser')detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan);
-    if(state.detectKind==='object')return;
-
-    /* 적응형 기준: 카메라·조명마다 레이저 색이 다르게 찍히므로, 고정된 숫자 대신 "그 순간 그 화면 자체의 잡음 수준"을 매 프레임 재서 기준을 스스로 세운다. R(또는 초록 모드는 G)이 배경보다, 그리고 잡음 수준보다 확실히(표준편차 5배 이상) 튀어야 인정한다. */
-    const color=els.laserColor.value, chIdx=color==='green'?1:0;
-    let sN=0,sSum=0,sSum2=0;
-    for(let y=y0;y<=y1;y+=2)for(let x=x0;x<=x1;x+=2){
-      if(!insideScan(x,y))continue;
-      const p=y*sw+x,i=p*4,bg=chIdx===0?state.backgroundR[p]:state.backgroundG[p],d=data[i+chIdx]-bg;
-      sN++;sSum+=d;sSum2+=d*d;
-    }
-    const meanD=sN?sSum/sN:0,stdD=sN?Math.sqrt(Math.max(0,sSum2/sN-meanD*meanD)):0;
-    const adaptFloor=Math.max(7,meanD+2.2*stdD),adaptMargin=Math.max(7.5,.85*stdD);
-    let coreBest=null,peak=null,peakMag=-1e9;
-    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-      if(!insideScan(x,y))continue;
-      const p=y*sw+x,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
-      const mag0=color==='green'?dg:dr;
-      if(mag0>peakMag){peakMag=mag0;peak={dr:Math.round(dr),dg:Math.round(dg),db:Math.round(db)}}
-      const strong=color==='green'?(dg>adaptFloor&&dg>dr+adaptMargin&&dg>db+adaptMargin):(dr>adaptFloor&&dr>dg+adaptMargin&&dr>db+adaptMargin*.8);
-      if(strong){const mag=mag0;if(!coreBest||mag>coreBest.mag)coreBest={x,y,mag}}
-    }
-    if(peak&&(state.dbgTick++%5===0)){
-      els.clrPill.textContent=`색상 dr=${peak.dr} dg=${peak.dg} db=${peak.db} (적응 기준 ${Math.round(adaptFloor)}, 편차 ${Math.round(stdD)})${coreBest?' ✓':''}`;
-    }
-    if(coreBest){
-      let near=0;
-      for(let oy=-7;oy<=7;oy++)for(let ox=-7;ox<=7;ox++){
-        const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
-        const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
-        // 손 떨림으로 레이저가 살짝 스치듯 번지면 한 점의 밝기는 약해지므로, 기준을 조금 더 느슨하게 잡는다.
-        const colorOk=color==='green'?(dg>adaptFloor*.4&&dg>dr+adaptMargin*.35&&dg>db+adaptMargin*.35):(dr>adaptFloor*.4&&dr>dg+adaptMargin*.35&&dr>db+adaptMargin*.3);
-        // 레이저가 너무 밝으면 중심부가 하얗게 포화되어(R,G,B가 색 구분 없이 다 같이 확 튐) 색 판정을 못 통과할 수 있다.
-        // 이미 확인된 색상 피크(coreBest) 바로 옆이라면, 이런 흰색 포화도 같은 레이저의 일부로 보고 확인용으로 인정한다.
-        const satOk=dr>adaptFloor*1.5&&dg>adaptFloor*1.2&&db>adaptFloor*1.2;
-        if(colorOk||satOk)near++;
-      }
-      if(near>=2){
-        state.releaseFrames=0;if(state.laserBlocked)return;
-        if(tryRecordLaser(coreBest.x,coreBest.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
-        return;
-      }
-    }
-    if(state.laserBlocked){state.releaseFrames++;if(state.releaseFrames<2)return;state.laserBlocked=false;state.releaseFrames=0;state.pendingLaser=null}
-
-    const points=[];let strongest=null;const signalThreshold=Math.max(7,30-state.sensitivity*.22);
-    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-      if(!insideScan(x,y))continue;
-      const p=y*sw+x,i=p*4,r=data[i],g=data[i+1],b=data[i+2],baseLum=state.background[p],blackSurface=baseLum<125,dr=r-state.backgroundR[p],dg=g-state.backgroundG[p],db=b-state.backgroundB[p],lumRise=lum[p]-baseLum,maxRise=Math.max(dr,dg,db);
-      const currentWarm=r-Math.max(g,b),baseWarm=state.backgroundR[p]-Math.max(state.backgroundG[p],state.backgroundB[p]),warmBoost=currentWarm-baseWarm;
-      const warmMixed=dr>5&&dr>=dg-8&&dr>=db-8,redHalo=currentWarm>9&&warmBoost>3&&dr>5,whitePink=r>180&&dr>8&&dr>=dg-10&&dr>=db-10;
-      const greenMixed=dg>7&&dg>=dr-6&&dg>=db-6;
-      const blackRed=blackSurface&&dr>5&&dr>=dg-10&&dr>=db-10;
-      const colorMargin=Math.max(1,5-state.sensitivity/25);   // 감도가 높을수록(기본 98) 거의 통과, 감도를 낮출수록 회색 밝기변화를 더 엄격히 거름
-      const redDominant=dr>dg+colorMargin&&dr>db+colorMargin,greenDominant=dg>dr+colorMargin&&dg>db+colorMargin;
-      const colorMatch=color==='green'?(greenDominant&&greenMixed):(redDominant&&(warmMixed||redHalo||whitePink||blackRed));
-      if(!colorMatch||maxRise<(blackSurface?Math.max(6,signalThreshold-1):signalThreshold)||lumRise<(blackSurface?1:2))continue;
-      const colorBoost=color==='green'?dg-Math.max(dr,db):Math.max(warmBoost,dr-Math.max(dg,db)),signal=maxRise+Math.max(0,lumRise)*(blackSurface?.8:1.15)+Math.max(0,colorBoost)*.65,point={x,y,wt:signal,delta:signal,bright:Math.max(r,g,b),redRise:dr,colorBoost,lumRise,blackSurface};points.push(point);if(!strongest||signal>strongest.wt)strongest=point;
-    }
-    if(!points.length){
-      state.laserBlocked=false;state.releaseFrames=0;
-      if(state.pendingLaser){const pending=state.pendingLaser;state.pendingLaser=null;const colorOrWhite=pending.maxColorBoost>=2||(pending.maxBright>=195&&pending.maxRedRise>=8),confirmed=pending.frames>=2&&pending.frames<=20&&pending.maxSignal>=20&&pending.maxContrast>=6&&colorOrWhite;if(confirmed)tryRecordLaser(pending.x,pending.y,sw,sh,vw,vh)}
-      blendBackground(data,lum,sw,x0,x1,y0,y1,.025);return;
-    }
-    if(points.length>2500){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,sw,x0,x1,y0,y1,.16);return}
-    let sx=0,sy=0,weight=0,localCount=0,clusterColorBoost=strongest.colorBoost,minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;for(const point of points){if(Math.hypot(point.x-strongest.x,point.y-strongest.y)<=9){sx+=point.x*point.wt;sy+=point.y*point.wt;weight+=point.wt;localCount++;clusterColorBoost=Math.max(clusterColorBoost,point.colorBoost);if(point.x<minX)minX=point.x;if(point.x>maxX)maxX=point.x;if(point.y<minY)minY=point.y;if(point.y>maxY)maxY=point.y}}
-    const clusterW=maxX-minX+1,clusterH=maxY-minY+1,shape=clusterW/Math.max(1,clusterH);let surround=0,surroundN=0;for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){const distance=Math.hypot(ox,oy);if(distance<6||distance>10)continue;const nx=strongest.x+ox,ny=strongest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;surround+=lum[ny*sw+nx];surroundN++}const localContrast=strongest.bright-surround/Math.max(1,surroundN);
-    if(localCount>220||shape<.2||shape>5||(localCount<2&&strongest.delta<25)||localContrast<4){state.pendingLaser=null;state.laserBlocked=true;blendBackground(data,lum,sw,x0,x1,y0,y1,.04);return}
-    if(state.laserBlocked)return;
-    const px=weight?sx/weight:strongest.x,py=weight?sy/weight:strongest.y;
-    if(state.pendingLaser&&Math.hypot(px-state.pendingLaser.x,py-state.pendingLaser.y)<12){const n=state.pendingLaser.frames;state.pendingLaser.x=(state.pendingLaser.x*n+px)/(n+1);state.pendingLaser.y=(state.pendingLaser.y*n+py)/(n+1);state.pendingLaser.frames++;state.pendingLaser.maxSignal=Math.max(state.pendingLaser.maxSignal,strongest.delta);state.pendingLaser.maxContrast=Math.max(state.pendingLaser.maxContrast,localContrast);state.pendingLaser.maxColorBoost=Math.max(state.pendingLaser.maxColorBoost,clusterColorBoost);state.pendingLaser.maxBright=Math.max(state.pendingLaser.maxBright,strongest.bright);state.pendingLaser.maxRedRise=Math.max(state.pendingLaser.maxRedRise,strongest.redRise);if(state.pendingLaser.frames>=2&&state.pendingLaser.maxSignal>=20&&state.pendingLaser.maxContrast>=6&&(state.pendingLaser.maxColorBoost>=2||state.pendingLaser.maxRedRise>=8)&&tryRecordLaser(state.pendingLaser.x,state.pendingLaser.y,sw,sh,vw,vh)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;return}if(state.pendingLaser.frames>20){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0}}
-    else state.pendingLaser={x:px,y:py,frames:1,maxSignal:strongest.delta,maxContrast:localContrast,maxColorBoost:clusterColorBoost,maxBright:strongest.bright,maxRedRise:strongest.redRise};
-  }
 
   function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
-  function reset(){state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
+  function reset(){state.running=false;state.shots=[];state.matchId=null;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
@@ -981,7 +854,7 @@
   els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.learnBtn.onclick=beginLaserLearning;els.matchBtn.title='레이저 3발 학습 후 라이브 관전 페이지에서 경기를 시작하세요.';els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
   function showDetectorInfo(){els.fpsPill.textContent='고감도 레이저 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')}
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
-  window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
+  window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){VResetLatch()}});updateScore();
 })();
 </script>
 </body>
