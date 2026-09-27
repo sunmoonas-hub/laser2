@@ -87,7 +87,7 @@
 
   <section class="panel setup">
     <div class="mini-brand">
-      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH <small style="font-size:.55em;color:#ffd441">v27</small></h1></div>
+      <div class="brand"><div class="brand-mark"></div><h1>LASER MATCH <small style="font-size:.55em;color:#ffd441">v28</small></h1></div>
       <div class="status" id="status"><i class="dot"></i><span>준비</span></div>
       <button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶</button>
     </div>
@@ -680,11 +680,11 @@
       for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
         if(matchSimpleOpen&&!inside(x,y))continue;
         const p=y*sw+x,i=p*4,pr=data[i]-V.prevR[p],pg=data[i+1]-V.prevG[p],pb=data[i+2]-V.prevB[p],rise=Math.max(pr,pg,pb),lum=(pr+pg*2+pb)*.25;
-        const minRise=learningCaptureOpen?3:Math.max(3,simpleP.onsetFloor*.55),minLum=learningCaptureOpen?.4:Math.max(.5,simpleP.contrastFloor*.45);
+        const minRise=learningCaptureOpen?.5:Math.max(3,simpleP.onsetFloor*.55),minLum=learningCaptureOpen?.05:Math.max(.5,simpleP.contrastFloor*.45);
         if(rise<minRise||lum<minLum)continue;const score=rise+Math.max(0,lum)*.7;
         if(!peak||score>peak.score)peak={x,y,score,rise,lum,pr,pg,pb};
       }
-      if(peak&&motionRatio<(learningCaptureOpen?.18:.08)&&exposureShift<(learningCaptureOpen?18:10)){
+      if(peak&&(learningCaptureOpen||(motionRatio<.08&&exposureShift<10))){
         let n=0,colorN=0,wt=0,pxs=0,pys=0,minX=999,maxX=0,minY=999,maxY=0;
         const neighborRise=Math.max(2,peak.rise*.08);
         for(let oy=-10;oy<=10;oy++)for(let ox=-10;ox<=10;ox++){
@@ -692,7 +692,7 @@
           if(rise>=neighborRise&&lum>0){const w=rise+Math.max(0,lum),colorLike=els.laserColor.value==='green'?(pg>=pr+1&&pg>=pb):(pr>=pg+1&&pr>=pb-1);n++;if(colorLike)colorN++;wt+=w;pxs+=x*w;pys+=y*w;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
         }
         const bw=maxX-minX+1,bh=maxY-minY+1;
-        if(n>=1&&n<=320&&bw<=38&&bh<=38){const cx=wt?pxs/wt:peak.x,cy=wt?pys/wt:peak.y,candidate={score:peak.score,contrast:peak.lum,dr:peak.pr,dg:peak.pg,db:peak.pb,onset:peak.rise,lumRise:peak.lum,colorRatio:colorN/Math.max(1,n),n,bw,bh,redN:colorN,whiteN:0,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)};
+        if(learningCaptureOpen||n>=1&&n<=320&&bw<=38&&bh<=38){if(n<1){n=1;wt=1;pxs=peak.x;pys=peak.y;minX=maxX=peak.x;minY=maxY=peak.y}const cx=wt?pxs/wt:peak.x,cy=wt?pys/wt:peak.y,candidate={score:peak.score,contrast:peak.lum,dr:peak.pr,dg:peak.pg,db:peak.pb,onset:peak.rise,lumRise:peak.lum,colorRatio:colorN/Math.max(1,n),n,bw:Math.max(1,maxX-minX+1),bh:Math.max(1,maxY-minY+1),redN:colorN,whiteN:0,u:(cx-t.x)/Math.max(1,t.rx),v:(cy-t.y)/Math.max(1,t.ry)};
           if(learningCaptureOpen){if(!state.learningCaptureBest||candidate.score>state.learningCaptureBest.score)state.learningCaptureBest=candidate;els.clrPill.textContent=`학습 스캔 · 최고상승 ${Math.round(state.learningCaptureBest.onset)} · ${n}px`}
           else{const colorGate=candidate.colorRatio>=simpleP.colorFloor||candidate.onset>=simpleP.onsetFloor*2.2,learnedMatch=candidate.onset>=simpleP.onsetFloor&&candidate.score>=simpleP.scoreFloor&&candidate.contrast>=simpleP.contrastFloor&&colorGate&&n>=simpleP.clusterMin&&n<=simpleP.sizeMax&&bw<=simpleP.widthMax&&bh<=simpleP.widthMax;simpleSignal=learnedMatch;if(learnedMatch&&!V.latched&&tryRecordLaser(cx,cy,sw,sh,vw,vh,roi)){V.latched=true;els.clrPill.textContent=`레이저 명중 · 상승 ${Math.round(candidate.onset)} · 적색 ${Math.round(candidate.colorRatio*100)}%`}}
         }
