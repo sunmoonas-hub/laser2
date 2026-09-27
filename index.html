@@ -297,8 +297,8 @@
     // 우연히 걸리는 것을 막기 위해, 검은 중심과 흰 바깥 링 사이의 가장 큰 닫힘 경계(10점 외곽)를 우선 맞춘다.
     for(let major=majorMin;major<=majorMax;major+=2)for(let ratio=.58;ratio<=1.001;ratio+=.04)for(let deg=0;deg<180;deg+=10){const minor=major*ratio,a=deg*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);let sum=0,covered=0,n=0;for(let j=0;j<120;j++){const t=j*Math.PI*2/120,ex=major*Math.cos(t),ey=minor*Math.sin(t),x=Math.round(cx+ex*ca-ey*sa),y=Math.round(cy+ex*sa+ey*ca);if(x<2||x>=sw-2||y<2||y>=sh-2)continue;const e=edge[y*sw+x];sum+=Math.min(100,e);if(e>24)covered++;n++}const coverage=covered/Math.max(1,n),score=sum/Math.max(1,n)+coverage*60+major*.015;if(coverage>.12&&(!ellipse||score>ellipse.score))ellipse={major,minor,a,score,coverage}}
     if(!ellipse)ellipse={major:outerR,minor:outerR,a:0};
-    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadiusX=ellipse.major/sw*vw*mapped.scale,screenRadiusY=ellipse.minor/sw*vw*mapped.scale,overlayMin=Math.min(els.overlay.clientWidth,els.overlay.clientHeight),minTargetRadius=Math.max(18,overlayMin*.045);
-    if(screenRadiusX<minTargetRadius||screenRadiusX>overlayMin*.55||screenRadiusY<minTargetRadius*.62){state.calibrationFailReason=`표적 크기 기준 미달(${Math.round(screenRadiusX)}×${Math.round(screenRadiusY)}px)`;return null;}
+    const mapped=videoToScreen(cx/sw*vw,cy/sh*vh),screenRadiusX=ellipse.major/sw*vw*mapped.scale,screenRadiusY=ellipse.minor/sw*vw*mapped.scale,overlayMin=Math.min(els.overlay.clientWidth,els.overlay.clientHeight),minTargetRadius=Math.max(8,overlayMin*.025);
+    if(screenRadiusX<minTargetRadius||screenRadiusX>overlayMin*.55||screenRadiusY<minTargetRadius*.5){state.calibrationFailReason=`표적 크기 기준 미달(${Math.round(screenRadiusX)}×${Math.round(screenRadiusY)}px)`;return null;}
     state.calibrationFailReason='';
     return{x:mapped.x,y:mapped.y,radius:screenRadiusX,radiusX:screenRadiusX,radiusY:screenRadiusY,angle:ellipse.a,rings:Math.min(10,rings),blackBoundaryFound:!!best,whiteBoundaryFound};
   }
