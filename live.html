@@ -46,8 +46,6 @@
   .startBtn{flex:1;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
   .startBtn:disabled{opacity:.5}
   .endBtn{flex:none;min-width:110px;min-height:54px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:850;font-size:.92rem}
-  .restartBtn{width:100%;min-height:50px;border:1px solid var(--lime);border-radius:12px;background:transparent;color:var(--lime);font-weight:850;font-size:.92rem;margin-bottom:12px}
-  .busyNote{text-align:center;color:var(--gold);font-size:.78rem;margin-bottom:10px}
   .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
   .hint{font-size:.74rem;line-height:1.6;color:var(--muted);margin:10px 0 0}
   .shotPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px;margin-top:16px}
@@ -100,8 +98,6 @@
     <div class="right">
       <section class="startPanel" id="startPanel">
         <h2>🕹️ 새 경기 시작</h2>
-        <button class="restartBtn" id="restartBtn">🔁 같은 설정으로 재시작</button>
-        <p class="busyNote" id="busyNote" hidden>⏳ 지금 사격이 진행 중이에요 - 끝나면 새 명령을 보낼 수 있어요.<br><a href="#" id="forceUnlockBtn" style="color:var(--gold)">그래도 지금 보내기</a></p>
         <div class="grid">
           <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
           <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
@@ -182,16 +178,13 @@
     applyView();
     syncStartLock();
   }
-  let forceUnlock = false;
   // 서버 전체(사로 구분 없이)에 사격이 진행 중이면, 새 시작 명령이 밀렸다가 경기가 끝나자마자
   // 자동으로 실행되는 걸 막기 위해 시작 버튼을 잠가 둔다.
   // 단, 연결이 끊기거나 페이지를 닫는 바람에 "진행 중"으로 멈춰버린 죽은 기록이면 60초 뒤 자동으로 풀어준다.
   function syncStartLock(){
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
-    const busy = !!(lastState && lastState.running && !stale) && !forceUnlock;
+    const busy = !!(lastState && lastState.running && !stale);
     $('rStart').disabled = busy;
-    $('busyNote').hidden = !busy;
-    $('forceUnlockBtn').hidden = !busy;
   }
   function applyView(){
     const state = lastState;
@@ -231,7 +224,6 @@
     $('shotPanel').hidden = which!=='live';
   }
   $('watchLane').addEventListener('change', applyView);
-  $('forceUnlockBtn').addEventListener('click', (e) => { e.preventDefault(); forceUnlock = true; syncStartLock(); });
 
   function poll(){
     const cb = 'liveCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
@@ -267,7 +259,7 @@
       clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
       if(res && res.ok){
         msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
-        lastSentCmd = cmd; forceUnlock = false;   // 새로 보낸 이 경기는 다시 정상적으로 잠금이 걸리게 초기화
+        lastSentCmd = cmd;
         $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
         applyView();
         if(onOk) onOk();
@@ -292,14 +284,6 @@
     sendCmd(cmd, $('rStart'), $('rMsg'));
   }
   $('rStart').addEventListener('click', sendRemoteStart);
-  $('restartBtn').addEventListener('click', () => {
-    const base = lastSentCmd || {
-      eventName: $('rEvent').value.trim(), player: $('rPlayer').value.trim(), firingLane: Number($('rLane').value),
-      laserColor: $('rColor').value, detectKind: $('rKind').value, maxShots: Number($('rMax').value)
-    };
-    if(!base.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
-    sendCmd(base, $('rStart'), $('rMsg'));
-  });
 
   $('undoBtnLive').addEventListener('click', () => {
     const btn = $('undoBtnLive'), msg = $('undoMsg');
