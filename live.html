@@ -5,7 +5,7 @@
 <meta name="google" content="notranslate">
 <meta name="theme-color" content="#07111f">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
-<title>LASER MATCH · 실시간 관전</title>
+<title>LASER MATCH R40 · 실시간 관전</title>
 <style>
   :root{--bg:#07111f;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
   *{box-sizing:border-box}
@@ -102,7 +102,7 @@
           <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
           <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
           <div class="field"><label>레이저 색상</label><select id="rColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
-          <div class="field"><label>감지 대상</label><select id="rKind"><option value="both" selected>레이저+물체</option><option value="laser">레이저만</option><option value="object">물체만</option></select></div>
+          <div class="field"><label>감지 대상</label><select id="rKind"><option value="both">레이저+물체</option><option value="laser" selected>레이저만</option><option value="object">물체만</option></select></div>
           <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
           <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
         </div>
@@ -157,10 +157,10 @@
     ctx.clearRect(0,0,W,H);
     for(let i=10;i>=1;i--){
       ctx.beginPath();ctx.arc(cx,cy,R*i/10,0,Math.PI*2);
-      ctx.strokeStyle = i===10 ? '#29e7d6cc' : '#ffffff33';
+      ctx.strokeStyle = i===10 ? '#b7ff3ccc' : '#b7ff3c55';
       ctx.lineWidth = i===10 ? 2.5 : 1.4; ctx.stroke();
     }
-    ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.strokeStyle='#b7ff3c';ctx.lineWidth=2;ctx.stroke();
     (shots||[]).forEach((s,i) => {
       const px = cx + (s.u||0)*R, py = cy + (s.v||0)*R;
       ctx.beginPath();
