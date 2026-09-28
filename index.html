@@ -121,6 +121,10 @@
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn','countdown','countdownText'].map(id => [id,$(id)]));
   // 느슨한 기준의 '보조 경로'. 밝은 환경 오인식의 주범이라 기본은 끈다. 아주 어두운 곳에서 약한 레이저를 놓치면 true로.
   const USE_FALLBACK = false;
+  // 진짜 레이저는 짧게 번쩍이고 사라진다. 이 시간(ms)보다 오래 켜져 있는 빛은 조명·그림자 같은 장면 변화로 보고 버린다.
+  const LASER_MAX_MS = 400;
+  // 진단 기록: 레이저 후보가 생길 때마다(기록/거부 모두) 구글 시트 '진단기록' 탭에 한 줄씩 저장한다. 조정이 끝나면 false로.
+  const DIAG = true;
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
   const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null,countdownSec:5,countdownEnd:0,settleMs:700,readyAt:0,announced:false,bgRoi:null};
@@ -192,7 +196,7 @@
   function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');setTimeout(()=>els.toast.classList.remove('show'),2200)}
   function setStatus(text,color='var(--cyan)'){els.status.querySelector('span').textContent=text;els.status.style.color=color}
   function uid(){return 'M-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
-  function clearDetectorBackground(){state.background=null;state.backgroundR=null;state.backgroundG=null;state.backgroundB=null;state.prevLum=null;state.pendingLaser=null;state.haloCandidate=null;state.laserBlocked=false;state.releaseFrames=0;state.stableFrames=0;state.objRef=null;state.objTracks=[];state.objKnown=[];state.objBusy=false;state.objBusySince=0;state.workSH=null;state.prevR=null;state.noiseR=null;state._frame=null}
+  function clearDetectorBackground(){state.background=null;state.backgroundR=null;state.backgroundG=null;state.backgroundB=null;state.prevLum=null;state.pendingLaser=null;state.haloCandidate=null;state.laserBlocked=false;state.releaseFrames=0;state.stableFrames=0;state.objRef=null;state.objTracks=[];state.objKnown=[];state.objBusy=false;state.objBusySince=0;state.workSH=null;state.prevR=null;state.noiseR=null;state._frame=null;state.laserCand=null;state.absorbFrames=0}
   function blendBackground(data,lum,sw,x0,x1,y0,y1,alpha){if(!state.backgroundR)return;for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=state.background[p]*(1-alpha)+lum[p]*alpha;state.backgroundR[p]=state.backgroundR[p]*(1-alpha)+data[i]*alpha;state.backgroundG[p]=state.backgroundG[p]*(1-alpha)+data[i+1]*alpha;state.backgroundB[p]=state.backgroundB[p]*(1-alpha)+data[i+2]*alpha}}}
   function resize(){const r=els.overlay.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);els.overlay.width=Math.round(r.width*d);els.overlay.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);restoreTargetFromVideo();drawOverlay()}
 
@@ -400,6 +404,42 @@
     }
   }
 
+  /* ===== 진단 기록 =====
+     후보마다 한 줄씩 모아 두었다가 3초마다 최대 10줄씩 Apps Script로 보내 '진단기록' 시트에 쌓는다. */
+  const diagSession=uid(),diagQueue=[];let diagBusy=false;
+  const r1=v=>v==null||!Number.isFinite(v)?'':Math.round(v*10)/10;
+  function diagPush(row){
+    if(!DIAG||!isServerConfigured())return;
+    let exposure='';try{const st=state.videoTrack&&state.videoTrack.getSettings?state.videoTrack.getSettings():{};if(Number.isFinite(st.exposureTime))exposure=st.exposureTime}catch(e){}
+    const d=new Date();
+    diagQueue.push(Object.assign({
+      t:d.toLocaleTimeString('ko-KR',{hour12:false})+'.'+String(d.getMilliseconds()).padStart(3,'0'),
+      session:diagSession,lane:Number(els.firingLane.value),player:els.player.value.trim(),
+      ambient:r1(state.lastAmbient),exposure,locked:state.cameraLocked?'Y':'N',fps:r1(state.actualFps)
+    },row,{margin:r1(row.margin),meanD:r1(row.meanD),stdD:r1(row.stdD)}));
+    if(diagQueue.length>300)diagQueue.splice(0,diagQueue.length-300);
+  }
+  function diagCand(c,verdict,reason,pos){
+    if(!DIAG)return;
+    if(!pos){const d=c.dims;pos=workToTarget(c.x,c.y,d.sw,d.sh,d.vw,d.vh)}
+    diagPush({kind:'후보',verdict,reason,ring:pos.ring,nr:r1(pos.nr*100)/100,u:Math.round(pos.u*100)/100,v:Math.round(pos.v*100)/100,
+      dr:r1(c.mag),thr:r1(c.thr),margin:c.mag-c.thr,onset:r1(c.onset),near:c.near,dur:Math.round(c.lastSeen-c.t0),frames:c.frames,
+      noise:r1(c.noise),meanD:c.meanD,stdD:c.stdD,bright:r1(c.bright)});
+  }
+  function diagFlush(){
+    if(diagBusy||!diagQueue.length||!isServerConfigured())return;
+    diagBusy=true;const rows=diagQueue.splice(0,10);
+    const cb='diagCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),script=document.createElement('script');
+    const fail=()=>{diagQueue.unshift(...rows);done()};
+    const timer=setTimeout(fail,9000);
+    function done(){clearTimeout(timer);window[cb]=function(){};script.remove();diagBusy=false}
+    window[cb]=res=>{if(res&&res.ok)done();else fail()};
+    script.onerror=fail;
+    script.src=`${APPS_SCRIPT_URL}?${new URLSearchParams({action:'diag',callback:cb,payload:JSON.stringify(rows)}).toString()}`;
+    document.head.appendChild(script);
+  }
+  if(DIAG)setInterval(diagFlush,3000);
+
   let lastCmdId=null,lastNotifiedCmdId=null,remotePollOn=false;
   const REMOTE_POLL_MS=900;
   function applyRemoteCmd(cmd){
@@ -600,6 +640,21 @@
     }
   }
 
+  function workToTarget(wx,wy,sw,sh,vw,vh){
+    const m=videoToScreen(wx/sw*vw,wy/sh*vh),dx=m.x-state.center.x,dy=m.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle);
+    const u=(dx*ca+dy*sa)/state.radiusX,v=(-dx*sa+dy*ca)/state.radiusY,nr=Math.hypot(u,v);
+    return{u,v,nr,ring:nr>1.015?0:Math.min(10,Math.max(1,10-Math.floor(nr*10-.15)))};
+  }
+  function finalizeCand(c){
+    const {sw,sh,vw,vh}=c.dims,pos=workToTarget(c.x,c.y,sw,sh,vw,vh);let reason='';
+    if(performance.now()-state.lastHit<=300)reason='직전 발과 너무 가까움';
+    else if(pos.nr>(state.paperMultiple||1.5))reason='표적 범위 밖';
+    else if(state.objKnown&&state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-c.x,k.y-c.y)<(k.r||10)+18))reason='물체 자국 근처';
+    const ok=!reason&&tryRecordLaser(c.x,c.y,sw,sh,vw,vh,`[확인] dr=${Math.round(c.mag)} ${Math.round(c.lastSeen-c.t0)}ms`);
+    if(ok){els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
+    diagCand(c,ok?'기록':'거부',ok?'':(reason||'기록 실패'),pos);
+  }
+
   function tryRecordLaser(wx,wy,sw,sh,vw,vh,info){
     if(performance.now()-state.lastHit<=300)return false;
     if(state.objKnown&&state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-wx,k.y-wy)<(k.r||10)+18))return false;
@@ -628,7 +683,10 @@
     const pr=state.prevR,nz=state.noiseR;
     if(!state._skipNoise){
       const a=state.detectorReady?.03:.15;   // 기준 화면 잡는 동안엔 빠르게 학습, 경기 중엔 천천히 따라감
-      for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x;let d=Math.abs(data[p*4+ch]-pr[p]);const cap=nz[p]*3+4;if(d>cap)d=cap;nz[p]+=(d-nz[p])*a}}
+      // 프레임 간 떨림뿐 아니라 '기준 화면과의 차이'도 함께 본다. 조명이 서서히 바뀌는 곳은 프레임 간 떨림은 작아도
+      // 기준 화면과의 차이가 쌓이는데, 판정은 기준 화면 대비로 하므로 이 차이까지 알고 있어야 기준이 제대로 잡힌다.
+      const bgc=ch?state.backgroundG:state.backgroundR;
+      for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,v=data[p*4+ch];let d=Math.max(Math.abs(v-pr[p]),Math.abs(v-bgc[p])*.8);const cap=nz[p]*3+4;if(d>cap)d=cap;nz[p]+=(d-nz[p])*a}}
     }
     for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x;pr[p]=data[p*4+ch]}}
   }
@@ -687,8 +745,9 @@
 
     let motionPixels=0,motionSamples=0,meanNow=0,meanBase=0;
     for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!insideScan(x,y))continue;const p=y*sw+x;motionSamples++;meanNow+=lum[p];meanBase+=state.background[p];if(Math.abs(lum[p]-state.prevLum[p])>18)motionPixels++}
+    state.lastAmbient=meanNow/Math.max(1,motionSamples);
     const motionRatio=motionPixels/Math.max(1,motionSamples),exposureShift=Math.abs(meanNow-meanBase)/Math.max(1,motionSamples);state.prevLum.set(lum);
-    if(motionRatio>.035||exposureShift>11){state._skipNoise=true;state.pendingLaser=null;state.laserBlocked=true;state.blockedFrames=0;state.stableFrames=0;blendBackground(data,lum,sw,x0,x1,y0,y1,.14);return}
+    if(motionRatio>.035||exposureShift>11){if(state.laserCand){diagCand(state.laserCand,'거부','화면 흔들림');state.laserCand=null}state._skipNoise=true;state.pendingLaser=null;state.laserBlocked=true;state.blockedFrames=0;state.stableFrames=0;blendBackground(data,lum,sw,x0,x1,y0,y1,.14);return}
     state.stableFrames++;if(state.stableFrames<2)return;
     if(state.detectKind!=='laser')detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan);
     if(state.detectKind==='object')return;
@@ -726,42 +785,67 @@
       // ② 갑자기 켜짐: 레이저는 직전 프레임엔 없다가 이번 프레임에 확 나타난다. 인쇄물의 느린 변화·서서히 쌓인 차이는 여기서 걸러진다.
       const onset=data[i+chIdx]-pr[p];
       if(onset<Math.max(K*.7*nz[p],mag0*.4))continue;
-      strongCount++;if(!coreBest||mag0>coreBest.mag)coreBest={x,y,mag:mag0};
+      strongCount++;if(!coreBest||mag0>coreBest.mag)coreBest={x,y,mag:mag0,thr:pixThr,onset,noise:nz[p],bright:data[i+chIdx]};
     }
     if(strongCount)state._skipNoise=true;   // 레이저가 잡음 지도에 섞여 들어가지 않게
-    if(peak&&(state.dbgTick++%5===0)&&!(state.infoUntil&&performance.now()<state.infoUntil)){
-      els.clrPill.textContent=`최대 dr=${peak.dr} / 그 자리 기준 ${peak.thr} (${peakMag>0?'+':''}${Math.round(peakMag)})${coreBest?' ✓':''}`;
+    const nowT=performance.now();
+    if(peakMag>(state.diagPeak==null?-1e9:state.diagPeak))state.diagPeak=peakMag;
+    if(peak&&(state.dbgTick++%5===0)&&!(state.infoUntil&&nowT<state.infoUntil)){
+      els.clrPill.textContent=`최대 dr=${peak.dr} / 그 자리 기준 ${peak.thr} (${peakMag>0?'+':''}${Math.round(peakMag)})${state.laserCand?' ◎추적':coreBest?' ✓':''}`;
     }
-    // 레이저 점은 작고 국지적이다(실제 영상에서 핵심 픽셀 수백 개 이하). 표적 주변이 한꺼번에 넓게 붉게 변했다면
-    // 노출·화이트밸런스가 다시 맞춰지는 것 등 화면 전체의 색 변화이므로 레이저로 인정하지 않고, 새 색을 배경으로 흡수한다.
-    if(strongCount>Math.max(400,roiCount*.012)){state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;state.blockedFrames=Math.max(12,Math.round((state.actualFps||30)*.5))+1;blendBackground(data,lum,sw,x0,x1,y0,y1,.3);return}
+    // 10초마다 '평소 상태'를 한 줄 남긴다(그 10초 동안 가장 기준에 가까웠던 여유값, 화면 밝기, 노출시간). 조명별 비교용.
+    if(DIAG&&nowT-(state.diagStatusAt||0)>10000){
+      if(state.diagStatusAt)diagPush({kind:'상태',verdict:'-',reason:'10초 요약',margin:state.diagPeak,meanD,stdD});
+      state.diagStatusAt=nowT;state.diagPeak=null;
+    }
+    // 레이저 점은 작고 국지적이다. 표적 주변이 한꺼번에 넓게 변했다면 화면 전체의 색 변화이므로 인정하지 않고 배경으로 흡수한다.
+    if(strongCount>Math.max(400,roiCount*.012)){
+      if(state.laserCand){diagCand(state.laserCand,'거부','화면 전체 변화');state.laserCand=null}
+      state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;blendBackground(data,lum,sw,x0,x1,y0,y1,.3);return;
+    }
+    // 오래 남은 빛(장면 변화)을 버린 직후: 몇 프레임 동안 새 장면을 빠르게 배경으로 흡수한다.
+    if(state.absorbFrames>0){state.absorbFrames--;state._skipNoise=true;blendBackground(data,lum,sw,x0,x1,y0,y1,.3);return}
+
+    /* ── 사라짐 확인 ──
+       후보가 생겨도 바로 기록하지 않고, 그 자리를 계속 지켜본다.
+       · LASER_MAX_MS 안에 사라지면 → 진짜 레이저로 기록
+       · 그보다 오래 남아 있으면 → 조명·그림자·인쇄물 반응 같은 장면 변화로 보고 버린다
+       (영상 분석: 무발사 오인식 후보는 한 번 튄 뒤 1초 넘게 그대로 남아 있었다.) */
+    const cand=state.laserCand;
+    if(cand){
+      state._skipNoise=true;
+      let present=0;
+      for(let oy=-6;oy<=6;oy++)for(let ox=-6;ox<=6;ox++){
+        const nx=Math.round(cand.x)+ox,ny=Math.round(cand.y)+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
+        const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
+        const mag=color==='green'?dg:dr,thrP=Math.max(adaptFloor*.5,meanD+K*.5*nz[p]);
+        const colorOk=color==='green'?(dg>dr+adaptMargin*.35&&dg>db+adaptMargin*.35):(dr>dg+adaptMargin*.35&&dr>db+adaptMargin*.3);
+        const satOk=dr>adaptFloor*1.5&&dg>adaptFloor*1.2&&db>adaptFloor*1.2;
+        if(mag>thrP&&(colorOk||satOk))present++;
+      }
+      if(present>=2){
+        cand.lastSeen=nowT;cand.frames++;cand.missing=0;
+        if(coreBest&&Math.hypot(coreBest.x-cand.x,coreBest.y-cand.y)<8&&coreBest.mag>cand.mag){cand.x=coreBest.x;cand.y=coreBest.y;cand.mag=coreBest.mag}
+      }else cand.missing++;
+      if(cand.missing>=2){state.laserCand=null;finalizeCand(cand);return}
+      if(nowT-cand.t0>LASER_MAX_MS){state.laserCand=null;diagCand(cand,'거부','빛이 오래 남음(장면 변화)');state.absorbFrames=8;return}
+      return;
+    }
     if(coreBest){
       let near=0;
       for(let oy=-7;oy<=7;oy++)for(let ox=-7;ox<=7;ox++){
         const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
         const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
-        // 손 떨림으로 레이저가 살짝 스치듯 번지면 한 점의 밝기는 약해지므로, 기준을 조금 더 느슨하게 잡는다.
+        // 손 떨림으로 레이저가 살짝 번지면 한 점의 밝기는 약해지므로, 주변 확인은 조금 느슨하게 잡는다.
         const colorOk=color==='green'?(dg>adaptFloor*.4&&dg>dr+adaptMargin*.35&&dg>db+adaptMargin*.35):(dr>adaptFloor*.4&&dr>dg+adaptMargin*.35&&dr>db+adaptMargin*.3);
-        // 레이저가 너무 밝으면 중심부가 하얗게 포화되어(R,G,B가 색 구분 없이 다 같이 확 튐) 색 판정을 못 통과할 수 있다.
-        // 이미 확인된 색상 피크(coreBest) 바로 옆이라면, 이런 흰색 포화도 같은 레이저의 일부로 보고 확인용으로 인정한다.
+        // 레이저가 너무 밝아 중심부가 하얗게 포화된 경우도 같은 레이저의 일부로 인정한다.
         const satOk=dr>adaptFloor*1.5&&dg>adaptFloor*1.2&&db>adaptFloor*1.2;
         if(colorOk||satOk)near++;
       }
-      if(near>=3){
-        state.releaseFrames=0;
-        if(state.laserBlocked){
-          // 같은 자리에 레이저 색 빛이 0.5초 넘게 계속 남아 있으면(반사광·오인식된 자리 등) 진짜 레이저가 아니라
-          // 고정된 빛이다. 그대로 두면 잠금이 영원히 안 풀려 이후의 진짜 레이저를 전부 놓치므로, 배경으로 흡수하고 푼다.
-          state.blockedFrames=(state.blockedFrames||0)+1;
-          const hold=Math.max(12,Math.round((state.actualFps||30)*.5));
-          // 흡수는 프레임마다 70%씩 남는 양이 줄어드는 방식이라 몇 프레임이면 완전히 사라진다. 사라진 뒤에는 아래의 평소 해제 절차가 잠금을 푼다.
-          // (남은 빛이 있는 채로 억지로 풀면 같은 자리를 새 발로 또 기록해 버린다.)
-          if(state.blockedFrames>hold)blendBackground(data,lum,sw,x0,x1,y0,y1,.3);
-          return;
-        }
-        if(tryRecordLaser(coreBest.x,coreBest.y,sw,sh,vw,vh,`[핵심] dr=${Math.round(coreBest.mag)} 주변=${near}`)){state.pendingLaser=null;state.laserBlocked=true;state.blockedFrames=0;state.releaseFrames=0;els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
-        return;
-      }
+      const c={x:coreBest.x,y:coreBest.y,mag:coreBest.mag,thr:coreBest.thr,onset:coreBest.onset,noise:coreBest.noise,bright:coreBest.bright,near,meanD,stdD,t0:nowT,lastSeen:nowT,frames:1,missing:0,dims:{sw,sh,vw,vh}};
+      if(near>=3){state.laserCand=c;state._skipNoise=true;return}
+      // 너무 작은 반짝임은 버리되, 진단용으로 1초에 한 번만 남긴다.
+      if(DIAG&&nowT-(state.diagSmallAt||0)>1000){state.diagSmallAt=nowT;diagCand(c,'거부','빛 점이 너무 작음')}
     }
     if(state.laserBlocked){state.releaseFrames++;if(state.releaseFrames<2)return;state.laserBlocked=false;state.releaseFrames=0;state.blockedFrames=0;state.pendingLaser=null}
     if(!USE_FALLBACK){blendBackground(data,lum,sw,x0,x1,y0,y1,.025);return}
