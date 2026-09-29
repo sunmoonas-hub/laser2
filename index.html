@@ -127,6 +127,10 @@
   // 진단 결과 480에서는 한 장 분석에 약 49ms가 걸려(카메라는 33ms마다 한 장) 사진의 1/3을 건너뛰었다. 그래서 400으로 낮춘다.
   // 사대 화면 오른쪽 위 '분석 ○○%'가 95% 이상이면 충분히 빠른 것이다.
   const ANALYSIS_WIDTH = 400;
+  // 카메라에서 받는 영상 크기. 진단 결과 분석 해상도를 줄여도 처리 시간이 거의 그대로(49→47ms)였다.
+  // 시간 대부분이 '큰 카메라 영상(1280x720)을 매번 작게 줄여 옮겨 담는 작업'에 쓰이는 것으로 보여, 받는 영상 자체를 줄인다.
+  // 분석은 어차피 가로 400(보정은 640)으로 줄여서 하므로 인식 정밀도는 같다. 화면 미리보기만 약간 덜 선명해진다.
+  const CAMERA_W = 640, CAMERA_H = 480;
   // 진단 기록: 레이저 후보가 생길 때마다(기록/거부 모두) 구글 시트 '진단기록' 탭에 한 줄씩 저장한다. 조정이 끝나면 false로.
   const DIAG = true;
   const ctx = els.overlay.getContext('2d');
@@ -212,8 +216,8 @@
       state.center=null;state.radius=state.radiusX=state.radiusY=0;state.targetVideo=null;state.paperMultiple=null;state.running=false;lastCmdId=null;lastNotifiedCmdId=null;clearCountdown();
       document.body.classList.remove('match-live');
       els.matchBtn.disabled=true;els.matchBtn.textContent='경기 시작';
-      try{state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280,min:640},height:{ideal:720,min:480},frameRate:{ideal:60,min:30,max:60}}})}
-      catch(fastError){console.warn('60fps unavailable, retrying at standard speed',fastError);state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}}})}
+      try{state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:CAMERA_W},height:{ideal:CAMERA_H},frameRate:{ideal:60,min:30,max:60}}})}
+      catch(fastError){console.warn('60fps unavailable, retrying at standard speed',fastError);state.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:CAMERA_W},height:{ideal:CAMERA_H},frameRate:{ideal:30}}})}
       els.video.srcObject=state.stream;await els.video.play();state.videoTrack=state.stream.getVideoTracks()[0];await setupCameraZoom();els.cameraMsg.style.display='none';
       els.cameraBtn.textContent='카메라 다시 시작';els.calibrateBtn.disabled=false;els.livePill.textContent='● CAMERA';setStatus('카메라 연결');els.guide.textContent='표적을 화면 중앙에 맞추면 자동으로 인식합니다.';resize();processFrames();ensureRemotePolling();setTimeout(()=>{if(state.stream&&!state.center&&!state.running)beginCalibration()},900);
     }catch(e){console.error(e);toast('카메라 권한을 허용해 주세요.');els.guide.textContent='브라우저 설정에서 카메라 권한을 허용한 뒤 다시 시도하세요.'}
@@ -277,6 +281,9 @@
       try{target=detectTarget()}catch(error){console.error('target detection',error);break;}
     }
     els.calibrateBtn.disabled=false;state.autoCalibrating=false;
+    {const c=state.lastCalib||{};diagPush({kind:'보정',verdict:target?'성공':'실패',
+      reason:target?`링${c.rings}개 맞음·점수${c.score}·바깥원 지름=짧은변의${c.outerPct}%·가장자리 여유${c.edge}px·검은원${c.blackPct}%`:'표적을 찾지 못함',
+      camRes:els.video.videoWidth+'x'+els.video.videoHeight})}
     if(target){
       state.center={x:target.x,y:target.y};state.radiusX=target.radiusX;state.radiusY=target.radiusY;state.radius=Math.max(target.radiusX,target.radiusY);state.targetAngle=target.angle;state.calibrationMode=0;state.calibratedAt=performance.now();saveTargetToVideo();
       els.guide.textContent='표적 자동 보정 완료 · 라이브 페이지에서 경기 시작을 누르세요.';
@@ -311,7 +318,9 @@
     const vw=els.video.videoWidth,vh=els.video.videoHeight;if(!vw||!vh)return null;
     const scale=Math.min(1,640/Math.max(vw,vh)),sw=Math.round(vw*scale),sh=Math.round(vh*scale);
     els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);
-    const found=findConcentricTarget(wctx.getImageData(0,0,sw,sh).data,sw,sh);if(!found)return null;
+    const found=findConcentricTarget(wctx.getImageData(0,0,sw,sh).data,sw,sh);
+    state.lastCalib=found?{rings:found.rings,score:Math.round(found.score),outerPct:Math.round(found.rx*2/Math.min(sw,sh)*100),edge:Math.round(Math.min(found.x-found.rx,sw-found.x-found.rx,found.y-found.ry,sh-found.y-found.ry)),blackPct:Math.round(found.blackRadius/found.rx*100),size:sw+'x'+sh}:{size:sw+'x'+sh};
+    if(!found)return null;
     const mapped=videoToScreen(found.x*vw/sw,found.y*vh/sh);
     return {x:mapped.x,y:mapped.y,radiusX:found.rx*vw/sw*mapped.scale,radiusY:found.ry*vw/sw*mapped.scale,angle:found.a,rings:found.rings};
   }
@@ -704,7 +713,9 @@
     if(!state.workSH||!state.background)state.workSH=Math.round(sw*vh/vw);   // 화면 비율 그대로(픽셀이 정사각형이어야 원 계산이 맞음)
     const sh=state.workSH;
     if(els.work.width!==sw)els.work.width=sw;if(els.work.height!==sh)els.work.height=sh;
+    const tg0=performance.now();
     wctx.drawImage(els.video,0,0,sw,sh);const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh;
+    if(state.detectorReady&&state.perf){state.perf.grab=(state.perf.grab||0)+performance.now()-tg0;state.perf.grabN=(state.perf.grabN||0)+1}
     if(!state.lumBuf||state.lumBuf.length!==total)state.lumBuf=new Uint8Array(total);
     const lum=state.lumBuf;
     // 실제로 읽히는 건 표적 주변 범위뿐이라, 밝기(lum)와 기준화면도 화면 전체가 아니라 그 범위만 계산한다.
@@ -824,7 +835,8 @@
       const pf=state.perf||{n:0,sum:0,max:0,skipped:0,frames:0};
       const seen=pf.frames?Math.round((pf.frames-pf.skipped)/pf.frames*100):'';
       if(state.diagStatusAt)diagPush({kind:'상태',verdict:'-',reason:'10초 요약',margin:state.diagPeak,meanD,stdD,
-        procMs:pf.n?r1(pf.sum/pf.n):'',procMax:r1(pf.max),skipped:pf.skipped,seenPct:seen});
+        procMs:pf.n?r1(pf.sum/pf.n):'',procMax:r1(pf.max),skipped:pf.skipped,seenPct:seen,grabMs:pf.grabN?r1(pf.grab/pf.grabN):'',
+        camRes:els.video.videoWidth+'x'+els.video.videoHeight});
       state.seenPct=seen;showDetectorInfo();
       state.perf={n:0,sum:0,max:0,skipped:0,frames:0};
       state.diagStatusAt=nowT;state.diagPeak=null;
