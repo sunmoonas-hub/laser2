@@ -36,7 +36,6 @@
   .updated{text-align:center;color:var(--muted);font-size:.72rem;margin-top:6px}
   .watchRow{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;font-size:.82rem;color:var(--muted)}
   .watchRow select{background:#091426;color:#fff;border:1px solid #29415e;border-radius:8px;padding:6px 10px;font-size:.85rem}
-  .otherLane{text-align:center;color:var(--muted);padding:40px 16px;font-size:.9rem;line-height:1.7}
   .startPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px}
   .startPanel h2{font-size:1rem;margin:0 0 12px}
   .startPanel .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
@@ -58,7 +57,6 @@
   .scoreGrid .slot.miss{background:var(--red);border-color:var(--red);color:#fff}
   .scoreGrid .slot.flash{animation:scorePop .5s ease}
   @keyframes scorePop{0%{transform:scale(1.35)}100%{transform:scale(1)}}
-  @media(max-width:380px){.scoreGrid{grid-template-columns:repeat(5,1fr)}}
   .undoBtnLive{width:100%;min-height:48px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:800;font-size:.88rem;margin-top:16px}
   .undoBtnLive:disabled{opacity:.4}
   .undoMsg{text-align:center;color:var(--muted);font-size:.76rem;margin-top:8px;min-height:1.1em}
@@ -69,7 +67,6 @@
 <div class="wrap">
   <header>
     <h1>🎯 LASER MATCH · 실시간 관전</h1>
-
   </header>
   <div class="layout">
     <div class="left">
@@ -80,7 +77,6 @@
         </select>
       </div>
       <div id="idleHint" class="idle"><b>대기 중…</b>선택한 사로에서 아직 경기가 시작되지 않았어요.</div>
-      <div id="otherLaneBox" class="otherLane" hidden></div>
       <div id="liveBox" hidden>
         <div class="who">
           <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
@@ -107,8 +103,8 @@
           <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
         </div>
         <div class="startRow">
-          <button class="startBtn" id="rStart">🕹️ 경기 시작</button>
-          <button class="endBtn" id="rEnd">🛑 경기 종료</button>
+          <button class="startBtn" id="rStart">🕹️ 1사로 경기 시작</button>
+          <button class="endBtn" id="rEnd">🛑 1사로 종료</button>
         </div>
         <p class="startMsg" id="rMsg"></p>
       </section>
@@ -129,6 +125,24 @@
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d');
   let lastSig = '', lastState = null;
+
+  // "지금 보는 사로"와 "시작할 사로"는 항상 같은 사로로 맞춘다.
+  // 그래야 시작·취소·종료 버튼이 지금 화면에 보이는 사로에만 적용된다.
+  function currentLane(){ return Number($('watchLane').value) || 1; }
+  function setLane(lane){
+    lane = String(lane);
+    $('watchLane').value = lane;
+    $('rLane').value = lane;
+    $('rStart').textContent = `🕹️ ${lane}사로 경기 시작`;
+    $('rEnd').textContent = `🛑 ${lane}사로 종료`;
+    // 다른 사로의 화면이 잠깐이라도 섞여 보이지 않게 즉시 비우고 새로 불러온다.
+    lastSig = ''; lastState = null; lastShotCount = -1;
+    $('rMsg').textContent = ''; $('undoMsg').textContent = '';
+    applyView(); syncStartLock();
+    restartPoll();
+  }
+  $('watchLane').addEventListener('change', e => setLane(e.target.value));
+  $('rLane').addEventListener('change', e => setLane(e.target.value));
 
   let lastShotCount = -1;
   function renderScores(shots, maxShots){
@@ -172,15 +186,13 @@
     });
   }
 
-  // 서버 상태가 새로 올 때마다 호출됨. "지금 보는 사로"와 실제 사로가 같을 때만 화면을 갱신한다.
   function handleState(state){
     lastState = state;
     applyView();
     syncStartLock();
   }
-  // 서버 전체(사로 구분 없이)에 사격이 진행 중이면, 새 시작 명령이 밀렸다가 경기가 끝나자마자
-  // 자동으로 실행되는 걸 막기 위해 시작 버튼을 잠가 둔다.
-  // 단, 연결이 끊기거나 페이지를 닫는 바람에 "진행 중"으로 멈춰버린 죽은 기록이면 60초 뒤 자동으로 풀어준다.
+  // 이 사로에서 사격이 진행 중이면 시작 버튼을 잠근다(다른 사로는 영향 없음).
+  // 사대 폰이 경기 중 15초마다 신호를 보내므로, 60초 넘게 소식이 없으면 연결이 끊긴 것으로 보고 풀어 준다.
   function syncStartLock(){
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
     const busy = !!(lastState && lastState.running && !stale);
@@ -188,21 +200,14 @@
   }
   function applyView(){
     const state = lastState;
-    const watch = Number($('watchLane').value) || 1;
-    if(!state){ show('idle'); return; }
+    const watch = currentLane();
+    if(!state || (state.firingLane && state.firingLane !== watch)){ show('idle'); return; }
     const shots = Array.isArray(state.shots) ? state.shots : [];
-    const hasResult = !!(state.player || shots.length);
-    if(!hasResult){ show('idle'); return; }
-    const lane = state.firingLane || 1;
-    if(lane !== watch){
-      $('otherLaneBox').innerHTML = `<b style="color:#fff;display:block;margin-bottom:6px">다른 사로에서 진행 중</b>${lane}사로에서 "${state.player||''}" 선수가 ${state.running?'사격 중':'경기를 마쳤어요'}.<br>${watch}사로를 보려면 위에서 사로를 바꿔서 기다려 주세요.`;
-      show('other'); return;
-    }
+    if(!(state.player || shots.length)){ show('idle'); return; }
     show('live');
     $('pName').textContent = state.player || '이름 없음';
-    $('pLane').textContent = state.eventName ? `${state.eventName} · ${lane}사로` : `${lane}사로`;
-    const pill = $('statusPill');
-    pill.className = 'status ' + (state.running ? 'live' : 'done');
+    $('pLane').textContent = state.eventName ? `${state.eventName} · ${watch}사로` : `${watch}사로`;
+    $('statusPill').className = 'status ' + (state.running ? 'live' : 'done');
     $('statusText').textContent = state.running ? '사격 중' : (shots.length ? '완료' : '대기');
     const total = shots.reduce((a,s)=>a+(s.score||0),0);
     $('total').textContent = total;
@@ -212,20 +217,27 @@
     drawTarget(shots);
     renderScores(shots, state.maxShots);
     $('undoBtnLive').disabled = !shots.length;
-    if(state.updatedAt){
-      const sec = Math.max(0, Math.round((Date.now()-state.updatedAt)/1000));
-      $('updatedAt').textContent = sec < 3 ? '방금 갱신됨' : `${sec}초 전 갱신`;
-    }
+    updateAgeText();
   }
+  function updateAgeText(){
+    if(!lastState || !lastState.updatedAt){ $('updatedAt').textContent = ''; return; }
+    const sec = Math.max(0, Math.round((Date.now()-lastState.updatedAt)/1000));
+    $('updatedAt').textContent = sec < 3 ? '방금 갱신됨' : `${sec}초 전 갱신`;
+  }
+  // 상태가 안 바뀌어도 "N초 전"과 시작 버튼 잠금은 시간이 지나면 달라지므로 1초마다 다시 계산한다.
+  setInterval(() => { updateAgeText(); syncStartLock(); }, 1000);
   function show(which){
     $('idleHint').hidden = which!=='idle';
-    $('otherLaneBox').hidden = which!=='other';
     $('liveBox').hidden = which!=='live';
     $('shotPanel').hidden = which!=='live';
   }
-  $('watchLane').addEventListener('change', applyView);
 
-  function poll(){
+  // 사로를 바꾸면 이전 사로의 폴링을 끊고 새 사로로 다시 시작한다.
+  let pollToken = 0;
+  function restartPoll(){ pollToken++; poll(pollToken); }
+  function poll(token){
+    if(token !== pollToken) return;
+    const lane = currentLane();
     const cb = 'liveCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     const script = document.createElement('script');
     let done = false;
@@ -233,37 +245,31 @@
     function finish(state){
       if(done) return; done = true;
       clearTimeout(timer);
-      window[cb] = function(){};   // 응답이 늦게 와도(타임아웃 뒤) 에러 없이 그냥 무시되도록, 삭제 대신 빈 함수로 남겨둠
+      window[cb] = function(){};
       script.remove();
-      if(state){
+      if(token !== pollToken) return;   // 그사이 사로가 바뀌었으면 이 응답은 버린다
+      if(state && state.ok !== false && lane === currentLane()){
         const sig = JSON.stringify(state);
         if(sig !== lastSig){ lastSig = sig; handleState(state); }
       }
-      setTimeout(poll, 1200);
+      setTimeout(() => poll(token), 1200);
     }
     window[cb] = data => finish(data);
     script.onerror = () => finish(null);
-    script.src = `${APPS_SCRIPT_URL}?action=live&callback=${cb}&t=${Date.now()}`;
+    script.src = `${APPS_SCRIPT_URL}?action=live&lane=${lane}&callback=${cb}&t=${Date.now()}`;
     document.head.appendChild(script);
   }
 
-  let lastSentCmd = null;
-  // 명령 전송의 공통 로직: cmd에 cmdId만 새로 채워서 서버로 보낸다. onOk(cmd)는 전송이 성공했을 때 호출된다.
-  function sendCmd(cmd, btn, msg, onOk){
+  function sendCmd(cmd, btn, msg){
     cmd = Object.assign({}, cmd, { cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) });
     btn.disabled = true; msg.textContent = '📡 명령을 보내는 중…';
     const cb = 'startCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     const script = document.createElement('script');
     const timer = setTimeout(() => finish(null), 8000);
     function finish(res){
-      clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = !!(lastState && lastState.running);
-      if(res && res.ok){
-        msg.textContent = '✅ 전송했어요 - 사대 화면에서 자동으로 시작돼요.';
-        lastSentCmd = cmd;
-        $('watchLane').value = String(cmd.firingLane);   // 방금 시작을 건 사로를 자동으로 보게 전환
-        applyView();
-        if(onOk) onOk();
-      } else msg.textContent = '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+      clearTimeout(timer); window[cb] = function(){}; script.remove(); syncStartLock();
+      if(res && res.ok) msg.textContent = `✅ ${cmd.firingLane}사로에 보냈어요 - 사대 화면에서 자동으로 시작돼요.`;
+      else msg.textContent = '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
     }
     window[cb] = res => finish(res);
     script.onerror = () => finish(null);
@@ -271,55 +277,49 @@
     script.src = `${APPS_SCRIPT_URL}?${qs.toString()}`;
     document.head.appendChild(script);
   }
-  function sendRemoteStart(){
+  $('rStart').addEventListener('click', () => {
     const cmd = {
       eventName: $('rEvent').value.trim(),
       player: $('rPlayer').value.trim(),
-      firingLane: Number($('rLane').value),
+      firingLane: currentLane(),
       laserColor: $('rColor').value,
       detectKind: $('rKind').value,
       maxShots: Number($('rMax').value)
     };
     if(!cmd.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
     sendCmd(cmd, $('rStart'), $('rMsg'));
-  }
-  $('rStart').addEventListener('click', sendRemoteStart);
+  });
 
-  $('undoBtnLive').addEventListener('click', () => {
-    const btn = $('undoBtnLive'), msg = $('undoMsg');
-    btn.disabled = true; msg.textContent = '📡 취소 신호를 보내는 중…';
-    const cb = 'undoCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  // 취소·종료 신호는 지금 보고 있는 사로에만 보낸다.
+  function sendLaneSignal(action, btn, msg, sendingText, okText, afterFinish){
+    const lane = currentLane();
+    btn.disabled = true; msg.textContent = sendingText;
+    const cb = action + 'Cb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     const script = document.createElement('script');
     const timer = setTimeout(() => finish(null), 8000);
     function finish(res){
       clearTimeout(timer); window[cb] = function(){}; script.remove();
-      btn.disabled = !(lastState && lastState.shots && lastState.shots.length);
-      msg.textContent = (res && res.ok) ? '✅ 취소 신호를 보냈어요 - 사대에 곧 반영돼요.' : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+      afterFinish();
+      msg.textContent = (res && res.ok) ? `✅ ${lane}사로: ${okText}` : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
     }
     window[cb] = res => finish(res);
     script.onerror = () => finish(null);
-    script.src = `${APPS_SCRIPT_URL}?action=remoteUndo&callback=${cb}&t=${Date.now()}`;
+    script.src = `${APPS_SCRIPT_URL}?action=${action}&lane=${lane}&callback=${cb}&t=${Date.now()}`;
     document.head.appendChild(script);
+  }
+  $('undoBtnLive').addEventListener('click', () => {
+    sendLaneSignal('remoteUndo', $('undoBtnLive'), $('undoMsg'), '📡 취소 신호를 보내는 중…', '취소 신호를 보냈어요 - 사대에 곧 반영돼요.',
+      () => { $('undoBtnLive').disabled = !(lastState && lastState.shots && lastState.shots.length); });
   });
-
   $('rEnd').addEventListener('click', () => {
-    const btn = $('rEnd'), msg = $('rMsg');
-    btn.disabled = true; msg.textContent = '📡 종료 신호를 보내는 중…';
-    const cb = 'endCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-    const script = document.createElement('script');
-    const timer = setTimeout(() => finish(null), 8000);
-    function finish(res){
-      clearTimeout(timer); window[cb] = function(){}; script.remove(); btn.disabled = false;
-      msg.textContent = (res && res.ok) ? '✅ 경기를 종료했어요 - 탄착군·점수가 초기화돼요.' : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
-    }
-    window[cb] = res => finish(res);
-    script.onerror = () => finish(null);
-    script.src = `${APPS_SCRIPT_URL}?action=remoteEnd&callback=${cb}&t=${Date.now()}`;
-    document.head.appendChild(script);
+    const lane = currentLane();
+    if(!confirm(`${lane}사로 경기를 종료할까요?\n탄착군과 점수가 초기화돼요.`)) return;
+    sendLaneSignal('remoteEnd', $('rEnd'), $('rMsg'), '📡 종료 신호를 보내는 중…', '경기를 종료했어요 - 탄착군·점수가 초기화돼요.',
+      () => { $('rEnd').disabled = false; });
   });
 
   drawTarget([]);
-  poll();
+  setLane(1);
 })();
 </script>
 </body>
