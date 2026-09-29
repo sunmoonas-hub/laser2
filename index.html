@@ -424,7 +424,15 @@
     if(!pos){const d=c.dims;pos=workToTarget(c.x,c.y,d.sw,d.sh,d.vw,d.vh)}
     diagPush({kind:'후보',verdict,reason,ring:pos.ring,nr:r1(pos.nr*100)/100,u:Math.round(pos.u*100)/100,v:Math.round(pos.v*100)/100,
       dr:r1(c.mag),thr:r1(c.thr),margin:c.mag-c.thr,onset:r1(c.onset),near:c.near,dur:Math.round(c.lastSeen-c.t0),frames:c.frames,
-      noise:r1(c.noise),meanD:c.meanD,stdD:c.stdD,bright:r1(c.bright)});
+      noise:r1(c.noise),meanD:c.meanD,stdD:c.stdD,bright:r1(c.bright),span:c.span||''});
+  }
+  /* 놓침 진단: 레이저처럼 '갑자기 나타난' 빛이 첫 관문(밝기·색·켜짐 조건)에서 떨어졌을 때 한 줄 남긴다.
+     예전에는 첫 관문에서 떨어지면 기록이 전혀 안 남아서, 쏜 레이저를 왜 놓쳤는지 알 수 없었다. */
+  function diagMiss(m,reason,dims,extra){
+    if(!DIAG||!m)return;
+    const pos=workToTarget(m.x,m.y,dims.sw,dims.sh,dims.vw,dims.vh);
+    diagPush(Object.assign({kind:'놓침후보',verdict:'탈락',reason,ring:pos.ring,nr:r1(pos.nr*100)/100,u:Math.round(pos.u*100)/100,v:Math.round(pos.v*100)/100,
+      dr:r1(m.mag),dg:r1(m.dg),db:r1(m.db),thr:r1(m.thr),margin:m.mag-m.thr,onset:r1(m.onset),noise:r1(m.noise),bright:r1(m.bright)},extra||{}));
   }
   function diagFlush(){
     if(diagBusy||!diagQueue.length||!isServerConfigured())return;
@@ -729,7 +737,7 @@
     for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!insideScan(x,y))continue;const p=y*sw+x;motionSamples++;meanNow+=lum[p];meanBase+=state.background[p];if(Math.abs(lum[p]-state.prevLum[p])>18)motionPixels++}
     state.lastAmbient=meanNow/Math.max(1,motionSamples);
     const motionRatio=motionPixels/Math.max(1,motionSamples),exposureShift=Math.abs(meanNow-meanBase)/Math.max(1,motionSamples);state.prevLum.set(lum);
-    if(motionRatio>.035||exposureShift>11){if(state.laserCand){diagCand(state.laserCand,'거부','화면 흔들림');state.laserCand=null}state._skipNoise=true;state.pendingLaser=null;state.laserBlocked=true;state.blockedFrames=0;state.stableFrames=0;blendBackground(data,lum,sw,x0,x1,y0,y1,.14);return}
+    if(motionRatio>.035||exposureShift>11){if(DIAG&&performance.now()-(state.diagBlockAt||0)>2000){state.diagBlockAt=performance.now();diagPush({kind:'감지멈춤',verdict:'-',reason:'화면 흔들림·밝기 변화',motion:r1(motionRatio*100),shift:r1(exposureShift)})}if(state.laserCand){diagCand(state.laserCand,'거부','화면 흔들림');state.laserCand=null}state._skipNoise=true;state.pendingLaser=null;state.laserBlocked=true;state.blockedFrames=0;state.stableFrames=0;blendBackground(data,lum,sw,x0,x1,y0,y1,.14);return}
     state.stableFrames++;if(state.stableFrames<2)return;
     if(state.detectKind!=='laser')detectObjectPass(data,total,sw,sh,vw,vh,t,insideScan);
     if(state.detectKind==='object')return;
@@ -753,24 +761,35 @@
     const nz=state.noiseR,pr=state.prevR;if(!nz||!pr)return;
     // K: 픽셀의 평소 흔들림 대비 몇 배를 넘어야 레이저로 볼지. 감도 98(기본)에서 6배, 감도를 낮추면 더 엄격해진다.
     const K=6+(98-state.sensitivity)*.1;
-    let coreBest=null,peak=null,peakMag=-1e9,strongCount=0,roiCount=0;
+    let coreBest=null,peak=null,peakMag=-1e9,strongCount=0,roiCount=0,missColor=null,missOnset=null;
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(!insideScan(x,y))continue;
       roiCount++;
       const p=y*sw+x,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
       const mag0=color==='green'?dg:dr;
       const pixThr=Math.max(adaptFloor,meanD+K*nz[p]);   // ① 이 픽셀 자신의 평소 흔들림 기준
-      if(mag0-pixThr>peakMag){peakMag=mag0-pixThr;peak={dr:Math.round(dr),dg:Math.round(dg),db:Math.round(db),thr:Math.round(pixThr)}}
+      if(mag0-pixThr>peakMag){peakMag=mag0-pixThr;peak={dr:Math.round(dr),dg:Math.round(dg),db:Math.round(db),thr:Math.round(pixThr),x,y,mag:mag0,onset:data[i+chIdx]-pr[p],noise:nz[p],bright:data[i+chIdx]}}
       if(mag0<=pixThr)continue;
       const colorStrong=color==='green'?(dg>dr+adaptMargin&&dg>db+adaptMargin):(dr>dg+adaptMargin&&dr>db+adaptMargin*.8);
-      if(!colorStrong)continue;
+      if(!colorStrong){if(!missColor||mag0>missColor.mag)missColor={x,y,mag:mag0,thr:pixThr,dg,db,onset:data[i+chIdx]-pr[p],noise:nz[p],bright:data[i+chIdx]};continue}
       // ② 갑자기 켜짐: 레이저는 직전 프레임엔 없다가 이번 프레임에 확 나타난다. 인쇄물의 느린 변화·서서히 쌓인 차이는 여기서 걸러진다.
       const onset=data[i+chIdx]-pr[p];
-      if(onset<Math.max(K*.7*nz[p],mag0*.4))continue;
+      if(onset<Math.max(K*.7*nz[p],mag0*.4)){if(!missOnset||mag0>missOnset.mag)missOnset={x,y,mag:mag0,thr:pixThr,dg,db,onset,noise:nz[p],bright:data[i+chIdx]};continue}
       strongCount++;if(!coreBest||mag0>coreBest.mag)coreBest={x,y,mag:mag0,thr:pixThr,onset,noise:nz[p],bright:data[i+chIdx]};
     }
     if(strongCount)state._skipNoise=true;   // 레이저가 잡음 지도에 섞여 들어가지 않게
     const nowT=performance.now();
+    if(DIAG&&!coreBest&&!state.laserCand&&nowT-(state.diagMissAt||0)>700){
+      const dims={sw,sh,vw,vh};let logged=true;
+      // 색 조건 탈락: 밝기는 충분히 올랐는데 빨강이 우세하지 않음. 초록·파랑도 같이 올랐으면 흰색 포화가 원인.
+      if(missColor&&missColor.onset>=6&&missColor.mag>=12)diagMiss(missColor,missColor.dg>missColor.mag*.5&&missColor.db>missColor.mag*.5?'색 조건 탈락(흰색 포화 의심)':'색 조건 탈락',dims);
+      // 켜짐 조건 탈락: 강한 빛인데 '갑자기' 나타나지 않음(두 프레임에 걸쳐 서서히 찍힌 경우 등).
+      else if(missOnset&&missOnset.mag>=20)diagMiss(missOnset,'켜짐 조건 탈락',dims);
+      // 밝기 조건 탈락: 갑자기 나타났지만 합격선에 조금 못 미침.
+      else if(peak&&peakMag<=0&&peakMag>-10&&peak.onset>=6&&peak.mag>=8)diagMiss(peak,'기준 미달(아깝게)',dims);
+      else logged=false;
+      if(logged)state.diagMissAt=nowT;
+    }
     if(peakMag>(state.diagPeak==null?-1e9:state.diagPeak))state.diagPeak=peakMag;
     if(peak&&(state.dbgTick++%5===0)&&!(state.infoUntil&&nowT<state.infoUntil)){
       els.clrPill.textContent=`최대 dr=${peak.dr} / 그 자리 기준 ${peak.thr} (${peakMag>0?'+':''}${Math.round(peakMag)})${state.laserCand?' ◎추적':coreBest?' ✓':''}`;
@@ -782,6 +801,7 @@
     }
     // 레이저 점은 작고 국지적이다. 표적 주변이 한꺼번에 넓게 변했다면 화면 전체의 색 변화이므로 인정하지 않고 배경으로 흡수한다.
     if(strongCount>Math.max(400,roiCount*.012)){
+      if(DIAG&&nowT-(state.diagBlockAt||0)>2000){state.diagBlockAt=nowT;diagPush({kind:'감지멈춤',verdict:'-',reason:'화면 전체 변화',near:strongCount})}
       if(state.laserCand){diagCand(state.laserCand,'거부','화면 전체 변화');state.laserCand=null}
       state.pendingLaser=null;state.laserBlocked=true;state.releaseFrames=0;blendBackground(data,lum,sw,x0,x1,y0,y1,.3);return;
     }
@@ -814,7 +834,7 @@
       return;
     }
     if(coreBest){
-      let near=0;
+      let near=0,sx0=99,sx1=-99,sy0=99,sy1=-99;
       for(let oy=-7;oy<=7;oy++)for(let ox=-7;ox<=7;ox++){
         const nx=coreBest.x+ox,ny=coreBest.y+oy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
         const p=ny*sw+nx,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
@@ -822,9 +842,9 @@
         const colorOk=color==='green'?(dg>adaptFloor*.4&&dg>dr+adaptMargin*.35&&dg>db+adaptMargin*.35):(dr>adaptFloor*.4&&dr>dg+adaptMargin*.35&&dr>db+adaptMargin*.3);
         // 레이저가 너무 밝아 중심부가 하얗게 포화된 경우도 같은 레이저의 일부로 인정한다.
         const satOk=dr>adaptFloor*1.5&&dg>adaptFloor*1.2&&db>adaptFloor*1.2;
-        if(colorOk||satOk)near++;
+        if(colorOk||satOk){near++;if(ox<sx0)sx0=ox;if(ox>sx1)sx1=ox;if(oy<sy0)sy0=oy;if(oy>sy1)sy1=oy}
       }
-      const c={x:coreBest.x,y:coreBest.y,mag:coreBest.mag,thr:coreBest.thr,onset:coreBest.onset,noise:coreBest.noise,bright:coreBest.bright,near,meanD,stdD,t0:nowT,lastSeen:nowT,frames:1,missing:0,dims:{sw,sh,vw,vh}};
+      const c={x:coreBest.x,y:coreBest.y,mag:coreBest.mag,thr:coreBest.thr,onset:coreBest.onset,noise:coreBest.noise,bright:coreBest.bright,near,span:near?`${sx1-sx0+1}x${sy1-sy0+1}`:'',meanD,stdD,t0:nowT,lastSeen:nowT,frames:1,missing:0,dims:{sw,sh,vw,vh}};
       if(near>=3){state.laserCand=c;state._skipNoise=true;return}
       // 너무 작은 반짝임은 버리되, 진단용으로 1초에 한 번만 남긴다.
       if(DIAG&&nowT-(state.diagSmallAt||0)>1000){state.diagSmallAt=nowT;diagCand(c,'거부','빛 점이 너무 작음')}
