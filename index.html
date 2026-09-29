@@ -440,26 +440,24 @@
   }
   if(DIAG)setInterval(diagFlush,3000);
 
+  /* ===== 원격 명령 수신 (사로별) =====
+     폰은 자기 사로(firingLane)의 신호만 가져온다. 시작·취소·종료를 한 번의 요청으로 함께 확인한다. */
   let lastCmdId=null,lastNotifiedCmdId=null,remotePollOn=false;
+  let lastUndoId=null,lastEndId=null,pollLane=null;
   const REMOTE_POLL_MS=900;
+  const CMD_MAX_AGE_MS=30000;   // 30초보다 오래된 시작 명령은 실행하지 않는다(예전 명령이 갑자기 실행되는 사고 방지)
   function applyRemoteCmd(cmd){
-    if(cmd.cmdId===lastCmdId)return;   // 이미 그 명령으로 경기를 시작한 뒤라면 더 이상 아무것도 안 함
-    const myLane=Number(els.firingLane.value);
-    if(myLane!==cmd.firingLane){
-      // 사로가 다르면 폰의 아무 값도 건드리지 않는다 - 사람이 폰에서 직접 사로를 맞춰야 연결된다.
-      if(lastNotifiedCmdId!==cmd.cmdId){lastNotifiedCmdId=cmd.cmdId;toast(`📡 ${cmd.firingLane}사로 시작 명령이 왔어요 - 사로를 ${cmd.firingLane}로 바꾸면 연결돼요.`)}
-      return;
-    }
-    // 사로는 맞아도 아직 표적 보정 전이면, 이 명령은 그냥 소비(무시)하고 끝낸다 - 나중에 보정이 끝나도 자동으로 시작되지 않는다.
-    // 보정을 마친 뒤엔 라이브에서 "경기 시작"을 다시 눌러야 한다.
+    if(cmd.cmdId===lastCmdId)return;   // 이미 처리한 명령
+    if(Number(els.firingLane.value)!==cmd.firingLane)return;   // 다른 사로의 명령(정상이라면 오지 않음)
+    if(Number.isFinite(cmd.ageMs)&&cmd.ageMs>CMD_MAX_AGE_MS){lastCmdId=cmd.cmdId;return}   // 너무 오래된 명령은 조용히 소비
+    // 아직 표적 보정 전이면 명령을 소비만 하고 끝낸다 - 보정 후 라이브에서 다시 눌러야 한다.
     if(!(state.center&&state.radius)){
       lastCmdId=cmd.cmdId;
       toast(`📡 ${cmd.firingLane}사로 명령을 받았지만 아직 표적 보정 전이에요 - 보정 후 라이브에서 다시 눌러주세요.`);
       return;
     }
-    if(state.running)return;   // 이미 사격 중이면 무시
-    // 보정이 끝난 직후(3초 이내)에는 어떤 명령이 와도 시작하지 않는다 - 보정 결과를 눈으로 확인할 최소한의 시간을 보장해서,
-    // "카메라를 켜자마자/보정하자마자 바로 경기가 시작돼버린다"는 상황 자체가 구조적으로 생기지 않게 한다.
+    if(state.running)return;
+    // 보정 직후 3초 안에는 시작하지 않는다 - 보정 결과를 눈으로 확인할 시간을 보장.
     if(state.calibratedAt&&performance.now()-state.calibratedAt<3000){
       lastCmdId=cmd.cmdId;
       toast(`📡 ${cmd.firingLane}사로 명령을 받았지만 방금 보정이 끝나서 안전을 위해 대기 중이에요 - 라이브에서 다시 눌러주세요.`);
@@ -470,67 +468,51 @@
     if(cmd.laserColor&&cmd.laserColor!==els.laserColor.value){els.laserColor.value=cmd.laserColor;clearDetectorBackground();showDetectorInfo()}
     if(cmd.detectKind)els.detectKind.value=cmd.detectKind;
     if(cmd.maxShots){els.maxShots.value=String(cmd.maxShots);updateScore()}
-    startMatch();lastCmdId=cmd.cmdId;toast(`📡 ${cmd.firingLane}사로 연결됨 - 경기를 시작했어요: `+(cmd.player||''));
+    startMatch();lastCmdId=cmd.cmdId;els.firingLane.disabled=true;
+    toast(`📡 ${cmd.firingLane}사로 연결됨 - 경기를 시작했어요: `+(cmd.player||''));
   }
-  function pollRemoteCmd(){
-    if(!isServerConfigured()){setTimeout(pollRemoteCmd,3000);return}
-    if(state.running){setTimeout(pollRemoteCmd,REMOTE_POLL_MS);return}
-    const cbName='cmdCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+  function handlePoll(res,lane){
+    if(!res||res.ok===false)return;
+    // 사로를 바꾸면, 새 사로에 이미 남아 있던 취소·종료 신호는 과거 것이므로 무시하고 지금 값을 새 기준으로 삼는다.
+    if(lane!==pollLane){pollLane=lane;lastUndoId=null;lastEndId=null}
+    // 종료 신호
+    if(lastEndId===null)lastEndId=res.endId||'';
+    else if(res.endId&&res.endId!==lastEndId){
+      lastEndId=res.endId;
+      reset();pushLive(true);toast('📡 라이브에서 경기를 종료했어요 - 탄착군·점수가 초기화됐어요.');
+    }
+    // 마지막 발 취소 신호
+    if(lastUndoId===null)lastUndoId=res.undoId||'';
+    else if(res.undoId&&res.undoId!==lastUndoId){
+      lastUndoId=res.undoId;
+      if(state.shots.length){undo();toast('📡 라이브에서 마지막 발을 취소했어요.')}
+    }
+    // 시작 명령(사격 중에는 확인하지 않음)
+    if(!state.running&&res.cmd&&res.cmd.cmdId)applyRemoteCmd(res.cmd);
+  }
+  function pollRemote(){
+    if(!isServerConfigured()){setTimeout(pollRemote,3000);return}
+    els.firingLane.disabled=!!state.running;   // 사격 중에는 사로를 못 바꾸게 잠근다
+    const lane=Number(els.firingLane.value);
+    const cbName='pollCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
     const script=document.createElement('script');
-    const timer=setTimeout(()=>{cleanup();setTimeout(pollRemoteCmd,REMOTE_POLL_MS)},6000);
-    function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
-    window[cbName]=cmd=>{
-      cleanup();
-      if(cmd&&cmd.cmdId)applyRemoteCmd(cmd);
-      setTimeout(pollRemoteCmd,REMOTE_POLL_MS);
-    };
-    script.onerror=()=>{cleanup();setTimeout(pollRemoteCmd,REMOTE_POLL_MS)};
-    script.src=`${APPS_SCRIPT_URL}?action=remoteCmd&callback=${cbName}&t=${Date.now()}`;
+    let done=false;
+    const timer=setTimeout(()=>finish(null),6000);
+    function finish(res){
+      if(done)return;done=true;
+      clearTimeout(timer);window[cbName]=function(){};script.remove();
+      if(res&&lane===Number(els.firingLane.value))handlePoll(res,lane);   // 그사이 사로가 바뀌었으면 버린다
+      setTimeout(pollRemote,REMOTE_POLL_MS);
+    }
+    window[cbName]=res=>finish(res);
+    script.onerror=()=>finish(null);
+    script.src=`${APPS_SCRIPT_URL}?action=phonePoll&lane=${lane}&callback=${cbName}&t=${Date.now()}`;
     document.head.appendChild(script);
   }
-  function ensureRemotePolling(){if(remotePollOn)return;remotePollOn=true;pollRemoteCmd();pollRemoteUndo();pollRemoteEnd()}
-
-  let lastEndId=null;
-  function pollRemoteEnd(){
-    if(!isServerConfigured()){setTimeout(pollRemoteEnd,3000);return}
-    const cbName='endCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-    const script=document.createElement('script');
-    const timer=setTimeout(()=>{cleanup();setTimeout(pollRemoteEnd,900)},6000);
-    function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
-    window[cbName]=res=>{
-      cleanup();
-      if(lastEndId===null){lastEndId=(res&&res.endId)||'';}   // 처음 연결 시 지금 값을 기준으로 삼아, 과거 신호는 무시한다
-      else if(res&&res.endId&&res.endId!==lastEndId){
-        lastEndId=res.endId;
-        reset();pushLive(true);toast('📡 라이브에서 경기를 종료했어요 - 탄착군·점수가 초기화됐어요.');
-      }
-      setTimeout(pollRemoteEnd,900);
-    };
-    script.onerror=()=>{cleanup();setTimeout(pollRemoteEnd,900)};
-    script.src=`${APPS_SCRIPT_URL}?action=endCmd&callback=${cbName}&t=${Date.now()}`;
-    document.head.appendChild(script);
-  }
-
-  let lastUndoId=null,undoPollOn=false;
-  function pollRemoteUndo(){
-    if(!isServerConfigured()){setTimeout(pollRemoteUndo,3000);return}
-    const cbName='undoCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-    const script=document.createElement('script');
-    const timer=setTimeout(()=>{cleanup();setTimeout(pollRemoteUndo,800)},6000);
-    function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
-    window[cbName]=res=>{
-      cleanup();
-      if(lastUndoId===null){lastUndoId=(res&&res.undoId)||'';}   // 처음 연결 시 지금 값을 기준으로 삼아, 과거 신호는 무시한다
-      else if(res&&res.undoId&&res.undoId!==lastUndoId){
-        lastUndoId=res.undoId;
-        if(state.shots.length){undo();toast('📡 라이브에서 마지막 발을 취소했어요.')}
-      }
-      setTimeout(pollRemoteUndo,800);
-    };
-    script.onerror=()=>{cleanup();setTimeout(pollRemoteUndo,800)};
-    script.src=`${APPS_SCRIPT_URL}?action=undoCmd&callback=${cbName}&t=${Date.now()}`;
-    document.head.appendChild(script);
-  }
+  function ensureRemotePolling(){if(remotePollOn)return;remotePollOn=true;pollRemote()}
+  // 경기 중에는 15초마다 현재 상태를 다시 보내 "이 사로는 아직 사격 중"임을 알린다.
+  // (관전 화면은 60초 넘게 소식이 없으면 연결이 끊긴 것으로 보고 시작 버튼 잠금을 푼다.)
+  setInterval(()=>{if(state.running)pushLive(true)},15000);
 
   function recordShot(x,y,manualScore=null,kind){
     if(!state.running||state.shots.length>=state.maxShots)return;
