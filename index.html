@@ -541,7 +541,16 @@
 
   function processFrames(){
     cancelAnimationFrame(state.raf);const token=++state.frameLoopToken;
-    const loop=()=>{if(token!==state.frameLoopToken)return;if(state.running&&!state.processing&&els.video.readyState>=2){state.processing=true;try{detectLaser()}finally{state.processing=false}}schedule()};
+    /* 성능 측정: 분석이 카메라 속도를 못 따라가면 그사이 들어온 프레임은 아예 분석되지 않는다.
+       레이저는 보통 한 프레임에만 찍히므로, 건너뛴 프레임에 찍힌 레이저는 흔적 없이 사라진다. */
+    const loop=(now,meta)=>{if(token!==state.frameLoopToken)return;
+      const pf=state.perf||(state.perf={n:0,sum:0,max:0,skipped:0,frames:0});
+      if(meta&&Number.isFinite(meta.presentedFrames)){
+        if(state.running&&state.detectorReady&&state.lastPF!=null){const d=meta.presentedFrames-state.lastPF;if(d>0){pf.frames+=d;if(d>1)pf.skipped+=d-1}}
+        state.lastPF=meta.presentedFrames;
+      }
+      if(state.running&&!state.processing&&els.video.readyState>=2){state.processing=true;const t0=performance.now();try{detectLaser()}finally{state.processing=false;if(state.detectorReady){const dt=performance.now()-t0;pf.n++;pf.sum+=dt;if(dt>pf.max)pf.max=dt}}}
+      schedule()};
     const schedule=()=>{if(token!==state.frameLoopToken)return;if(typeof els.video.requestVideoFrameCallback==='function')els.video.requestVideoFrameCallback(loop);else state.raf=requestAnimationFrame(loop)};schedule();
   }
 
@@ -728,9 +737,10 @@
     if(!state.detectorReady){state.detectorReady=true;if(state.detectKind!=='laser'){state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}state.objTracks=[];state.objKnown=[];state.objBusySince=0;state.objBusy=false}els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');state.readyAt=performance.now();showGo();return}
     // 사격 시작 직후 잠깐(0.7초)은 인식하지 않고 기준 화면만 최신으로 맞춘다 - 시작 순간에 카메라 노출·색이 다시 맞춰지며 튀는 것을 레이저로 착각하지 않게.
     if(state.settleMs>0&&state.readyAt&&performance.now()-state.readyAt<state.settleMs){blendBackground(data,lum,sw,x0,x1,y0,y1,.1);state.prevLum.set(lum);return}
+    const tca=Math.cos(t.a),tsa=Math.sin(t.a),irx=1/t.rx,iry=1/t.ry;
     const insideScan=(x,y,margin=state.paperMultiple?state.paperMultiple+.1:1.6)=>{
-      const dx=x-t.x,dy=y-t.y,ca=Math.cos(t.a),sa=Math.sin(t.a),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
-      return Math.hypot(ex/t.rx,ey/t.ry)<=margin;
+      const dx=x-t.x,dy=y-t.y,ex=(dx*tca+dy*tsa)*irx,ey=(-dx*tsa+dy*tca)*iry;
+      return ex*ex+ey*ey<=margin*margin;   // 예전 Math.hypot(...)<=margin 과 같은 판정, 더 빠름
     };
 
     let motionPixels=0,motionSamples=0,meanNow=0,meanBase=0;
@@ -796,7 +806,12 @@
     }
     // 10초마다 '평소 상태'를 한 줄 남긴다(그 10초 동안 가장 기준에 가까웠던 여유값, 화면 밝기, 노출시간). 조명별 비교용.
     if(DIAG&&nowT-(state.diagStatusAt||0)>10000){
-      if(state.diagStatusAt)diagPush({kind:'상태',verdict:'-',reason:'10초 요약',margin:state.diagPeak,meanD,stdD});
+      const pf=state.perf||{n:0,sum:0,max:0,skipped:0,frames:0};
+      const seen=pf.frames?Math.round((pf.frames-pf.skipped)/pf.frames*100):'';
+      if(state.diagStatusAt)diagPush({kind:'상태',verdict:'-',reason:'10초 요약',margin:state.diagPeak,meanD,stdD,
+        procMs:pf.n?r1(pf.sum/pf.n):'',procMax:r1(pf.max),skipped:pf.skipped,seenPct:seen});
+      state.seenPct=seen;showDetectorInfo();
+      state.perf={n:0,sum:0,max:0,skipped:0,frames:0};
       state.diagStatusAt=nowT;state.diagPeak=null;
     }
     // 레이저 점은 작고 국지적이다. 표적 주변이 한꺼번에 넓게 변했다면 화면 전체의 색 변화이므로 인정하지 않고 배경으로 흡수한다.
@@ -904,7 +919,7 @@
   function updateFullscreenButton(){const active=!!document.fullscreenElement;els.fullscreenBtn.textContent=active?'⛶ 전체화면 종료':'⛶ 전체화면';els.fullscreenBtn.setAttribute('aria-label',active?'전체화면 종료':'전체화면 켜기');setTimeout(resize,120)}
 
   els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.matchBtn.title='라이브 관전 페이지에서 사로를 맞춰 경기 시작 명령을 보내면 자동으로 시작돼요.';els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
-  function showDetectorInfo(){els.fpsPill.textContent='고감도 레이저 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')+(state.cameraLocked?' · 🔒':'')}
+  function showDetectorInfo(){els.fpsPill.textContent='고감도 레이저 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')+(state.cameraLocked?' · 🔒':'')+(state.running&&state.seenPct!==''&&state.seenPct!=null?' · 분석 '+state.seenPct+'%':'')}
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
   window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
 })();
