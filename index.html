@@ -123,6 +123,10 @@
   const USE_FALLBACK = false;
   // 진짜 레이저는 짧게 번쩍이고 사라진다. 이 시간(ms)보다 오래 켜져 있는 빛은 조명·그림자 같은 장면 변화로 보고 버린다.
   const LASER_MAX_MS = 400;
+  // 레이저 분석용으로 줄인 화면의 가로 픽셀 수. 클수록 정밀하지만 느려진다.
+  // 진단 결과 480에서는 한 장 분석에 약 49ms가 걸려(카메라는 33ms마다 한 장) 사진의 1/3을 건너뛰었다. 그래서 400으로 낮춘다.
+  // 사대 화면 오른쪽 위 '분석 ○○%'가 95% 이상이면 충분히 빠른 것이다.
+  const ANALYSIS_WIDTH = 400;
   // 진단 기록: 레이저 후보가 생길 때마다(기록/거부 모두) 구글 시트 '진단기록' 탭에 한 줄씩 저장한다. 조정이 끝나면 false로.
   const DIAG = true;
   const ctx = els.overlay.getContext('2d');
@@ -670,7 +674,7 @@
      평평한 흰 바탕·검은 바탕처럼 조용한 곳은 기준이 낮게 유지된다. (예전엔 화면 전체 평균 잡음 하나로 판정해서
      경계선 픽셀이 쉽게 기준을 넘었고, 밝을수록 그 흔들림이 커져 오인식이 폭증했다.) */
   function detectLaser(){
-    state._frame=null;
+    state._frame=null;state.maintTick=(state.maintTick||0)+1;
     detectLaserCore();
     const f=state._frame;if(!f||!state.background)return;
     const {data,total,sw,x0,x1,y0,y1}=f,ch=els.laserColor.value==='green'?1:0;
@@ -680,8 +684,9 @@
       return;
     }
     const pr=state.prevR,nz=state.noiseR;
-    if(!state._skipNoise){
-      const a=state.detectorReady?.03:.15;   // 기준 화면 잡는 동안엔 빠르게 학습, 경기 중엔 천천히 따라감
+    const every=state.detectorReady?2:1;   // 경기 중엔 2프레임에 한 번만 갱신
+    if(!state._skipNoise&&state.maintTick%every===0){
+      const a=state.detectorReady?.06:.15;   // 2프레임에 한 번이므로 예전(.03)의 2배   // 기준 화면 잡는 동안엔 빠르게 학습, 경기 중엔 천천히 따라감
       // 프레임 간 떨림뿐 아니라 '기준 화면과의 차이'도 함께 본다. 조명이 서서히 바뀌는 곳은 프레임 간 떨림은 작아도
       // 기준 화면과의 차이가 쌓이는데, 판정은 기준 화면 대비로 하므로 이 차이까지 알고 있어야 기준이 제대로 잡힌다.
       const bgc=ch?state.backgroundG:state.backgroundR;
@@ -695,10 +700,13 @@
     // 작업 해상도(sw,sh)는 기준화면을 잡을 때 한 번만 정하고 계속 그 값을 쓴다.
     // 카메라 초점이 잡히는 동안 비디오 해상도 비율이 프레임마다 아주 미세하게 흔들리면,
     // 매 프레임 다시 계산할 경우 그때마다 기준화면이 초기화되어 "기준 화면 설정 중"에서 영원히 못 넘어갈 수 있었다.
-    const sw=480;
-    if(!state.workSH||!state.background)state.workSH=Math.max(270,Math.round(sw*vh/vw));
+    const sw=ANALYSIS_WIDTH;
+    if(!state.workSH||!state.background)state.workSH=Math.round(sw*vh/vw);   // 화면 비율 그대로(픽셀이 정사각형이어야 원 계산이 맞음)
     const sh=state.workSH;
-    els.work.width=sw;els.work.height=sh;wctx.drawImage(els.video,0,0,sw,sh);const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh,lum=new Uint8Array(total);
+    if(els.work.width!==sw)els.work.width=sw;if(els.work.height!==sh)els.work.height=sh;
+    wctx.drawImage(els.video,0,0,sw,sh);const data=wctx.getImageData(0,0,sw,sh).data,total=sw*sh;
+    if(!state.lumBuf||state.lumBuf.length!==total)state.lumBuf=new Uint8Array(total);
+    const lum=state.lumBuf;
     // 실제로 읽히는 건 표적 주변 범위뿐이라, 밝기(lum)와 기준화면도 화면 전체가 아니라 그 범위만 계산한다.
     // (표적이 화면의 일부만 차지할 때 매 프레임 계산량을 크게 줄여, 짧게 스치는 레이저도 프레임을 안 놓치고 볼 확률을 높인다.)
     // 이 범위(t,x0,x1,y0,y1)는 아래쪽 실제 감지 로직에서도 그대로 재사용한다.
@@ -742,9 +750,16 @@
       const dx=x-t.x,dy=y-t.y,ex=(dx*tca+dy*tsa)*irx,ey=(-dx*tsa+dy*tca)*iry;
       return ex*ex+ey*ey<=margin*margin;   // 예전 Math.hypot(...)<=margin 과 같은 판정, 더 빠름
     };
+    const maskKey=[sw,sh,x0,x1,y0,y1,t.x.toFixed(2),t.y.toFixed(2),t.rx.toFixed(2),t.ry.toFixed(2),t.a.toFixed(4),state.paperMultiple||0].join(',');
+    if(state.scanMaskKey!==maskKey||!state.scanMask||state.scanMask.length!==total){
+      state.scanMask=new Uint8Array(total);
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(insideScan(x,y))state.scanMask[y*sw+x]=1;
+      state.scanMaskKey=maskKey;
+    }
+    const mask=state.scanMask;
 
     let motionPixels=0,motionSamples=0,meanNow=0,meanBase=0;
-    for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){if(!insideScan(x,y))continue;const p=y*sw+x;motionSamples++;meanNow+=lum[p];meanBase+=state.background[p];if(Math.abs(lum[p]-state.prevLum[p])>18)motionPixels++}
+    for(let y=y0;y<=y1;y+=3)for(let x=x0;x<=x1;x+=3){const p=y*sw+x;if(!mask[p])continue;motionSamples++;meanNow+=lum[p];meanBase+=state.background[p];if(Math.abs(lum[p]-state.prevLum[p])>18)motionPixels++}
     state.lastAmbient=meanNow/Math.max(1,motionSamples);
     const motionRatio=motionPixels/Math.max(1,motionSamples),exposureShift=Math.abs(meanNow-meanBase)/Math.max(1,motionSamples);state.prevLum.set(lum);
     if(motionRatio>.035||exposureShift>11){if(DIAG&&performance.now()-(state.diagBlockAt||0)>2000){state.diagBlockAt=performance.now();diagPush({kind:'감지멈춤',verdict:'-',reason:'화면 흔들림·밝기 변화',motion:r1(motionRatio*100),shift:r1(exposureShift)})}if(state.laserCand){diagCand(state.laserCand,'거부','화면 흔들림');state.laserCand=null}state._skipNoise=true;state.pendingLaser=null;state.laserBlocked=true;state.blockedFrames=0;state.stableFrames=0;blendBackground(data,lum,sw,x0,x1,y0,y1,.14);return}
@@ -756,7 +771,7 @@
     const color=els.laserColor.value, chIdx=color==='green'?1:0;
     let sN=0,sSum=0,sSum2=0;
     for(let y=y0;y<=y1;y+=2)for(let x=x0;x<=x1;x+=2){
-      if(!insideScan(x,y))continue;
+      if(!mask[y*sw+x])continue;
       const p=y*sw+x,i=p*4,bg=chIdx===0?state.backgroundR[p]:state.backgroundG[p];let d=data[i+chIdx]-bg;
       d=d>30?30:d<-30?-30:d;   // 진짜 레이저처럼 아주 큰 값이 '잡음 크기'를 부풀려 자기 자신을 걸러내지 않게 자른다
       sN++;sSum+=d;sSum2+=d*d;
@@ -773,7 +788,7 @@
     const K=6+(98-state.sensitivity)*.1;
     let coreBest=null,peak=null,peakMag=-1e9,strongCount=0,roiCount=0,missColor=null,missOnset=null;
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-      if(!insideScan(x,y))continue;
+      if(!mask[y*sw+x])continue;
       roiCount++;
       const p=y*sw+x,i=p*4,dr=data[i]-state.backgroundR[p],dg=data[i+1]-state.backgroundG[p],db=data[i+2]-state.backgroundB[p];
       const mag0=color==='green'?dg:dr;
@@ -796,7 +811,7 @@
       // 켜짐 조건 탈락: 강한 빛인데 '갑자기' 나타나지 않음(두 프레임에 걸쳐 서서히 찍힌 경우 등).
       else if(missOnset&&missOnset.mag>=20)diagMiss(missOnset,'켜짐 조건 탈락',dims);
       // 밝기 조건 탈락: 갑자기 나타났지만 합격선에 조금 못 미침.
-      else if(peak&&peakMag<=0&&peakMag>-10&&peak.onset>=6&&peak.mag>=8)diagMiss(peak,'기준 미달(아깝게)',dims);
+      else if(peak&&peakMag<=0&&peakMag>-10&&peak.onset>=6&&peak.mag>=8&&(color==='green'?(peak.dg>peak.dr+3&&peak.dg>peak.db+3):(peak.dr>peak.dg+3&&peak.dr>peak.db+3)))diagMiss(peak,'기준 미달(아깝게)',dims);
       else logged=false;
       if(logged)state.diagMissAt=nowT;
     }
@@ -865,7 +880,7 @@
       if(DIAG&&nowT-(state.diagSmallAt||0)>1000){state.diagSmallAt=nowT;diagCand(c,'거부','빛 점이 너무 작음')}
     }
     if(state.laserBlocked){state.releaseFrames++;if(state.releaseFrames<2)return;state.laserBlocked=false;state.releaseFrames=0;state.blockedFrames=0;state.pendingLaser=null}
-    if(!USE_FALLBACK){blendBackground(data,lum,sw,x0,x1,y0,y1,.025);return}
+    if(!USE_FALLBACK){if(state.maintTick%2===0)blendBackground(data,lum,sw,x0,x1,y0,y1,.05);return}   // 2프레임에 한 번, 2배 비율(예전 매 프레임 .025)
 
     const points=[];let strongest=null;const signalThreshold=Math.max(7,30-state.sensitivity*.22);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
