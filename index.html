@@ -127,6 +127,9 @@
   // 진단 결과 480에서는 한 장 분석에 약 49ms가 걸려(카메라는 33ms마다 한 장) 사진의 1/3을 건너뛰었다. 그래서 400으로 낮춘다.
   // 사대 화면 오른쪽 위 '분석 ○○%'가 95% 이상이면 충분히 빠른 것이다.
   const ANALYSIS_WIDTH = 400;
+  // 0점(MISS) 인정 경계: 가장 바깥 원 반지름을 1로 봤을 때 몇 배까지를 '표적을 벗어난 발(0점)'로 기록할지.
+  // 이 경계 밖에 맞은 빛은 무시한다(발수에 안 들어감). 사대 화면에 노란 점선으로 표시된다.
+  const MISS_LIMIT = 1.5;
   // 카메라에서 받는 영상 크기. 진단 결과 분석 해상도를 줄여도 처리 시간이 거의 그대로(49→47ms)였다.
   // 시간 대부분이 '큰 카메라 영상(1280x720)을 매번 작게 줄여 옮겨 담는 작업'에 쓰이는 것으로 보여, 받는 영상 자체를 줄인다.
   // 분석은 어차피 가로 400(보정은 640)으로 줄여서 하므로 인식 정밀도는 같다. 화면 미리보기만 약간 덜 선명해진다.
@@ -325,12 +328,20 @@
     return {x:mapped.x,y:mapped.y,radiusX:found.rx*vw/sw*mapped.scale,radiusY:found.ry*vw/sw*mapped.scale,angle:found.a,rings:found.rings};
   }
 
+  function missLimit(){return state.paperMultiple||MISS_LIMIT}
   function canvasPoint(ev){const r=els.overlay.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top}}
   function drawOverlay(){
     const width=els.overlay.clientWidth,height=els.overlay.clientHeight;ctx.clearRect(0,0,width,height);
     if(!state.center)return;
     ctx.save();ctx.lineWidth=1.2;
     if(state.radius){ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);for(let i=10;i>=1;i--){ctx.beginPath();ctx.ellipse(0,0,state.radiusX*i/10,state.radiusY*i/10,0,0,Math.PI*2);ctx.strokeStyle=i===10?'#29e7d6cc':'#ffffff55';ctx.stroke()}ctx.rotate(-state.targetAngle);ctx.translate(-state.center.x,-state.center.y)}
+    if(state.radius){
+      // 0점 인정 경계(노란 점선): 이 선 안쪽에 맞으면 원 밖이어도 0점으로 기록, 선 밖은 무시.
+      const L=missLimit();ctx.save();ctx.translate(state.center.x,state.center.y);ctx.rotate(state.targetAngle);
+      ctx.beginPath();ctx.ellipse(0,0,state.radiusX*L,state.radiusY*L,0,0,Math.PI*2);ctx.setLineDash([8,6]);ctx.strokeStyle='#ffc940dd';ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);
+      ctx.rotate(-state.targetAngle);ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.lineWidth=3;ctx.strokeStyle='#07111fcc';
+      const ly=-state.radiusY*L-4;ctx.strokeText('0점 인정 경계 (×'+L+')',0,ly);ctx.fillStyle='#ffc940';ctx.fillText('0점 인정 경계 (×'+L+')',0,ly);ctx.restore();
+    }
     ctx.beginPath();ctx.arc(state.center.x,state.center.y,6,0,Math.PI*2);ctx.strokeStyle='#ff4d66';ctx.lineWidth=2;ctx.stroke();
     state.shots.forEach((s,i)=>{if(s.manual||s.screenX==null)return;let px=s.screenX,py=s.screenY;if(Number.isFinite(s.videoX)&&Number.isFinite(s.videoY)){const g=videoGeometry(),mapped=videoToScreen(s.videoX*g.vw,s.videoY*g.vh);px=mapped.x;py=mapped.y}s.screenX=px;s.screenY=py;ctx.beginPath();if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}else ctx.arc(px,py,9,0,Math.PI*2);ctx.fillStyle=s.score?'#b7ff3c':'#ff4d66';ctx.fill();ctx.fillStyle='#07111f';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),px,py)});ctx.restore();
   }
@@ -660,7 +671,7 @@
   function finalizeCand(c){
     const {sw,sh,vw,vh}=c.dims,pos=workToTarget(c.x,c.y,sw,sh,vw,vh);let reason='';
     if(performance.now()-state.lastHit<=300)reason='직전 발과 너무 가까움';
-    else if(pos.nr>(state.paperMultiple||1.5))reason='표적 범위 밖';
+    else if(pos.nr>missLimit())reason='표적 범위 밖';
     else if(state.objKnown&&state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-c.x,k.y-c.y)<(k.r||10)+18))reason='물체 자국 근처';
     const ok=!reason&&tryRecordLaser(c.x,c.y,sw,sh,vw,vh,`[확인] dr=${Math.round(c.mag)} ${Math.round(c.lastSeen-c.t0)}ms`);
     if(ok){els.fpsPill.textContent='◎ 실제 레이저';setTimeout(showDetectorInfo,700)}
@@ -672,7 +683,7 @@
     if(state.objKnown&&state.objKnown.some(k=>k.kind==='object'&&Math.hypot(k.x-wx,k.y-wy)<(k.r||10)+18))return false;
     const mapped=videoToScreen(wx/sw*vw,wy/sh*vh),dx=mapped.x-state.center.x,dy=mapped.y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca;
     const nx=ex/state.radiusX,ny=ey/state.radiusY;
-    if(Math.hypot(nx,ny)>(state.paperMultiple||1.5))return false;
+    if(Math.hypot(nx,ny)>missLimit())return false;
     recordShot(mapped.x,mapped.y,null,'laser');
     if(info){els.clrPill.textContent='#'+state.shots.length+' '+info;state.infoUntil=performance.now()+4000}
     return true;
@@ -721,7 +732,7 @@
     // 실제로 읽히는 건 표적 주변 범위뿐이라, 밝기(lum)와 기준화면도 화면 전체가 아니라 그 범위만 계산한다.
     // (표적이 화면의 일부만 차지할 때 매 프레임 계산량을 크게 줄여, 짧게 스치는 레이저도 프레임을 안 놓치고 볼 확률을 높인다.)
     // 이 범위(t,x0,x1,y0,y1)는 아래쪽 실제 감지 로직에서도 그대로 재사용한다.
-    const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*(state.paperMultiple?state.paperMultiple+.1:1.6);
+    const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*(missLimit()+.1);
     const x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
     state._frame={data,total,sw,x0,x1,y0,y1};state._skipNoise=false;
     // 화면 배치가 바뀌어(전체화면 전환·주소창 접힘 등) 감지 범위가 기준 화면을 잡아둔 범위 밖으로 벗어나면,
@@ -757,7 +768,7 @@
     // 사격 시작 직후 잠깐(0.7초)은 인식하지 않고 기준 화면만 최신으로 맞춘다 - 시작 순간에 카메라 노출·색이 다시 맞춰지며 튀는 것을 레이저로 착각하지 않게.
     if(state.settleMs>0&&state.readyAt&&performance.now()-state.readyAt<state.settleMs){blendBackground(data,lum,sw,x0,x1,y0,y1,.1);state.prevLum.set(lum);return}
     const tca=Math.cos(t.a),tsa=Math.sin(t.a),irx=1/t.rx,iry=1/t.ry;
-    const insideScan=(x,y,margin=state.paperMultiple?state.paperMultiple+.1:1.6)=>{
+    const insideScan=(x,y,margin=missLimit()+.1)=>{
       const dx=x-t.x,dy=y-t.y,ex=(dx*tca+dy*tsa)*irx,ey=(-dx*tsa+dy*tca)*iry;
       return ex*ex+ey*ey<=margin*margin;   // 예전 Math.hypot(...)<=margin 과 같은 판정, 더 빠름
     };
