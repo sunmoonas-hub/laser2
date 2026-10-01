@@ -5,344 +5,783 @@
 <meta name="google" content="notranslate">
 <meta name="theme-color" content="#07111f">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
-<title>LASER MATCH R40 · 실시간 관전</title>
+<title>LASER MATCH · 관전</title>
 <style>
-  :root{--bg:#07111f;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
+  :root{--bg:#07111f;--panel:#101d30;--panel2:#0b1626;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--dim:#5b6f86;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--red2:#ff7a8c;--gold:#ffc940}
   *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% -15%,#17375a 0,var(--bg) 45%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
-  .wrap{max-width:1080px;margin:0 auto;padding:max(env(safe-area-inset-top),14px) 16px calc(24px + env(safe-area-inset-bottom))}
-  header{text-align:center;margin-bottom:14px}
-  header h1{font-size:1.3rem;letter-spacing:.06em;margin:0 0 4px}
-  header p{color:var(--muted);font-size:.8rem;margin:0}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
+  button,select,input{font:inherit}
+  button{cursor:pointer}
+  .wrap{max-width:1200px;margin:0 auto;padding:max(env(safe-area-inset-top),14px) 16px calc(24px + env(safe-area-inset-bottom))}
+  header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  header h1{font-size:1.25rem;letter-spacing:.04em;margin:0;font-weight:900}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;border:1px solid #ffffff28;background:#06101dcc;border-radius:999px;padding:6px 12px;white-space:nowrap;color:var(--muted)}
+  .pill.ok{color:var(--lime);border-color:#b7ff3c66}
+  .pill.bad{color:var(--red2);border-color:#ff4d6666}
   .layout{display:grid;grid-template-columns:1fr;gap:16px}
-  @media(min-width:860px){.layout{grid-template-columns:1.15fr .85fr;align-items:start}}
-  .left,.right{min-width:0}
-  .idle{text-align:center;color:var(--muted);padding:20px 20px 4px;font-size:1rem;line-height:1.7}
-  .idle b{display:block;color:#fff;font-size:1.25rem;margin-bottom:8px}
-  .who{display:flex;justify-content:space-between;align-items:center;margin:14px 0 10px}
-  .who .name{font-size:1.4rem;font-weight:800}
-  .who .lane{color:var(--muted);font-size:.85rem}
-  .status{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;border:1px solid #ffffff28;background:#06101dcc;border-radius:999px;padding:6px 12px;white-space:nowrap}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
-  .status.live .dot{background:#ff4d66;box-shadow:0 0 8px #ff4d66}
-  .status.done .dot{background:var(--lime);box-shadow:0 0 8px var(--lime)}
-  .target-box{position:relative;width:100%;aspect-ratio:1;max-width:560px;margin:14px auto;border-radius:16px;overflow:hidden;background:#0c1728;border:1px solid #29415e}
-  canvas{width:100%;height:100%;display:block}
-  .scoreboard{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:#29415e;border-radius:14px;overflow:hidden;margin:14px 0}
-  .metric{background:#0e1b2d;padding:14px 6px;text-align:center}
-  .metric small{display:block;color:var(--muted);font-size:.7rem;margin-bottom:5px}
-  .metric strong{font-size:1.6rem}
-  .metric:first-child strong{color:var(--lime);font-size:2rem}
-  .updated{text-align:center;color:var(--muted);font-size:.72rem;margin-top:6px}
-  .startPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px}
-  .startPanel h2{font-size:1rem;margin:0 0 12px}
-  .startPanel .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-  .startPanel .field label{display:block;color:var(--muted);font-size:.75rem;margin:0 0 6px 2px;font-weight:700}
-  .startPanel .field input,.startPanel .field select{width:100%;min-height:50px;border:1px solid #29415e;border-radius:10px;background:#091426;color:#fff;padding:10px 12px;font-size:.92rem}
-  .startRow{display:flex;gap:10px}
-  .startBtn{flex:1;min-height:54px;border:0;border-radius:12px;background:var(--cyan);color:#08111d;font-weight:850;font-size:1rem}
-  .startBtn:disabled{opacity:.5}
-  .endBtn{flex:none;min-width:110px;min-height:54px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:850;font-size:.92rem}
-  .startMsg{text-align:center;color:var(--muted);font-size:.78rem;margin-top:10px;min-height:1.1em}
-  .hint{font-size:.74rem;line-height:1.6;color:var(--muted);margin:10px 0 0}
-  .shotPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px;margin-top:16px}
-  .shotPanel h2{font-size:1rem;margin:0 0 12px}
-  .scoreGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;padding:6px 0 4px}
-  .scoreGrid .slot{aspect-ratio:1;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0e1b2d;border:1px solid #29415e;color:var(--muted)}
-  .scoreGrid .slot .num{font-size:.62rem;opacity:.75;font-weight:700}
-  .scoreGrid .slot .val{font-size:1.3rem;font-weight:900;line-height:1.1}
-  .scoreGrid .slot.hit{background:var(--lime);border-color:var(--lime);color:#07111f}
-  .scoreGrid .slot.miss{background:var(--red);border-color:var(--red);color:#fff}
-  .scoreGrid .slot.flash{animation:scorePop .5s ease}
-  @keyframes scorePop{0%{transform:scale(1.35)}100%{transform:scale(1)}}
-  .manualTitle{font-size:.9rem;margin:18px 0 8px;color:var(--muted);font-weight:800}
-  .manualGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
-  .manualGrid button{min-height:46px;border:1px solid #34506f;border-radius:10px;background:#142941;color:#fff;font-weight:900;font-size:1.05rem}
-  .manualGrid button:active{background:var(--cyan);color:#07111f}
-  .manualGrid button:disabled{opacity:.35}
-  .manualGrid button.zero{border-color:var(--red);color:var(--red)}
-  .undoBtnLive{width:100%;min-height:48px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:800;font-size:.88rem;margin-top:16px}
-  .undoBtnLive:disabled{opacity:.4}
-  .undoMsg{text-align:center;color:var(--muted);font-size:.76rem;margin-top:8px;min-height:1.1em}
-  @media(max-width:420px){.startPanel .grid{grid-template-columns:1fr}}
+  @media(min-width:860px){.layout{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);align-items:start}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+  .panel h2{margin:0;font-size:1.05rem;font-weight:900}
+  .muted{color:var(--muted)}
+  .small{font-size:.8rem}
+  .seg{display:grid;gap:6px}
+  .seg button{min-height:48px;border-radius:10px;border:2px solid #34506f;background:transparent;color:var(--muted);font-weight:900}
+  .seg button.on-practice{background:var(--cyan);border-color:var(--cyan);color:#07111f}
+  .seg button.on-eval{background:var(--red);border-color:var(--red);color:#fff}
+  .seg button.on-check{background:#5b6f86;border-color:#5b6f86;color:#fff}
+  .seg button.on-mode{background:#142941;border-color:var(--cyan);color:var(--text)}
+  .lbl{display:flex;flex-direction:column;gap:6px;font-size:.8rem;font-weight:700;color:var(--muted)}
+  select{min-height:48px;border-radius:10px;border:1px solid var(--line);background:#091426;color:var(--text);font-size:.95rem;padding:0 10px;width:100%}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .summary{border-radius:12px;border:2px solid var(--cyan);background:#0d2a33;padding:14px;text-align:center}
+  .summary.eval{border-color:var(--red);background:#331019}
+  .summary.check{border-color:#5b6f86;background:#151f2c}
+  .summary.warn{border-color:var(--gold);background:#2e2610}
+  .summary .big{font-size:1.2rem;font-weight:900;margin-top:4px;color:var(--cyan)}
+  .summary.eval .big{color:var(--red2)}
+  .summary.check .big{color:var(--muted)}
+  .summary.warn .big{color:var(--gold)}
+  .btnrow{display:flex;gap:10px}
+  .btn-start{flex:1;min-height:56px;border:0;border-radius:12px;background:var(--cyan);color:#07111f;font-size:1.05rem;font-weight:900}
+  .btn-start:disabled{opacity:.4;cursor:not-allowed}
+  .btn-line{min-height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--red);background:transparent;color:var(--red2);font-weight:800}
+  .btn-line.gray{border-color:#5b6f86;color:var(--muted)}
+  .btn-line:disabled{opacity:.4;cursor:not-allowed}
+  .msg{text-align:center;color:var(--muted);font-size:.8rem;min-height:1.1em}
+  .order-row{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+  .order-row.absent{opacity:.45}
+  .order-row .rank{font-weight:900;color:var(--cyan);min-width:24px;text-align:center}
+  .order-row .nm{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .order-row .sh{font-weight:900;color:var(--gold);min-width:40px;text-align:right}
+  .icon-btn{width:44px;height:44px;border-radius:9px;border:1px solid #34506f;background:#142941;color:var(--text);display:flex;align-items:center;justify-content:center;flex:none}
+  .icon-btn:disabled{opacity:.35}
+  .tog-btn{min-height:44px;padding:0 10px;border-radius:9px;border:1px solid #5b6f86;background:transparent;color:var(--muted);font-size:.8rem;font-weight:700;flex:none}
+  .stats3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .stat .k{font-size:.78rem;color:var(--muted)}
+  .stat .v{font-size:1.5rem;font-weight:900}
+  .slots10{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px}
+  @media(max-width:520px){.slots10{grid-template-columns:repeat(5,minmax(0,1fr))}}
+  .slot{border-radius:10px;padding:7px 0;text-align:center;background:var(--panel2);border:1px solid var(--line)}
+  .slot .n{font-size:.68rem;color:var(--muted)}
+  .slot .s{font-size:1rem;font-weight:900;color:var(--dim)}
+  .slot.filled{background:#0d2a33;border-color:var(--cyan)}
+  .slot.filled .s{color:var(--text)}
+  .slot.next{border-color:var(--gold)}
+  .slot.next .s{color:var(--gold)}
+  .sec-title{font-size:.88rem;font-weight:800}
+  .rec-row{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 8px;flex-wrap:wrap}
+  .rec-row .lab{font-weight:800;min-width:76px}
+  .rec-row .sc{flex:1;min-width:90px;font-size:.88rem}
+  .rec-row button{min-height:44px;padding:0 10px;border-radius:9px;font-size:.8rem;font-weight:700}
+  .rec-move{border:1px solid #34506f;background:#142941;color:var(--text)}
+  .rec-del{border:1px solid var(--red);background:transparent;color:var(--red2)}
+  .hist-grid{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:start}
+  @media(max-width:620px){.hist-grid{grid-template-columns:1fr}}
+  .canvas-box{background:var(--panel2);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .canvas-box canvas{width:100%;height:auto;display:block;aspect-ratio:1}
+  .banner{border-radius:16px;border:2px solid var(--cyan);background:#0d2a33;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .banner .who{font-size:1.9rem;font-weight:900;color:var(--cyan);line-height:1.15;word-break:keep-all}
+  .banner .cnt{font-size:1.7rem;font-weight:900;color:var(--gold);text-align:right;white-space:nowrap}
+  .banner .sub{font-size:.82rem;color:var(--muted)}
+  .scoreboard{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;background:var(--line);border-radius:14px;overflow:hidden}
+  .metric{background:#0e1b2d;padding:12px 6px;text-align:center}
+  .metric small{display:block;color:var(--muted);font-size:.72rem;margin-bottom:4px}
+  .metric strong{font-size:1.5rem}
+  .metric:first-child strong{color:var(--lime);font-size:1.9rem}
+  .live-slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+  .lslot{aspect-ratio:1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0e1b2d;border:1px solid var(--line);color:var(--dim)}
+  .lslot .n{font-size:.62rem;font-weight:700;opacity:.8}
+  .lslot .v{font-size:1.25rem;font-weight:900;line-height:1.1}
+  .lslot.hit{background:var(--lime);border-color:var(--lime);color:#07111f}
+  .lslot.miss{background:var(--red);border-color:var(--red);color:#fff}
+  .lslot.now{border-color:var(--gold);color:var(--gold)}
+  .member-box{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+  .member-box.cur{border-color:var(--cyan)}
+  .member-box .mh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .member-box .mn{font-weight:900}
+  .member-box.cur .mn{color:var(--cyan)}
+  .member-box .ms{font-weight:900;color:var(--gold);white-space:nowrap}
+  .mslots{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+  .ms-slot{border-radius:8px;padding:6px 0;text-align:center;font-size:.92rem;font-weight:900;background:#0e1b2d;color:var(--dim);border:1px solid var(--line)}
+  .ms-slot.hit{background:var(--lime);border-color:var(--lime);color:#07111f}
+  .ms-slot.miss{background:var(--red);border-color:var(--red);color:#fff}
+  .ms-slot.now{border-color:var(--gold);color:var(--gold)}
+  .keys{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+  .keys button{min-height:46px;border:1px solid #34506f;border-radius:10px;background:#142941;color:var(--text);font-weight:900;font-size:1.05rem}
+  .keys button.zero{border-color:var(--red);color:var(--red2)}
+  .keys button:disabled{opacity:.35;cursor:not-allowed}
+  .savebox{border-radius:12px;padding:12px;text-align:center;font-weight:800;border:1px solid var(--line);background:var(--panel2)}
+  .savebox.ok{border-color:var(--lime);color:var(--lime)}
+  .savebox.fail{border-color:var(--red);color:var(--red2)}
+  .savebox.saving{border-color:var(--gold);color:var(--gold)}
+  .hint{color:var(--muted);text-align:center;padding:28px 10px;line-height:1.7}
+  [hidden]{display:none!important}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>🎯 LASER MATCH · 실시간 관전</h1>
+    <h1>LASER MATCH · <span id="hdrLane">1</span>사로</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="pill" id="phonePill">사대 폰 확인 중…</span>
+      <span class="pill" id="connPill">연결 중…</span>
+    </div>
   </header>
-  <div class="layout">
-    <div class="left">
-      <div id="idleHint" class="idle"><b>대기 중…</b>오른쪽에서 선택한 사로에서 아직 경기가 시작되지 않았어요.</div>
-      <div id="liveBox" hidden>
-        <div class="who">
-          <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
-          <span class="status" id="statusPill"><i class="dot"></i><span id="statusText">대기</span></span>
+
+  <!-- ===== 시작 전 화면 ===== -->
+  <div class="layout" id="setupView">
+    <section class="panel" id="histPanel">
+      <div class="hint" id="histHint">오른쪽에서 학생 또는 조를 고르면 지난 기록이 여기에 보여요.</div>
+      <div id="histBody" hidden></div>
+    </section>
+
+    <section class="panel">
+      <h2>새 경기 시작</h2>
+      <div class="lbl">구분
+        <div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))" id="segType">
+          <button type="button" data-v="practice">연습</button>
+          <button type="button" data-v="eval">수행</button>
+          <button type="button" data-v="check">점수 확인</button>
         </div>
-        <div class="target-box"><canvas id="cv" width="600" height="600"></canvas></div>
-        <div class="scoreboard">
-          <div class="metric"><small>총점</small><strong id="total">0</strong></div>
-          <div class="metric"><small>발수</small><strong><span id="cnt">0</span>/<span id="maxS">10</span></strong></div>
-          <div class="metric"><small>평균</small><strong id="avg">0.0</strong></div>
-        </div>
-        <p class="updated" id="updatedAt"></p>
       </div>
-    </div>
-    <div class="right">
-      <section class="startPanel" id="startPanel">
-        <h2>🕹️ 새 경기 시작</h2>
-        <div class="grid">
-          <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
-          <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
-          <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
-          <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
+      <div class="lbl">방식
+        <div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))" id="segMode">
+          <button type="button" data-v="individual">개인전 10발</button>
+          <button type="button" data-v="team">단체전 20발</button>
         </div>
-        <div class="startRow">
-          <button class="startBtn" id="rStart">🕹️ 1사로 경기 시작</button>
-          <button class="endBtn" id="rEnd">🛑 1사로 종료</button>
+      </div>
+      <div class="grid2">
+        <label class="lbl">사로<select id="selLane"></select></label>
+        <label class="lbl">반<select id="selClass"><option value="">불러오는 중…</option></select></label>
+      </div>
+      <label class="lbl" id="rowStudent">학생<select id="selStudent"><option value="">-- 반을 먼저 고르세요 --</option></select></label>
+      <div id="rowTeam" hidden style="display:flex;flex-direction:column;gap:10px">
+        <label class="lbl">조 (드래프트 결과)<select id="selTeam"><option value="">-- 반을 먼저 고르세요 --</option></select></label>
+        <div class="lbl">사격 순서 (화살표로 바꾸기, 결석은 빼기)
+          <div id="orderList" style="display:flex;flex-direction:column;gap:6px"></div>
         </div>
-        <p class="startMsg" id="rMsg"></p>
-      </section>
-      <section class="shotPanel" id="shotPanel" hidden>
-        <h2>🎯 획득 점수</h2>
-        <div class="scoreGrid" id="scoreGrid"></div>
-        <div class="manualTitle">✍️ 수동 점수 입력 (누르면 바로 1발 기록)</div>
-        <div class="manualGrid" id="manualGrid"></div>
-        <button class="undoBtnLive" id="undoBtnLive">↩️ 마지막 발 취소</button>
-        <p class="undoMsg" id="undoMsg"></p>
-      </section>
-    </div>
+      </div>
+      <div class="summary" id="summaryBox">
+        <div class="small muted">이렇게 저장돼요</div>
+        <div class="big" id="sumBig">-</div>
+        <div class="small muted" id="sumSub" style="margin-top:4px"></div>
+      </div>
+      <div class="btnrow">
+        <button type="button" class="btn-start" id="btnStart" disabled>경기 시작</button>
+        <button type="button" class="btn-line" id="btnEnd">종료</button>
+      </div>
+      <p class="msg" id="setupMsg"></p>
+    </section>
+  </div>
+
+  <!-- ===== 경기 화면 ===== -->
+  <div class="layout" id="liveView" hidden>
+    <section style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div class="banner" id="banner">
+        <div><div class="sub" id="banSub">-</div><div class="who" id="banWho">-</div></div>
+        <div><div class="cnt" id="banCnt">-</div><div class="sub" id="banNext" style="text-align:right"></div></div>
+      </div>
+      <div class="canvas-box"><canvas id="cvLive" width="600" height="600"></canvas></div>
+      <div class="scoreboard">
+        <div class="metric"><small id="totLabel">총점</small><strong id="mTotal">0</strong></div>
+        <div class="metric"><small>발수</small><strong><span id="mCnt">0</span>/<span id="mMax">10</span></strong></div>
+        <div class="metric"><small>평균</small><strong id="mAvg">0.0</strong></div>
+      </div>
+      <div class="savebox" id="saveBox" hidden></div>
+      <button type="button" class="btn-line gray" id="btnRetrySave" hidden>저장 다시 시도</button>
+      <button type="button" class="btn-start" id="btnNext" hidden>다음 경기 준비</button>
+    </section>
+    <section class="panel">
+      <h2 id="scoreTitle">획득 점수</h2>
+      <div id="scoreArea"></div>
+      <div class="sec-title muted">수동 점수 입력 (누르면 바로 1발 기록)</div>
+      <div class="keys" id="keys"></div>
+      <button type="button" class="btn-line" id="btnUndo">마지막 발 취소</button>
+      <button type="button" class="btn-line gray" id="btnEndLive">종료</button>
+      <p class="msg" id="liveMsg"></p>
+    </section>
   </div>
 </div>
+
 <script>
 (() => {
   'use strict';
-  // index.html의 APPS_SCRIPT_URL과 반드시 같은 주소를 넣으세요.
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
+  // ★ 기존 감일고 레이저 사격 시스템(Apps Script) 웹앱의 /exec 주소를 넣으세요. (index.html과 같은 주소)
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFR3r_0IBj335qmebcyng187aj7yuYYtDn79pZyIDkld8X5c3xWFo6rQrIp7_dHu57/exec';
+  // 실시간 통신(Firebase) 설정 - index.html과 같은 값
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBe8XGq4Vz-e0HrvRrxV8uyyiE10ozBEvc",
+    authDomain: "laser-9893f.firebaseapp.com",
+    databaseURL: "https://laser-9893f-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "laser-9893f",
+    storageBucket: "laser-9893f.firebasestorage.app",
+    messagingSenderId: "790272136984",
+    appId: "1:790272136984:web:304af6db9ff926f71bb06d"
+  };
+  const LANE_COUNT = 7;
+  const LANE_SHOTS = { individual: 10, team: 20 };   // index.html과 같은 값
+  const TYPE_LABEL = { practice: '연습', eval: '수행', check: '점수 확인' };
+
   const $ = id => document.getElementById(id);
-  const cv = $('cv'), ctx = cv.getContext('2d');
-  let lastSig = '', lastState = null;
+  const esc = v => String(v === undefined || v === null ? '' : v).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
 
-  // "지금 보는 사로"와 "시작할 사로"는 항상 같은 사로로 맞춘다.
-  // 그래야 시작·취소·종료 버튼이 지금 화면에 보이는 사로에만 적용된다.
-  function currentLane(){ return Number($('rLane').value) || 1; }
-  function setLane(lane){
-    lane = String(lane);
-    $('rLane').value = lane;
-    $('rStart').textContent = `🕹️ ${lane}사로 경기 시작`;
-    $('rEnd').textContent = `🛑 ${lane}사로 종료`;
-    // 다른 사로의 화면이 잠깐이라도 섞여 보이지 않게 즉시 비우고 새로 불러온다.
-    lastSig = ''; lastState = null; lastShotCount = -1;
-    $('rMsg').textContent = ''; $('undoMsg').textContent = '';
-    applyView(); syncStartLock();
-    restartPoll();
-  }
-  $('rLane').addEventListener('change', e => setLane(e.target.value));
+  const S = {
+    lane: 1, type: 'practice', mode: 'individual',
+    classes: [], students: [], byId: {},
+    cls: '', studentId: '',
+    drafts: [], teamIdx: '', order: [],          // order: [{id, name, absent}]
+    hist: null, histReq: 0, histLoading: false, histError: '',
+    laneState: null, dismissedMatch: '', db: null, fbReady: false
+  };
 
-  let lastShotCount = -1;
-  function renderScores(shots, maxShots){
-    shots = shots || []; maxShots = maxShots || 10;
-    const html = [];
-    for(let i=0;i<maxShots;i++){
-      const s = shots[i];
-      if(s){
-        const miss = !s.score;
-        html.push(`<div class="slot ${miss?'miss':'hit'}"><span class="num">${i+1}발</span><span class="val">${miss?'0':s.score}</span></div>`);
-      } else {
-        html.push(`<div class="slot"><span class="num">${i+1}발</span><span class="val">–</span></div>`);
-      }
-    }
-    $('scoreGrid').innerHTML = html.join('');
-    if(shots.length !== lastShotCount){
-      lastShotCount = shots.length;
-      const slots = $('scoreGrid').children;
-      const idx = shots.length - 1;
-      if(idx >= 0 && slots[idx]) slots[idx].classList.add('flash');
-    }
-  }
-
-  function drawTarget(shots){
-    const W = cv.width, H = cv.height, cx = W/2, cy = H/2, R = W*0.28;
-    ctx.clearRect(0,0,W,H);
-    for(let i=10;i>=1;i--){
-      ctx.beginPath();ctx.arc(cx,cy,R*i/10,0,Math.PI*2);
-      ctx.strokeStyle = i===10 ? '#b7ff3ccc' : '#b7ff3c55';
-      ctx.lineWidth = i===10 ? 2.5 : 1.4; ctx.stroke();
-    }
-    ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.strokeStyle='#b7ff3c';ctx.lineWidth=2;ctx.stroke();
-    (shots||[]).forEach((s,i) => {
-      if(s.kind==='manual') return;   // 수동 입력 발은 위치가 없어 점수 칸에만 표시
-      const px = cx + (s.u||0)*R, py = cy + (s.v||0)*R;
-      ctx.beginPath();
-      if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}
-      else ctx.arc(px,py,10,0,Math.PI*2);
-      ctx.fillStyle = s.score ? '#b7ff3c' : '#ff4d66'; ctx.fill();
-      ctx.fillStyle = '#07111f'; ctx.font = 'bold 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(String(i+1), px, py);
+  /* ---------- Apps Script 호출 (JSONP) ---------- */
+  function serverReady() { return /^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/.+\/exec$/.test(APPS_SCRIPT_URL); }
+  function jsonp(action, params, timeoutMs) {
+    return new Promise((resolve, reject) => {
+      if (!serverReady()) { reject(new Error('live.html에 Apps Script 주소를 넣어 주세요.')); return; }
+      const cb = 'lvCb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const script = document.createElement('script'); let done = false;
+      const timer = setTimeout(() => finish(new Error('응답 시간 초과')), timeoutMs || 25000);
+      function finish(err, res) { if (done) return; done = true; clearTimeout(timer); window[cb] = function () {}; script.remove(); err ? reject(err) : resolve(res); }
+      window[cb] = res => finish(null, res);
+      script.onerror = () => finish(new Error('네트워크 오류'));
+      script.src = `${APPS_SCRIPT_URL}?${new URLSearchParams(Object.assign({ action, callback: cb }, params || {})).toString()}`;
+      document.head.appendChild(script);
     });
   }
 
-  function handleState(state){
-    lastState = state;
-    applyView();
-    syncStartLock();
+  /* ---------- 공통 계산 ---------- */
+  function nameOf(id) { const s = S.byId[id]; return s ? s.name : (id || ''); }
+  function labelOfStudent(id) { const s = S.byId[id]; return s ? `${s.cls}반 ${s.number}번 ${s.name}` : (id || ''); }
+  function presentMembers() { return S.order.filter(m => !m.absent); }
+  // 발수 자동 배분: 20발을 출석 인원으로 나누고, 남는 발은 앞 순서부터 1발씩 더 (4명 5-5-5-5, 3명 7-7-6)
+  function splitShots(n) {
+    if (!n) return [];
+    const base = Math.floor(LANE_SHOTS.team / n), rem = LANE_SHOTS.team % n;
+    return Array.from({ length: n }, (_, i) => base + (i < rem ? 1 : 0));
   }
-  // 이 사로에서 사격이 진행 중이면 시작 버튼을 잠근다(다른 사로는 영향 없음).
-  // 사대 폰이 경기 중 15초마다 신호를 보내므로, 60초 넘게 소식이 없으면 연결이 끊긴 것으로 보고 풀어 준다.
-  function syncStartLock(){
-    const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
-    const busy = !!(lastState && lastState.running && !stale);
-    $('rStart').disabled = busy;
-    const canManual = busy && Array.isArray(lastState.shots) && lastState.shots.length < (lastState.maxShots || 10);
-    for(const b of $('manualGrid').children) b.disabled = !canManual;
+  function teamKey() {
+    const team = S.drafts[S.teamIdx];
+    if (!team) return '';
+    const ids = (team.members || []).map(m => String(m.studentId)).filter(Boolean).sort();
+    return S.cls + ':' + ids.join(',');
   }
-  function applyView(){
-    const state = lastState;
-    const watch = currentLane();
-    if(!state || (state.firingLane && state.firingLane !== watch)){ show('idle'); return; }
-    const shots = Array.isArray(state.shots) ? state.shots : [];
-    if(!(state.player || shots.length)){ show('idle'); return; }
-    show('live');
-    $('pName').textContent = state.player || '이름 없음';
-    $('pLane').textContent = state.eventName ? `${state.eventName} · ${watch}사로` : `${watch}사로`;
-    $('statusPill').className = 'status ' + (state.running ? 'live' : 'done');
-    $('statusText').textContent = state.running ? '사격 중' : (shots.length ? '완료' : '대기');
-    const total = shots.reduce((a,s)=>a+(s.score||0),0);
-    $('total').textContent = total;
-    $('cnt').textContent = shots.length;
-    $('maxS').textContent = state.maxShots || 10;
-    $('avg').textContent = shots.length ? (total/shots.length).toFixed(1) : '0.0';
-    drawTarget(shots);
-    renderScores(shots, state.maxShots);
-    $('undoBtnLive').disabled = !shots.length;
-    updateAgeText();
-  }
-  function updateAgeText(){
-    if(!lastState || !lastState.updatedAt){ $('updatedAt').textContent = ''; return; }
-    const sec = Math.max(0, Math.round((Date.now()-lastState.updatedAt)/1000));
-    $('updatedAt').textContent = sec < 3 ? '방금 갱신됨' : `${sec}초 전 갱신`;
-  }
-  // 상태가 안 바뀌어도 "N초 전"과 시작 버튼 잠금은 시간이 지나면 달라지므로 1초마다 다시 계산한다.
-  setInterval(() => { updateAgeText(); syncStartLock(); }, 1000);
-  function show(which){
-    $('idleHint').hidden = which!=='idle';
-    $('liveBox').hidden = which!=='live';
-    $('shotPanel').hidden = which!=='live';
+  function shotsArr(v) { return Array.isArray(v) ? v.filter(Boolean) : (v && typeof v === 'object' ? Object.keys(v).sort((a, b) => a - b).map(k => v[k]) : []); }
+  function membersArr(v) { return Array.isArray(v) ? v.filter(Boolean) : (v && typeof v === 'object' ? Object.keys(v).sort((a, b) => a - b).map(k => v[k]) : []); }
+  // 몇 번째 발이 몇 번째 팀원의 것인지 (사격 순서·발수 기준)
+  function memberIndexOf(shotIndex, members) {
+    let acc = 0;
+    for (let i = 0; i < members.length; i++) { acc += Number(members[i].shots) || 0; if (shotIndex < acc) return i; }
+    return members.length - 1;
   }
 
-  // 사로를 바꾸면 이전 사로의 폴링을 끊고 새 사로로 다시 시작한다.
-  let pollToken = 0;
-  function restartPoll(){ pollToken++; poll(pollToken); }
-  function poll(token){
-    if(token !== pollToken) return;
-    const lane = currentLane();
-    const cb = 'liveCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-    const script = document.createElement('script');
-    let done = false;
-    const timer = setTimeout(() => finish(null), 9000);
-    function finish(state){
-      if(done) return; done = true;
-      clearTimeout(timer);
-      window[cb] = function(){};
-      script.remove();
-      if(token !== pollToken) return;   // 그사이 사로가 바뀌었으면 이 응답은 버린다
-      if(state && state.ok !== false && lane === currentLane()){
-        const sig = JSON.stringify(state);
-        if(sig !== lastSig){ lastSig = sig; handleState(state); }
-      }
-      setTimeout(() => poll(token), 1200);
+  /* ---------- 과녁 그리기 ---------- */
+  function drawTarget(canvas, shots, colorOf) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, cx = W / 2, cy = W / 2, R = W * 0.28;
+    ctx.clearRect(0, 0, W, W);
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.4, 0, Math.PI * 2); ctx.fillStyle = '#1d3550'; ctx.fill();
+    for (let i = 10; i >= 1; i--) {
+      ctx.beginPath(); ctx.arc(cx, cy, R * i / 10, 0, Math.PI * 2);
+      ctx.strokeStyle = i === 10 ? '#b7ff3ccc' : '#b7ff3c55'; ctx.lineWidth = i === 10 ? W / 240 : W / 430; ctx.stroke();
     }
-    window[cb] = data => finish(data);
-    script.onerror = () => finish(null);
-    script.src = `${APPS_SCRIPT_URL}?action=live&lane=${lane}&callback=${cb}&t=${Date.now()}`;
-    document.head.appendChild(script);
+    const dot = W / 60;
+    shots.forEach((s, i) => {
+      if (!s || s.k === 'manual') return;   // 수동 입력 발은 위치가 없음
+      const px = cx + (Number(s.u) || 0) * R, py = cy + (Number(s.v) || 0) * R;
+      const c = colorOf(s, i);
+      ctx.beginPath();
+      if (s.k === 'object') { ctx.moveTo(px, py - dot * 1.1); ctx.lineTo(px + dot * 1.1, py); ctx.lineTo(px, py + dot * 1.1); ctx.lineTo(px - dot * 1.1, py); ctx.closePath(); }
+      else ctx.arc(px, py, dot, 0, Math.PI * 2);
+      ctx.fillStyle = c.fill; ctx.fill();
+      if (c.ring) { ctx.lineWidth = W / 200; ctx.strokeStyle = c.ring; ctx.stroke(); }
+      if (c.label) { ctx.fillStyle = '#07111f'; ctx.font = `bold ${Math.round(dot * 1.1)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(i + 1), px, py); }
+    });
   }
 
-  function sendCmd(cmd, btn, msg){
-    cmd = Object.assign({}, cmd, { cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) });
-    btn.disabled = true; msg.textContent = '📡 명령을 보내는 중…';
-    const cb = 'startCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-    const script = document.createElement('script');
-    const timer = setTimeout(() => finish(null), 8000);
-    function finish(res){
-      clearTimeout(timer); window[cb] = function(){}; script.remove(); syncStartLock();
-      if(res && res.ok) msg.textContent = `✅ ${cmd.firingLane}사로에 보냈어요 - 사대 화면에서 자동으로 시작돼요.`;
-      else msg.textContent = '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
-    }
-    window[cb] = res => finish(res);
-    script.onerror = () => finish(null);
-    const qs = new URLSearchParams({ action: 'remoteStart', callback: cb, payload: JSON.stringify(cmd) });
-    script.src = `${APPS_SCRIPT_URL}?${qs.toString()}`;
-    document.head.appendChild(script);
+  /* ---------- 시작 전: 선택 화면 ---------- */
+  function renderSeg() {
+    document.querySelectorAll('#segType button').forEach(b => { b.className = b.dataset.v === S.type ? 'on-' + S.type : ''; });
+    document.querySelectorAll('#segMode button').forEach(b => { b.className = b.dataset.v === S.mode ? 'on-mode' : ''; });
+    $('rowStudent').hidden = S.mode !== 'individual';
+    $('rowTeam').hidden = S.mode !== 'team';
   }
-  $('rStart').addEventListener('click', () => {
+  function renderLaneOptions() {
+    let h = '';
+    for (let i = 1; i <= LANE_COUNT; i++) h += `<option value="${i}">${i}사로</option>`;
+    $('selLane').innerHTML = h; $('selLane').value = String(S.lane);
+    $('hdrLane').textContent = S.lane;
+    $('btnEnd').textContent = `${S.lane}사로 종료`;
+    $('btnEndLive').textContent = `${S.lane}사로 종료`;
+  }
+  function renderClassOptions() {
+    const sel = $('selClass');
+    if (!S.classes.length) { sel.innerHTML = '<option value="">등록된 학급 없음</option>'; return; }
+    sel.innerHTML = '<option value="">-- 반 선택 --</option>' + S.classes.map(c => `<option value="${esc(c)}">${esc(c)}반</option>`).join('');
+    sel.value = S.cls;
+  }
+  function renderStudentOptions() {
+    const sel = $('selStudent');
+    if (!S.cls) { sel.innerHTML = '<option value="">-- 반을 먼저 고르세요 --</option>'; return; }
+    const list = S.students.filter(s => String(s.cls) === String(S.cls));
+    const first = S.type === 'check' ? '-- 학생 선택 안 함 (점수만 확인) --' : '-- 학생 선택 --';
+    sel.innerHTML = `<option value="">${first}</option>` + list.map(s => `<option value="${esc(s.id)}">${esc(s.number)}번 ${esc(s.name)}</option>`).join('');
+    sel.value = S.studentId;
+  }
+  function renderTeamOptions() {
+    const sel = $('selTeam');
+    if (!S.cls) { sel.innerHTML = '<option value="">-- 반을 먼저 고르세요 --</option>'; return; }
+    if (!S.drafts.length) { sel.innerHTML = '<option value="">이 반의 드래프트 결과가 없어요</option>'; return; }
+    sel.innerHTML = '<option value="">-- 조 선택 --</option>' + S.drafts.map((t, i) => `<option value="${i}">${esc(t.teamName)} (${esc((t.members || []).map(m => m.name).join(', '))})</option>`).join('');
+    sel.value = S.teamIdx === '' ? '' : String(S.teamIdx);
+  }
+  function renderOrder() {
+    const box = $('orderList');
+    if (!S.order.length) { box.innerHTML = '<div class="small muted">조를 고르면 팀원이 드래프트 순서대로 나와요.</div>'; return; }
+    const split = splitShots(presentMembers().length);
+    let rank = 0;
+    box.innerHTML = S.order.map((m, i) => {
+      const shots = m.absent ? '-' : (split[rank++] + '발');
+      return `<div class="order-row${m.absent ? ' absent' : ''}">
+        <span class="rank">${m.absent ? '-' : rank}</span>
+        <span class="nm">${esc(m.name)}</span>
+        <span class="sh">${shots}</span>
+        <button type="button" class="icon-btn" aria-label="위로" data-act="up" data-i="${i}" ${i === 0 ? 'disabled' : ''}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+        <button type="button" class="icon-btn" aria-label="아래로" data-act="down" data-i="${i}" ${i === S.order.length - 1 ? 'disabled' : ''}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button type="button" class="tog-btn" data-act="abs" data-i="${i}">${m.absent ? '출석' : '결석'}</button>
+      </div>`;
+    }).join('');
+  }
+
+  // 지금 고른 내용으로 무엇이 저장될지, 시작해도 되는지 판단한다.
+  function evaluateSetup() {
+    const r = { ok: false, big: '-', sub: '', cls: S.type, reason: '' };
+    const typeLabel = TYPE_LABEL[S.type];
+    if (S.mode === 'individual') {
+      if (S.type !== 'check' && !S.studentId) { r.reason = '학생을 선택하세요.'; r.big = '학생을 선택하세요'; return r; }
+      const who = S.studentId ? labelOfStudent(S.studentId) : '학생 선택 안 함';
+      if (S.type === 'check') { r.ok = true; r.big = `${who} · 점수 확인`; r.sub = '기록은 저장하지 않아요'; return r; }
+      if (S.histLoading) { r.big = `${who}`; r.sub = '지난 기록을 불러오는 중…'; r.reason = '기록을 불러오는 중이에요.'; return r; }
+      if (!S.hist || S.hist.kind !== 'student' || S.hist.id !== S.studentId) { r.big = who; r.sub = S.histError || '지난 기록을 불러오지 못했어요'; r.reason = '지난 기록 확인이 필요해요.'; return r; }
+      const next = S.hist.data.next[S.type];
+      if (!next) { r.cls = 'warn'; r.big = `${typeLabel} 차시가 모두 찼어요`; r.sub = '왼쪽 기록 관리에서 정리한 뒤 다시 시도하세요'; r.reason = '차시가 모두 찼어요.'; return r; }
+      r.ok = true; r.big = `${who} · ${typeLabel} ${next}차시 · 개인전`; r.sub = '비어 있는 가장 앞 차시로 자동 지정'; r.label = `${typeLabel} ${next}차시`;
+      return r;
+    }
+    const team = S.drafts[S.teamIdx];
+    if (!S.cls || !team) { r.reason = '반과 조를 선택하세요.'; r.big = '반과 조를 선택하세요'; return r; }
+    const n = presentMembers().length;
+    if (n < 3 || n > 5) { r.cls = 'warn'; r.big = `출석 ${n}명`; r.sub = '단체전은 3~5명이 쏴야 해요'; r.reason = '출석 인원을 확인하세요.'; return r; }
+    const split = splitShots(n).map(x => x + '발').join(' · ');
+    if (S.type === 'check') { r.ok = true; r.big = `${S.cls}반 ${team.teamName} · 점수 확인`; r.sub = `${n}명 → ${split} · 저장 안 함`; return r; }
+    if (S.histLoading) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = '지난 기록을 불러오는 중…'; r.reason = '기록을 불러오는 중이에요.'; return r; }
+    if (!S.hist || S.hist.kind !== 'team' || S.hist.id !== teamKey()) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = S.histError || '지난 기록을 불러오지 못했어요'; r.reason = '지난 기록 확인이 필요해요.'; return r; }
+    const nth = S.hist.data.next[S.type];
+    r.ok = true; r.big = `${S.cls}반 ${team.teamName} · ${typeLabel} ${nth}번째 · 단체전`; r.sub = `${n}명 출석 → ${split} 자동 배분`; r.label = `${typeLabel} ${nth}번째`;
+    return r;
+  }
+  function laneBusy() { const ls = S.laneState; return !!(ls && ls.running && ls.online); }
+  function renderSummary() {
+    const r = evaluateSetup();
+    $('summaryBox').className = 'summary ' + (r.cls === 'warn' ? 'warn' : S.type === 'eval' ? 'eval' : S.type === 'check' ? 'check' : '');
+    $('sumBig').textContent = r.big; $('sumSub').textContent = r.sub;
+    const btn = $('btnStart');
+    btn.textContent = `${S.lane}사로 경기 시작`;
+    btn.disabled = !r.ok || !S.fbReady || laneBusy();
+    btn.title = !S.fbReady ? '실시간 연결 중이에요' : laneBusy() ? '이 사로는 사격 중이에요' : (r.reason || '');
+    return r;
+  }
+
+  /* ---------- 시작 전: 지난 기록 ---------- */
+  function loadHistory() {
+    const req = ++S.histReq;
+    S.hist = null; S.histError = '';
+    let action, params, kind, id;
+    if (S.mode === 'individual') {
+      if (!S.studentId) { S.histLoading = false; renderHistory(); renderSummary(); return; }
+      action = 'studentHistory'; params = { studentId: S.studentId }; kind = 'student'; id = S.studentId;
+    } else {
+      const key = teamKey();
+      if (!key) { S.histLoading = false; renderHistory(); renderSummary(); return; }
+      action = 'teamHistory'; params = { cls: S.cls, teamKey: key }; kind = 'team'; id = key;
+    }
+    S.histLoading = true; renderHistory(); renderSummary();
+    jsonp(action, params).then(res => {
+      if (req !== S.histReq) return;   // 그사이 다른 학생/조를 골랐으면 버림
+      if (!res || !res.ok) throw new Error((res && res.error) || '불러오기 실패');
+      S.hist = { kind, id, data: res };
+    }).catch(err => {
+      if (req !== S.histReq) return;
+      S.histError = '지난 기록을 불러오지 못했어요: ' + err.message;
+    }).then(() => {
+      if (req !== S.histReq) return;
+      S.histLoading = false; renderHistory(); renderSummary();
+    });
+  }
+  function renderHistory() {
+    const hint = $('histHint'), body = $('histBody');
+    const showHint = t => { hint.textContent = t; hint.hidden = false; body.hidden = true; };
+    if (S.mode === 'individual' && !S.studentId) return showHint('오른쪽에서 학생을 고르면 지난 기록이 여기에 보여요.');
+    if (S.mode === 'team' && !teamKey()) return showHint('오른쪽에서 반과 조를 고르면 이 팀의 지난 기록이 여기에 보여요.');
+    if (S.histLoading) return showHint('지난 기록을 불러오는 중…');
+    if (!S.hist) return showHint(S.histError || '지난 기록이 없어요.');
+    hint.hidden = true; body.hidden = false;
+    S.hist.kind === 'student' ? renderStudentHistory(S.hist.data) : renderTeamHistory(S.hist.data);
+  }
+  function slotHtml(n, v, next) {
+    const filled = v !== '' && v !== null && v !== undefined;
+    const cls = filled ? 'filled' : (next ? 'next' : '');
+    return `<div class="slot ${cls}"><div class="n">${n}차시</div><div class="s">${filled ? esc(v) : (next ? '다음' : '-')}</div></div>`;
+  }
+  function renderStudentHistory(d) {
+    const st = d.student || {};
+    const nextP = S.type === 'practice' ? d.next.practice : 0, nextE = S.type === 'eval' ? d.next.eval : 0;
+    const recs = (d.records || []).map((r, i) => `<div class="rec-row">
+        <span class="lab" style="color:${r.sheet === 'eval' ? 'var(--red2)' : 'var(--cyan)'}">${TYPE_LABEL[r.sheet]} ${esc(r.session)}차시</span>
+        <span class="sc">${esc(r.score)}점 · ${esc(r.src)}<br><span class="small muted">${esc(r.at)}</span></span>
+        <button type="button" class="rec-move" data-rec="${i}" data-act="move">${r.sheet === 'eval' ? '연습으로 이동' : '수행으로 이동'}</button>
+        <button type="button" class="rec-del" data-rec="${i}" data-act="del">삭제</button>
+      </div>`).join('') || '<div class="small muted">저장된 기록이 없어요.</div>';
+    $('histBody').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+        <h2>${esc(st.cls)}반 ${esc(st.number)}번 ${esc(st.name)}</h2><span class="small muted">지난 기록</span>
+      </div>
+      <div class="stats3">
+        <div class="stat"><div class="k">최고점</div><div class="v" style="color:var(--gold)">${d.recordCount ? esc(d.bestScore) : '-'}</div></div>
+        <div class="stat"><div class="k">평균</div><div class="v" style="color:var(--cyan)">${d.recordCount ? esc(d.averageScore) : '-'}</div></div>
+        <div class="stat"><div class="k">기록 수</div><div class="v">${esc(d.recordCount)} / 12</div></div>
+      </div>
+      <div class="sec-title" style="color:var(--cyan)">연습 1~10차시</div>
+      <div class="slots10">${(d.practice || []).map((v, i) => slotHtml(i + 1, v, nextP === i + 1)).join('')}</div>
+      <div class="sec-title" style="color:var(--red2)">수행 1~2차시</div>
+      <div class="slots10">${(d.eval || []).map((v, i) => slotHtml(i + 1, v, nextE === i + 1)).join('')}</div>
+      <div class="hist-grid">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+          <div class="canvas-box" style="width:100%"><canvas id="cvHist" width="400" height="400"></canvas></div>
+          <span class="small muted">${(d.lastShots || []).length ? '최근 레이저 경기 탄착군' : '레이저 경기 기록 없음'}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="sec-title">기록 관리</div>
+          ${recs}
+        </div>
+      </div>`;
+    drawTarget($('cvHist'), d.lastShots || [], s => ({ fill: Number(s.s) ? '#b7ff3c' : '#ff4d66' }));
+  }
+  function renderTeamHistory(d) {
+    const team = S.drafts[S.teamIdx] || {};
+    const list = (arr, type) => arr.length ? arr.map(r => `${r.n}번째 ${esc(r.total)}점`).join(' · ') : '기록 없음';
+    $('histBody').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+        <h2>${esc(S.cls)}반 ${esc(team.teamName)}</h2><span class="small muted">이 팀원 구성의 지난 기록</span>
+      </div>
+      <div class="grid2">
+        <div class="stat" style="text-align:left"><div class="sec-title" style="color:var(--cyan)">연습</div><div class="small muted" style="margin-top:6px">${list(d.practice || [])}</div><div class="small muted" style="margin-top:4px">다음은 ${esc(d.next.practice)}번째</div></div>
+        <div class="stat" style="text-align:left"><div class="sec-title" style="color:var(--red2)">수행</div><div class="small muted" style="margin-top:6px">${list(d.eval || [])}</div><div class="small muted" style="margin-top:4px">다음은 ${esc(d.next.eval)}번째 · 수행은 팀별 최고 합계가 반영돼요</div></div>
+      </div>
+      <div class="sec-title">최근 경기 팀원별 점수</div>
+      <div class="small muted" style="line-height:1.7">${d.lastMemberScores ? esc(d.lastMemberScores) : '팀원별 점수 기록 없음'}</div>`;
+  }
+
+  /* ---------- 기록 관리: 이동·삭제 ---------- */
+  function manageRecord(act, i) {
+    const d = S.hist && S.hist.kind === 'student' ? S.hist.data : null;
+    const r = d && d.records[i];
+    if (!r) return;
+    const st = d.student;
+    const what = `${st.name} · ${TYPE_LABEL[r.sheet]} ${r.session}차시 (${r.score}점)`;
+    const q = act === 'move'
+      ? `${what} 기록을 ${r.sheet === 'eval' ? '연습' : '수행'}으로 옮길까요?\n옮길 쪽의 비어 있는 가장 앞 차시로 들어가요.`
+      : `${what} 기록을 삭제할까요?\n삭제하면 되돌릴 수 없어요.`;
+    if (!confirm(q)) return;
+    $('setupMsg').textContent = '처리 중…';
+    const payload = JSON.stringify({ sheet: r.sheet, row: r.row, studentId: st.id, session: r.session, at: r.at });
+    jsonp(act === 'move' ? 'moveRecord' : 'deleteRecord', { payload }, 60000).then(res => {
+      if (!res || !res.ok) throw new Error((res && res.error) || '실패');
+      $('setupMsg').textContent = '✅ ' + res.message;
+    }).catch(err => { $('setupMsg').textContent = '⚠️ ' + err.message; })
+      .then(() => loadHistory());
+  }
+
+  /* ---------- 명령 보내기 (Firebase) ---------- */
+  function cmdRef(path) { return S.db.ref('cmds/' + S.lane + (path ? '/' + path : '')); }
+  function sendStart() {
+    const r = renderSummary();
+    if (!r.ok || !S.fbReady || laneBusy()) return;
     const cmd = {
-      eventName: $('rEvent').value.trim(),
-      player: $('rPlayer').value.trim(),
-      firingLane: currentLane(),
-      laserColor: 'red',     // 빨간 레이저로 고정
-      detectKind: 'laser',   // 레이저만 감지(물체·자국 감지는 사용하지 않음)
-      maxShots: Number($('rMax').value)
+      cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      issuedAt: firebase.database.ServerValue.TIMESTAMP,
+      lane: S.lane, evalType: S.type, mode: S.mode, label: r.label || '',
+      studentId: '', cls: S.cls || '', teamName: '', teamKey: '', members: []
     };
-    if(!cmd.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
-    sendCmd(cmd, $('rStart'), $('rMsg'));
-  });
-
-  // 취소·종료 신호는 지금 보고 있는 사로에만 보낸다.
-  function sendLaneSignal(action, btn, msg, sendingText, okText, afterFinish){
-    const lane = currentLane();
-    btn.disabled = true; msg.textContent = sendingText;
-    const cb = action + 'Cb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-    const script = document.createElement('script');
-    const timer = setTimeout(() => finish(null), 8000);
-    function finish(res){
-      clearTimeout(timer); window[cb] = function(){}; script.remove();
-      afterFinish();
-      msg.textContent = (res && res.ok) ? `✅ ${lane}사로: ${okText}` : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+    if (S.mode === 'individual') {
+      cmd.studentId = S.studentId || '';
+    } else {
+      const team = S.drafts[S.teamIdx];
+      const split = splitShots(presentMembers().length);
+      cmd.teamName = team.teamName || '';
+      cmd.teamKey = teamKey();
+      cmd.members = presentMembers().map((m, i) => ({ id: m.id, shots: split[i] }));
     }
-    window[cb] = res => finish(res);
-    script.onerror = () => finish(null);
-    script.src = `${APPS_SCRIPT_URL}?action=${action}&lane=${lane}&callback=${cb}&t=${Date.now()}`;
-    document.head.appendChild(script);
+    $('btnStart').disabled = true;
+    $('setupMsg').textContent = '📡 시작 명령을 보내는 중…';
+    // start로 통째로 덮어써서, 이전 경기의 취소·수동입력·종료 신호도 함께 비운다.
+    cmdRef('').set({ start: cmd }).then(() => {
+      $('setupMsg').textContent = '✅ 보냈어요 - 사대 폰에서 카운트다운이 시작돼요.';
+    }).catch(err => {
+      $('setupMsg').textContent = '⚠️ 전송 실패: ' + err.message; renderSummary();
+    });
   }
-  $('undoBtnLive').addEventListener('click', () => {
-    sendLaneSignal('remoteUndo', $('undoBtnLive'), $('undoMsg'), '📡 취소 신호를 보내는 중…', '취소 신호를 보냈어요 - 사대에 곧 반영돼요.',
-      () => { $('undoBtnLive').disabled = !(lastState && lastState.shots && lastState.shots.length); });
-  });
-  $('rEnd').addEventListener('click', () => {
-    const lane = currentLane();
-    if(!confirm(`${lane}사로 경기를 종료할까요?\n탄착군과 점수가 초기화돼요.`)) return;
-    sendLaneSignal('remoteEnd', $('rEnd'), $('rMsg'), '📡 종료 신호를 보내는 중…', '경기를 종료했어요 - 탄착군·점수가 초기화돼요.',
-      () => { $('rEnd').disabled = false; });
-  });
+  function sendEvent(ev, msgEl) {
+    if (!S.fbReady) return;
+    ev.at = firebase.database.ServerValue.TIMESTAMP;
+    cmdRef('events').push(ev).then(() => { if (msgEl) msgEl.textContent = ''; })
+      .catch(err => { if (msgEl) msgEl.textContent = '⚠️ 전송 실패: ' + err.message; });
+  }
+  function sendEnd() {
+    if (!S.fbReady) return;
+    if (!confirm(`${S.lane}사로 경기를 종료할까요?\n사대 폰의 탄착군과 점수가 초기화돼요. (진행 중인 경기는 저장되지 않아요)`)) return;
+    cmdRef('end').set({ endId: 'end_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: firebase.database.ServerValue.TIMESTAMP })
+      .then(() => { S.dismissedMatch = (S.laneState && S.laneState.matchId) || ''; $('setupMsg').textContent = '✅ 종료 신호를 보냈어요.'; $('liveMsg').textContent = ''; render(); })
+      .catch(err => { $('setupMsg').textContent = '⚠️ 전송 실패: ' + err.message; });
+  }
 
-  // 수동 점수 버튼(10~0). 확인 창 없이 바로 보낸다 - 잘못 눌렀으면 '마지막 발 취소' 후 다시 입력.
-  // 서버가 누른 순서대로 번호를 붙여 쌓으므로 빠르게 여러 번 눌러도 누른 횟수만큼 정확히 기록된다.
-  for(let sc=10; sc>=0; sc--){
-    const b = document.createElement('button');
-    b.type = 'button'; b.textContent = sc; if(sc===0) b.className = 'zero';
-    b.addEventListener('click', () => sendManual(sc));
-    $('manualGrid').appendChild(b);
+  /* ---------- 사로 상태 구독 (Firebase) ---------- */
+  let laneRefCur = null, lastSaveStatus = '';
+  function subscribeLane() {
+    if (!S.fbReady) return;
+    if (laneRefCur) laneRefCur.off();
+    S.laneState = null;
+    laneRefCur = S.db.ref('lanes/' + S.lane);
+    const lane = S.lane;
+    laneRefCur.on('value', snap => {
+      if (lane !== S.lane) return;
+      const prev = S.laneState;
+      S.laneState = snap.val();
+      const ls = S.laneState;
+      // 이 화면에서 고른 학생/팀의 저장이 끝나면 지난 기록을 다시 불러와 다음 차시를 갱신한다.
+      const st = ls && ls.save && ls.save.status;
+      if (st === 'ok' && lastSaveStatus !== 'ok') loadHistory();
+      lastSaveStatus = st || '';
+      if (prev && ls && prev.matchId !== ls.matchId) S.dismissedMatch = '';
+      render();
+    }, err => { $('connPill').textContent = '실시간 읽기 오류'; $('connPill').className = 'pill bad'; console.error(err); });
   }
-  function sendManual(score){
-    const lane = currentLane(), msg = $('undoMsg');
-    msg.textContent = `📡 ${lane}사로에 ${score}점 보내는 중…`;
-    const cb = 'manualCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-    const script = document.createElement('script');
-    const timer = setTimeout(() => finish(null), 8000);
-    function finish(res){
-      clearTimeout(timer); window[cb] = function(){}; script.remove();
-      msg.textContent = (res && res.ok) ? `✅ ${lane}사로: 수동 ${score}점을 보냈어요 - 사대에 곧 반영돼요.` : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+
+  /* ---------- 경기 화면 ---------- */
+  function inMatchView() {
+    const ls = S.laneState;
+    if (!ls || !ls.matchId) return false;
+    if (ls.running) return true;
+    return shotsArr(ls.shots).length > 0 && S.dismissedMatch !== ls.matchId;
+  }
+  function renderLive() {
+    const ls = S.laneState || {};
+    const shots = shotsArr(ls.shots);
+    const members = membersArr(ls.members);
+    const isTeam = ls.mode === 'team' && members.length > 0;
+    const max = Number(ls.maxShots) || (isTeam ? LANE_SHOTS.team : LANE_SHOTS.individual);
+    const total = shots.reduce((a, s) => a + (Number(s.s) || 0), 0);
+    const typeLabel = TYPE_LABEL[ls.evalType] || '';
+    const curIdx = isTeam ? memberIndexOf(Math.min(shots.length, max - 1), members) : -1;
+
+    // 상단 배너
+    const statusText = ls.running ? (ls.phase === 'ready' ? '준비 중 · 카운트다운' : '사격 중') : '경기 완료';
+    if (isTeam) {
+      const m = members[curIdx] || {};
+      let before = 0; for (let i = 0; i < curIdx; i++) before += Number(members[i].shots) || 0;
+      const doneInMember = Math.max(0, shots.length - before);
+      const finished = shots.length >= max;
+      $('banSub').textContent = `${ls.cls ? ls.cls + '반 ' : ''}${ls.teamName || ''} · ${ls.label || typeLabel} · ${statusText}`;
+      $('banWho').textContent = finished ? '팀 경기 완료' : `현재 사수 ${nameOf(m.id)}`;
+      $('banCnt').textContent = finished ? `${shots.length} / ${max}발` : `${doneInMember} / ${m.shots}발`;
+      $('banNext').textContent = finished ? '' : (members[curIdx + 1] ? `다음: ${nameOf(members[curIdx + 1].id)}` : '마지막 사수');
+    } else {
+      $('banSub').textContent = `${ls.label || typeLabel} · 개인전 · ${statusText}`;
+      $('banWho').textContent = ls.studentId ? labelOfStudent(ls.studentId) : '점수 확인';
+      $('banCnt').textContent = `${shots.length} / ${max}발`;
+      $('banNext').textContent = '';
     }
-    window[cb] = res => finish(res);
-    script.onerror = () => finish(null);
-    script.src = `${APPS_SCRIPT_URL}?action=remoteManual&lane=${lane}&score=${score}&callback=${cb}&t=${Date.now()}`;
-    document.head.appendChild(script);
+
+    // 과녁: 단체전은 지금 사수의 탄착만 밝게, 앞 사람들은 회색. 가장 최근 발은 노란 테두리.
+    drawTarget($('cvLive'), shots, (s, i) => {
+      const latest = i === shots.length - 1;
+      let fill = Number(s.s) ? '#b7ff3c' : '#ff4d66';
+      if (isTeam && ls.running && shots.length < max && memberIndexOf(i, members) !== curIdx) fill = '#7d8b99';
+      return { fill, ring: latest ? '#ffc940' : '', label: true };
+    });
+
+    // 점수판
+    $('totLabel').textContent = isTeam ? '팀 총점' : '총점';
+    $('mTotal').textContent = total; $('mCnt').textContent = shots.length; $('mMax').textContent = max;
+    $('mAvg').textContent = shots.length ? (total / shots.length).toFixed(1) : '0.0';
+
+    // 오른쪽: 발별 점수
+    const slotCls = (s, isNow) => s ? (Number(s.s) ? 'hit' : 'miss') : (isNow ? 'now' : '');
+    if (isTeam) {
+      $('scoreTitle').textContent = '팀원별 점수';
+      let cursor = 0;
+      $('scoreArea').innerHTML = members.map((m, mi) => {
+        const n = Number(m.shots) || 0;
+        const own = shots.slice(cursor, cursor + n);
+        const sub = own.reduce((a, s) => a + (Number(s.s) || 0), 0);
+        let cells = '';
+        for (let k = 0; k < n; k++) {
+          const s = own[k];
+          cells += `<div class="ms-slot ${slotCls(s, cursor + k === shots.length && ls.running)}">${s ? esc(s.s) : '-'}</div>`;
+        }
+        cursor += n;
+        const cur = mi === curIdx && ls.running && shots.length < max;
+        const state = own.length >= n ? `${sub}점` : (cur ? '사격 중' : (own.length ? `${sub}점…` : '대기'));
+        return `<div class="member-box${cur ? ' cur' : ''}"><div class="mh"><span class="mn">${mi + 1}. ${esc(nameOf(m.id))} · ${n}발</span><span class="ms">${state}</span></div><div class="mslots">${cells}</div></div>`;
+      }).join('');
+    } else {
+      $('scoreTitle').textContent = '획득 점수';
+      let cells = '';
+      for (let i = 0; i < max; i++) {
+        const s = shots[i];
+        cells += `<div class="lslot ${slotCls(s, i === shots.length && ls.running)}"><span class="n">${i + 1}발</span><span class="v">${s ? esc(s.s) : '–'}</span></div>`;
+      }
+      $('scoreArea').innerHTML = `<div class="live-slots">${cells}</div>`;
+    }
+
+    // 수동 입력·취소 가능 여부
+    const canManual = !!(ls.running && ls.online && shots.length < max);
+    document.querySelectorAll('#keys button').forEach(b => { b.disabled = !canManual; });
+    $('btnUndo').disabled = !(ls.online && shots.length);
+
+    // 저장 상태 (경기 완료 후)
+    const sv = ls.save || null;
+    const box = $('saveBox');
+    if (!ls.running && sv && sv.status) {
+      box.hidden = false;
+      box.className = 'savebox ' + (sv.status === 'ok' ? 'ok' : sv.status === 'fail' ? 'fail' : sv.status === 'saving' ? 'saving' : '');
+      box.textContent = sv.status === 'ok' ? '✅ ' + sv.msg : sv.status === 'fail' ? '⚠️ 저장 실패 · ' + sv.msg : sv.status === 'saving' ? '⏳ ' + sv.msg : sv.msg;
+    } else { box.hidden = true; box.textContent = ''; box.className = 'savebox'; }
+    $('btnRetrySave').hidden = !(!ls.running && sv && sv.status === 'fail' && ls.online);
+    $('btnNext').hidden = !!ls.running;
   }
 
-  drawTarget([]);
-  setLane(1);
+  /* ---------- 전체 그리기 ---------- */
+  function renderPills() {
+    const ls = S.laneState;
+    const pp = $('phonePill');
+    if (!S.fbReady) { pp.textContent = '사대 폰 확인 중…'; pp.className = 'pill'; }
+    else if (!ls || !ls.online) { pp.textContent = `${S.lane}사로 사대 폰 연결 안 됨`; pp.className = 'pill bad'; }
+    else if (ls.running) { pp.textContent = `${S.lane}사로 사격 중`; pp.className = 'pill ok'; }
+    else { pp.textContent = `${S.lane}사로 사대 폰 대기 중`; pp.className = 'pill ok'; }
+  }
+  function render() {
+    renderPills();
+    const live = inMatchView();
+    $('setupView').hidden = live; $('liveView').hidden = !live;
+    if (live) renderLive(); else renderSummary();
+  }
+
+  /* ---------- 이벤트 연결 ---------- */
+  $('segType').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (S.type === b.dataset.v) return;
+    S.type = b.dataset.v;
+    try { localStorage.setItem('lm_type', S.type); } catch (e2) {}
+    renderSeg(); renderStudentOptions(); renderHistory(); renderSummary();
+  });
+  $('segMode').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (S.mode === b.dataset.v) return;
+    S.mode = b.dataset.v;
+    renderSeg(); loadHistory();
+  });
+  $('selLane').addEventListener('change', e => {
+    S.lane = Number(e.target.value) || 1;
+    try { localStorage.setItem('lm_lane', String(S.lane)); } catch (e2) {}
+    S.dismissedMatch = ''; lastSaveStatus = '';
+    $('setupMsg').textContent = ''; $('liveMsg').textContent = '';
+    renderLaneOptions(); subscribeLane(); render();
+  });
+  $('selClass').addEventListener('change', e => {
+    S.cls = e.target.value; S.studentId = ''; S.teamIdx = ''; S.order = []; S.drafts = [];
+    renderStudentOptions(); renderTeamOptions(); renderOrder(); loadHistory();
+    if (S.cls) {
+      $('selTeam').innerHTML = '<option value="">불러오는 중…</option>';
+      const cls = S.cls;
+      jsonp('drafts', { cls }).then(res => {
+        if (cls !== S.cls) return;
+        S.drafts = (res && res.teams) || [];
+        renderTeamOptions();
+      }).catch(err => { if (cls === S.cls) $('selTeam').innerHTML = `<option value="">불러오기 실패: ${esc(err.message)}</option>`; });
+    }
+  });
+  $('selStudent').addEventListener('change', e => { S.studentId = e.target.value; loadHistory(); });
+  $('selTeam').addEventListener('change', e => {
+    S.teamIdx = e.target.value === '' ? '' : Number(e.target.value);
+    const team = S.drafts[S.teamIdx];
+    S.order = team ? (team.members || []).map(m => ({ id: String(m.studentId), name: m.name || nameOf(m.studentId), absent: false })) : [];
+    renderOrder(); loadHistory();
+  });
+  $('orderList').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const i = Number(b.dataset.i);
+    if (b.dataset.act === 'up' && i > 0) [S.order[i - 1], S.order[i]] = [S.order[i], S.order[i - 1]];
+    else if (b.dataset.act === 'down' && i < S.order.length - 1) [S.order[i + 1], S.order[i]] = [S.order[i], S.order[i + 1]];
+    else if (b.dataset.act === 'abs') S.order[i].absent = !S.order[i].absent;
+    renderOrder(); renderSummary();
+  });
+  $('histBody').addEventListener('click', e => {
+    const b = e.target.closest('button[data-rec]'); if (!b) return;
+    manageRecord(b.dataset.act, Number(b.dataset.rec));
+  });
+  $('btnStart').addEventListener('click', sendStart);
+  $('btnEnd').addEventListener('click', sendEnd);
+  $('btnEndLive').addEventListener('click', sendEnd);
+  $('btnUndo').addEventListener('click', () => sendEvent({ type: 'undo' }, $('liveMsg')));
+  $('btnRetrySave').addEventListener('click', () => sendEvent({ type: 'retrySave' }, $('liveMsg')));
+  $('btnNext').addEventListener('click', () => { S.dismissedMatch = (S.laneState && S.laneState.matchId) || ''; $('setupMsg').textContent = ''; $('liveMsg').textContent = ''; render(); });
+  // 수동 점수 버튼(10~0): 확인 창 없이 바로 보낸다 - 잘못 눌렀으면 '마지막 발 취소' 후 다시 입력.
+  $('keys').innerHTML = Array.from({ length: 11 }, (_, i) => 10 - i).map(v => `<button type="button" data-v="${v}" class="${v === 0 ? 'zero' : ''}">${v}</button>`).join('');
+  $('keys').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    sendEvent({ type: 'manual', score: Number(b.dataset.v) }, $('liveMsg'));
+  });
+
+  /* ---------- 시작 ---------- */
+  function init() {
+    try {
+      const savedLane = Number(localStorage.getItem('lm_lane'));
+      if (savedLane >= 1 && savedLane <= LANE_COUNT) S.lane = savedLane;
+      const savedType = localStorage.getItem('lm_type');
+      if (savedType && TYPE_LABEL[savedType]) S.type = savedType;
+    } catch (e) {}
+    renderLaneOptions(); renderSeg(); renderOrder(); render();
+
+    jsonp('roster').then(res => {
+      if (!res || !res.ok) throw new Error((res && (res.error || res.message)) || '학생명단 없음');
+      S.classes = res.classes || []; S.students = res.students || [];
+      S.byId = {}; S.students.forEach(s => { S.byId[s.id] = s; });
+      renderClassOptions(); renderStudentOptions(); render();
+    }).catch(err => {
+      $('selClass').innerHTML = `<option value="">학생명단 불러오기 실패</option>`;
+      $('setupMsg').textContent = '⚠️ ' + err.message;
+    });
+
+    if (!window.firebase || !firebase.initializeApp) { $('connPill').textContent = '실시간 연결 실패(인터넷 확인)'; $('connPill').className = 'pill bad'; return; }
+    try {
+      firebase.initializeApp(FIREBASE_CONFIG);
+      S.db = firebase.database();
+      S.db.ref('.info/connected').on('value', s => {
+        const on = s.val() === true;
+        $('connPill').textContent = on ? '실시간 연결됨' : '실시간 연결 끊김 · 재연결 중';
+        $('connPill').className = 'pill ' + (on ? 'ok' : 'bad');
+      });
+      firebase.auth().signInAnonymously().then(() => {
+        S.fbReady = true; subscribeLane(); render();
+      }).catch(err => { $('connPill').textContent = '실시간 로그인 실패: ' + err.message; $('connPill').className = 'pill bad'; });
+    } catch (err) { $('connPill').textContent = '실시간 준비 오류: ' + err.message; $('connPill').className = 'pill bad'; }
+  }
+  init();
 })();
 </script>
 </body>
