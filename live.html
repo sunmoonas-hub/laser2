@@ -116,6 +116,7 @@
   .savebox.fail{border-color:var(--red);color:var(--red2)}
   .savebox.saving{border-color:var(--gold);color:var(--gold)}
   .hint{color:var(--muted);text-align:center;padding:28px 10px;line-height:1.7}
+  .dupwarn{border-radius:12px;border:2px solid var(--gold);background:#2e2610;color:var(--gold);font-weight:800;padding:10px 14px;margin-bottom:14px;text-align:center}
   [hidden]{display:none!important}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -131,6 +132,7 @@
       <span class="pill" id="connPill">연결 중…</span>
     </div>
   </header>
+  <div class="dupwarn" id="dupWarn" hidden></div>
 
   <!-- ===== 시작 전 화면 ===== -->
   <div class="layout" id="setupView">
@@ -211,7 +213,7 @@
 (() => {
   'use strict';
   // ★ 기존 감일고 레이저 사격 시스템(Apps Script) 웹앱의 /exec 주소를 넣으세요. (index.html과 같은 주소)
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFR3r_0IBj335qmebcyng187aj7yuYYtDn79pZyIDkld8X5c3xWFo6rQrIp7_dHu57/exec';
+  const APPS_SCRIPT_URL = '여기에_기존_웹앱_exec_주소';
   // 실시간 통신(Firebase) 설정 - index.html과 같은 값
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyBe8XGq4Vz-e0HrvRrxV8uyyiE10ozBEvc",
@@ -235,7 +237,9 @@
     cls: '', studentId: '',
     drafts: [], teamIdx: '', order: [],          // order: [{id, name, absent}]
     hist: null, histReq: 0, histLoading: false, histError: '',
-    laneState: null, dismissedMatch: '', db: null, fbReady: false
+    laneState: null, dismissedMatch: '', db: null, fbReady: false,
+    offset: 0, otherViewers: 0,
+    viewerId: 'v_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
   };
 
   /* ---------- Apps Script 호출 (JSONP) ---------- */
@@ -508,14 +512,19 @@
 
   /* ---------- 명령 보내기 (Firebase) ---------- */
   function cmdRef(path) { return S.db.ref('cmds/' + S.lane + (path ? '/' + path : '')); }
+  // 같은 사로에서 '아직 사대가 처리하지 않은' 다른 시작 명령이 있으면 덮어쓰지 않는다(동시에 눌러도 한 쪽만 성공).
+  const START_PENDING_MS = 15000;
+  let ackRef = null, ackTimer = 0;
   function sendStart() {
     const r = renderSummary();
     if (!r.ok || !S.fbReady || laneBusy()) return;
+    const warn = S.otherViewers ? `\n\n⚠ 지금 ${S.lane}사로를 다른 크롬북 ${S.otherViewers}대도 열고 있어요. 사로 번호를 다시 확인하세요.` : '';
+    if (!confirm(`${S.lane}사로에서\n\n${r.big}\n\n경기를 시작할까요?${warn}`)) return;
     const cmd = {
       cmdId: 'cmd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      issuedAt: firebase.database.ServerValue.TIMESTAMP,
+      issuedAt: Date.now() + S.offset,
       lane: S.lane, evalType: S.type, mode: S.mode, label: r.label || '',
-      studentId: '', cls: S.cls || '', teamName: '', teamKey: '', members: []
+      studentId: '', cls: S.cls || '', teamName: '', teamKey: '', members: [], by: S.viewerId
     };
     if (S.mode === 'individual') {
       cmd.studentId = S.studentId || '';
@@ -526,13 +535,44 @@
       cmd.teamKey = teamKey();
       cmd.members = presentMembers().map((m, i) => ({ id: m.id, shots: split[i] }));
     }
+    const lane = S.lane;
     $('btnStart').disabled = true;
     $('setupMsg').textContent = '📡 시작 명령을 보내는 중…';
     // start로 통째로 덮어써서, 이전 경기의 취소·수동입력·종료 신호도 함께 비운다.
-    cmdRef('').set({ start: cmd }).then(() => {
-      $('setupMsg').textContent = '✅ 보냈어요 - 사대 폰에서 카운트다운이 시작돼요.';
+    S.db.ref('cmds/' + lane).transaction(cur => {
+      const p = cur && cur.start;
+      const pending = p && p.cmdId && p.cmdId !== cmd.cmdId && !(p.ack && p.ack.cmdId === p.cmdId) &&
+        (Date.now() + S.offset - Number(p.issuedAt || 0)) < START_PENDING_MS;
+      if (pending) return;   // 다른 크롬북의 시작 명령이 처리 대기 중 → 이번 시도는 취소
+      return { start: cmd };
+    }).then(res => {
+      if (!res || !res.committed) {
+        $('setupMsg').textContent = `⚠ 다른 크롬북이 방금 ${lane}사로에 시작 명령을 보냈어요. 사로 번호를 확인하세요.`;
+        renderSummary(); return;
+      }
+      $('setupMsg').textContent = '📡 보냈어요 - 사대 태블릿 확인 중…';
+      watchAck(lane, cmd.cmdId);
     }).catch(err => {
       $('setupMsg').textContent = '⚠️ 전송 실패: ' + err.message; renderSummary();
+    });
+  }
+  // 사대 태블릿이 이 시작 명령을 받아들였는지(또는 왜 거절했는지) 확인해서 보여준다.
+  function watchAck(lane, cmdId) {
+    if (ackRef) ackRef.off();
+    clearTimeout(ackTimer);
+    ackRef = S.db.ref('cmds/' + lane + '/start/ack');
+    const ref = ackRef;
+    ackTimer = setTimeout(() => {
+      ref.off();
+      if (S.lane === lane) $('setupMsg').textContent = `⚠ ${lane}사로 사대 태블릿이 응답하지 않아요. 태블릿이 켜져 있고 ${lane}사로로 연결됐는지 확인하세요.`;
+    }, 8000);
+    ref.on('value', snap => {
+      const a = snap.val();
+      if (!a || a.cmdId !== cmdId) return;
+      clearTimeout(ackTimer); ref.off();
+      const el = $('setupMsg');
+      if (a.result === 'started') { el.textContent = '✅ 사대에서 경기를 시작했어요.'; $('liveMsg').textContent = ''; }
+      else { el.textContent = '⚠ 시작되지 않았어요: ' + (a.reason || '알 수 없는 이유'); renderSummary(); }
     });
   }
   function sendEvent(ev, msgEl) {
@@ -547,6 +587,33 @@
     cmdRef('end').set({ endId: 'end_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: firebase.database.ServerValue.TIMESTAMP })
       .then(() => { S.dismissedMatch = (S.laneState && S.laneState.matchId) || ''; $('setupMsg').textContent = '✅ 종료 신호를 보냈어요.'; $('liveMsg').textContent = ''; render(); })
       .catch(err => { $('setupMsg').textContent = '⚠️ 전송 실패: ' + err.message; });
+  }
+
+  /* ---------- 같은 사로를 연 크롬북 확인 (Firebase viewers/{사로}) ---------- */
+  let viewerRef = null, viewersRef = null;
+  function registerViewer() {
+    if (!S.fbReady) return;
+    if (viewerRef) { viewerRef.onDisconnect().cancel(); viewerRef.remove().catch(() => {}); }
+    if (viewersRef) viewersRef.off();
+    const lane = S.lane;
+    viewerRef = S.db.ref('viewers/' + lane + '/' + S.viewerId);
+    viewerRef.onDisconnect().remove();
+    viewerRef.set({ at: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
+    S.otherViewers = 0; renderDup();
+    viewersRef = S.db.ref('viewers/' + lane);
+    viewersRef.on('value', snap => {
+      if (lane !== S.lane) return;
+      const v = snap.val() || {};
+      S.otherViewers = Object.keys(v).filter(k => k !== S.viewerId).length;
+      renderDup();
+    }, () => {});
+  }
+  function renderDup() {
+    const el = $('dupWarn');
+    if (S.otherViewers > 0) {
+      el.hidden = false;
+      el.textContent = `⚠ 지금 ${S.lane}사로를 다른 크롬북 ${S.otherViewers}대도 열고 있어요. 내 사로 번호가 맞는지 확인하세요.`;
+    } else el.hidden = true;
   }
 
   /* ---------- 사로 상태 구독 (Firebase) ---------- */
@@ -700,7 +767,7 @@
     try { localStorage.setItem('lm_lane', String(S.lane)); } catch (e2) {}
     S.dismissedMatch = ''; lastSaveStatus = '';
     $('setupMsg').textContent = ''; $('liveMsg').textContent = '';
-    renderLaneOptions(); subscribeLane(); render();
+    renderLaneOptions(); subscribeLane(); registerViewer(); render();
   });
   $('selClass').addEventListener('change', e => {
     S.cls = e.target.value; S.studentId = ''; S.teamIdx = ''; S.order = []; S.drafts = [];
@@ -771,13 +838,15 @@
     try {
       firebase.initializeApp(FIREBASE_CONFIG);
       S.db = firebase.database();
+      S.db.ref('.info/serverTimeOffset').on('value', s => { S.offset = Number(s.val()) || 0; });
       S.db.ref('.info/connected').on('value', s => {
         const on = s.val() === true;
+        if (on && S.fbReady) registerViewer();   // 재연결되면 다시 등록
         $('connPill').textContent = on ? '실시간 연결됨' : '실시간 연결 끊김 · 재연결 중';
         $('connPill').className = 'pill ' + (on ? 'ok' : 'bad');
       });
       firebase.auth().signInAnonymously().then(() => {
-        S.fbReady = true; subscribeLane(); render();
+        S.fbReady = true; subscribeLane(); registerViewer(); render();
       }).catch(err => { $('connPill').textContent = '실시간 로그인 실패: ' + err.message; $('connPill').className = 'pill bad'; });
     } catch (err) { $('connPill').textContent = '실시간 준비 오류: ' + err.message; $('connPill').className = 'pill bad'; }
   }
