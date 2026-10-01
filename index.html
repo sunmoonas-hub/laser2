@@ -150,7 +150,7 @@
   // 분석은 어차피 가로 400(보정은 640)으로 줄여서 하므로 인식 정밀도는 같다. 화면 미리보기만 약간 덜 선명해진다.
   const CAMERA_W = 640, CAMERA_H = 480;
   // 진단 기록: 레이저 후보가 생길 때마다(기록/거부 모두) 구글 시트 '진단기록' 탭에 한 줄씩 저장한다. 조정이 끝나면 false로.
-  const DIAG = true;
+  const DIAG = false;
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
   const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null,countdownSec:5,countdownEnd:0,settleMs:700,readyAt:0,announced:false,bgRoi:null};
