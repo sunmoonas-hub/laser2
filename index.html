@@ -42,6 +42,10 @@
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
     @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side";gap:8px;padding:4px 8px 8px}.camera{height:100%;min-height:0;position:relative;top:auto}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 3px 18px 0;scrollbar-gutter:stable}.setup{margin:0 0 7px;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0 0 7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0 0 7px}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0 0 7px;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
   </style>
+  <!-- 실시간 통신(Firebase) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
 <main class="app">
@@ -71,7 +75,7 @@
       <button class="fullscreen-btn" id="fullscreenBtn" type="button" aria-label="전체화면 켜기">⛶</button>
     </div>
     <div class="grid">
-      <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
+      <div class="field"><label>사로 지정</label><select id="firingLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option></select></div>
     </div>
     <p class="hint" id="calibrationInfo">표적 보정 전입니다. 표적 전체가 화면에 보이도록 휴대폰을 정면으로 고정하세요.</p>
     <div class="field" style="display:none">
@@ -116,7 +120,18 @@
 (() => {
   'use strict';
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrVEhkDw7Q4DEjA_uKP-eJrINC7mJ5LrwkP8QOBQV1gBRqGFD-ScU7r6ipQ-QyjEz9Q/exec';
+  // ★ 기존 감일고 레이저 사격 시스템(Apps Script) 웹앱의 /exec 주소를 넣으세요. (live.html과 같은 주소)
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFR3r_0IBj335qmebcyng187aj7yuYYtDn79pZyIDkld8X5c3xWFo6rQrIp7_dHu57/exec';
+  // 실시간 통신(Firebase) 설정 - live.html과 같은 값
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBe8XGq4Vz-e0HrvRrxV8uyyiE10ozBEvc",
+    authDomain: "laser-9893f.firebaseapp.com",
+    databaseURL: "https://laser-9893f-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "laser-9893f",
+    storageBucket: "laser-9893f.firebasestorage.app",
+    messagingSenderId: "790272136984",
+    appId: "1:790272136984:web:304af6db9ff926f71bb06d"
+  };
   const $ = id => document.getElementById(id);
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn','countdown','countdownText'].map(id => [id,$(id)]));
   // 느슨한 기준의 '보조 경로'. 밝은 환경 오인식의 주범이라 기본은 끈다. 아주 어두운 곳에서 약한 레이저를 놓치면 true로.
@@ -384,49 +399,85 @@
 
   function finishMatch(){if(!state.running||state.shots.length<state.maxShots)return;   // 완료 예약 사이에 취소됐으면 완료하지 않음
     clearCountdown();lockCamera(false);state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
-  async function saveMatch(){
-    const payload={matchId:state.matchId,eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),maxShots:state.maxShots,totalScore:state.shots.reduce((a,s)=>a+s.score,0),device:navigator.userAgent,shots:state.shots};
-    localStorage.setItem('laserMatchLast',JSON.stringify(payload));
-    if(!isServerConfigured()){setStatus('기기에 저장됨');els.guide.textContent='Apps Script 주소가 설정되지 않아 이 기기에만 기록했습니다.';toast('index.html에 Apps Script 주소를 넣어 주세요.');return}
-    try{
-      const body=new URLSearchParams({action:'saveMatch',payload:JSON.stringify(payload)});
-      await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body});
-      setStatus('저장 요청 완료');els.guide.textContent=`${state.shots.length}발 저장 요청 완료 · 순위표에서 확인하세요.`;toast('구글 시트에 저장 요청을 보냈습니다.');
-    }catch(err){console.error(err);setStatus('기기 저장');els.guide.textContent='서버 저장 실패 · 기록은 이 기기에 보관했습니다.';toast('서버 연결에 실패했습니다.')}
+  // Apps Script 호출(JSONP). 응답을 실제로 받아서 성공 여부를 확인한다.
+  function jsonp(action,params,timeoutMs){
+    return new Promise((resolve,reject)=>{
+      const cb='lzCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+      const script=document.createElement('script');let done=false;
+      const timer=setTimeout(()=>finish(new Error('응답 시간 초과')),timeoutMs||20000);
+      function finish(err,res){if(done)return;done=true;clearTimeout(timer);window[cb]=function(){};script.remove();err?reject(err):resolve(res)}
+      window[cb]=res=>finish(null,res);
+      script.onerror=()=>finish(new Error('네트워크 오류'));
+      script.src=`${APPS_SCRIPT_URL}?${new URLSearchParams(Object.assign({action,callback:cb},params||{})).toString()}`;
+      document.head.appendChild(script);
+    });
   }
 
-  function isServerConfigured(){return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(APPS_SCRIPT_URL)}
+  let saveToken=0;
+  function setSaveInfo(status,msg){state.saveInfo={status,msg};pushLive()}
 
-  let lastPush=0;
-  function pushLive(force){
-    if(!isServerConfigured()){els.liveStatus.textContent='📡 관전 URL 미설정';return}
-    const now=Date.now();if(!force&&now-lastPush<300)return;lastPush=now;
-    els.liveStatus.textContent='📡 전송 중…';
-    try{
-      const cbName='pushCb_'+now+'_'+Math.random().toString(36).slice(2,7);
-      const qs=new URLSearchParams({action:'liveUpdate',callback:cbName,payload:JSON.stringify({
-        eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),
-        maxShots:state.maxShots||Number(els.maxShots.value),running:state.running,
-        shots:state.shots.map(s=>{
-          // 관전 페이지는 표적을 항상 똑바로 그리므로, 채점용으로 기울기를 보정한 좌표(xMm/yMm) 대신
-          // 화면에 실제 보이는 그대로의 위치(화면 좌표 기준)를 보낸다.
-          let u=0,v=0;
-          if(s.screenX!=null&&s.screenY!=null&&state.radiusX&&state.radiusY){u=(s.screenX-state.center.x)/state.radiusX;v=(s.screenY-state.center.y)/state.radiusY}
-          return{score:s.score,u:+u.toFixed(3),v:+v.toFixed(3),kind:s.manual?'manual':(s.kind||'laser')};
-        })
-      })});
-      // 눈에 안 보이는 fetch() 요청만 걸러내는 환경이 있어, 순위표·관전 페이지가 이미 쓰고 있는
-      // <script> 태그 삽입(JSONP) 방식으로 통일한다 - 이건 확실히 통과한다.
-      const script=document.createElement('script');
-      const timer=setTimeout(()=>{els.liveStatus.textContent='📡 응답 없음(시간 초과)';cleanup()},9000);
-      function cleanup(){clearTimeout(timer);window[cbName]=function(){};script.remove()}
-      window[cbName]=()=>{els.liveStatus.textContent='📡 전송됨 '+new Date().toLocaleTimeString('ko-KR',{hour12:false});cleanup()};
-      script.onerror=()=>{els.liveStatus.textContent='📡 전송 실패(네트워크 차단)';cleanup()};
-      script.src=`${APPS_SCRIPT_URL}?${qs.toString()}`;
-      document.head.appendChild(script);
-    }catch(err){
-      els.liveStatus.textContent='📡 전송 준비 오류: '+((err&&err.message)||err);
+  // 경기 결과를 기존 연습기록/수행평가기록 형식으로 저장한다. 실패하면 2번 더 자동으로 다시 시도한다.
+  function saveMatch(){
+    const cfg=state.matchCfg||{};
+    const payload={
+      matchId:state.matchId,lane:Number(els.firingLane.value),evalType:cfg.evalType,mode:cfg.mode||'individual',
+      studentId:cfg.studentId||'',cls:cfg.cls||'',teamName:cfg.teamName||'',teamKey:cfg.teamKey||'',
+      members:(cfg.members||[]).map(m=>({id:m.id,shots:m.shots})),
+      shots:state.shots.map(s=>{const p=shotUV(s);return[s.score,s.xMm||0,s.yMm||0,p.u,p.v,shotKind(s)]})
+    };
+    try{localStorage.setItem('laserMatchLast',JSON.stringify(payload))}catch(e){}
+    if(cfg.evalType!=='practice'&&cfg.evalType!=='eval'){
+      setStatus('점수 확인 완료');els.guide.textContent='점수 확인 모드 · 기록은 저장하지 않았습니다.';setSaveInfo('skip','점수 확인 모드 · 저장 안 함');return;
     }
+    if(!isServerConfigured()){setStatus('저장 실패','#ff4d66');setSaveInfo('fail','index.html에 Apps Script 주소가 없어요');return}
+    const token=++saveToken;
+    setStatus('저장 중','#ffc940');els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';setSaveInfo('saving','저장 중…');
+    const attempt=n=>{
+      jsonp('saveLaserMatch',{payload:JSON.stringify(payload)},60000).then(res=>{
+        if(token!==saveToken)return;   // 그사이 경기가 다시 열렸으면 이 결과는 무시(다시 완료되면 새로 저장됨)
+        if(!res||!res.ok)throw new Error((res&&res.error)||'저장 실패');
+        setStatus('저장 완료');els.guide.textContent=res.message||'저장 완료';toast('✅ '+(res.message||'저장 완료'));setSaveInfo('ok',res.message||'저장 완료');
+      }).catch(err=>{
+        if(token!==saveToken)return;
+        const msg=(err&&err.message)||String(err);
+        // 서버가 명확히 거절한 경우(예: 차시가 다 참)는 다시 시도해도 같으므로 바로 실패 처리
+        const definite=/모두 기록|학생명단|발을 모두|팀원|학급|경기ID|저장하지 않는/.test(msg);
+        if(!definite&&n<3){setSaveInfo('saving',`저장 재시도 중… (${n+1}/3)`);setTimeout(()=>attempt(n+1),2000*n);return}
+        setStatus('저장 실패','#ff4d66');els.guide.textContent='저장 실패 · '+msg;toast('⚠️ 저장 실패: '+msg);setSaveInfo('fail',msg);
+      });
+    };
+    attempt(1);
+  }
+
+  function isServerConfigured(){return /^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/.+\/exec$/.test(APPS_SCRIPT_URL)}
+
+  // 관전 화면은 표적을 항상 똑바로 그리므로, 채점용으로 기울기를 보정한 좌표(xMm/yMm) 대신
+  // 화면에 실제 보이는 그대로의 위치(표적 반지름 기준 비율)를 보낸다.
+  function shotUV(s){
+    let u=0,v=0;
+    if(s.screenX!=null&&s.screenY!=null&&state.center&&state.radiusX&&state.radiusY){u=(s.screenX-state.center.x)/state.radiusX;v=(s.screenY-state.center.y)/state.radiusY}
+    return{u:+u.toFixed(3),v:+v.toFixed(3)};
+  }
+  function shotKind(s){return s.manual?'manual':(s.kind||'laser')}
+
+  // 이 사로의 현재 상태를 Firebase에 통째로 쓴다. (점수 한 발마다, 시작·취소·완료·저장 결과마다 호출)
+  function pushLive(){
+    if(!fb.ready||!fb.laneRef)return;
+    const cfg=state.matchCfg||{};
+    const data={
+      online:true,running:!!state.running,
+      phase:state.running?(state.detectorReady?'live':'ready'):(state.shots.length?'done':'idle'),
+      matchId:state.matchId||'',
+      mode:cfg.mode||'individual',evalType:cfg.evalType||'check',
+      studentId:cfg.studentId||'',cls:cfg.cls||'',teamName:cfg.teamName||'',teamKey:cfg.teamKey||'',
+      members:(cfg.members||[]).map(m=>({id:m.id,shots:m.shots})),
+      label:cfg.label||'',maxShots:state.maxShots||10,
+      shots:state.shots.map(s=>{const p=shotUV(s);return{s:s.score,u:p.u,v:p.v,k:shotKind(s)}}),
+      save:state.saveInfo?{status:state.saveInfo.status||'',msg:state.saveInfo.msg||''}:null,
+      updatedAt:firebase.database.ServerValue.TIMESTAMP
+    };
+    fb.laneRef.set(data).then(()=>{els.liveStatus.textContent='📡 실시간 전송됨 '+new Date().toLocaleTimeString('ko-KR',{hour12:false})})
+      .catch(err=>{els.liveStatus.textContent='📡 실시간 전송 실패: '+((err&&err.message)||err)});
   }
 
   /* ===== 진단 기록 =====
@@ -473,89 +524,102 @@
   }
   if(DIAG)setInterval(diagFlush,3000);
 
-  /* ===== 원격 명령 수신 (사로별) =====
-     폰은 자기 사로(firingLane)의 신호만 가져온다. 시작·취소·종료를 한 번의 요청으로 함께 확인한다. */
-  let lastCmdId=null,lastNotifiedCmdId=null,remotePollOn=false;
-  let lastEventSeq=null,lastEndId=null,pollLane=null;
-  const REMOTE_POLL_MS=900;
+  /* ===== 실시간 통신 (Firebase) =====
+     사로 상태(점수·위치)는 Firebase의 lanes/{사로}에 쓰고, 관전 화면이 보내는 명령은 cmds/{사로}에서 받는다.
+     값이 바뀌는 순간 서로에게 바로 전달되므로, 예전처럼 1초마다 Apps Script에 물어볼 필요가 없다. */
+  const LANE_SHOTS={individual:10,team:20};   // 개인전 10발, 단체전 20발 (바꾸려면 여기만 고치면 됨)
   const CMD_MAX_AGE_MS=30000;   // 30초보다 오래된 시작 명령은 실행하지 않는다(예전 명령이 갑자기 실행되는 사고 방지)
+  const fb={db:null,ready:false,offset:0,lane:null,laneRef:null,cmdRef:null,seen:null};
+  let lastCmdId=null,lastNotifiedCmdId=null;
+
+  function fbInit(){
+    if(!window.firebase||!firebase.initializeApp){els.liveStatus.textContent='📡 Firebase를 불러오지 못했어요(인터넷 확인)';return}
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      fb.db=firebase.database();
+      fb.db.ref('.info/serverTimeOffset').on('value',s=>{fb.offset=Number(s.val())||0});
+      fb.db.ref('.info/connected').on('value',s=>{
+        if(s.val()===true){if(fb.ready){armPresence();pushLive()}}
+        else els.liveStatus.textContent='📡 실시간 연결 끊김 · 재연결 중…';
+      });
+      els.liveStatus.textContent='📡 실시간 연결 중…';
+      firebase.auth().signInAnonymously().then(()=>{fb.ready=true;attachLane()}).catch(err=>{els.liveStatus.textContent='📡 실시간 로그인 실패: '+((err&&err.message)||err)});
+    }catch(err){els.liveStatus.textContent='📡 실시간 준비 오류: '+((err&&err.message)||err)}
+  }
+  function armPresence(){if(fb.laneRef)fb.laneRef.onDisconnect().update({online:false})}
+
+  // 사로를 정하거나 바꿀 때 호출. 이전 사로 구독을 끊고, 새 사로의 명령을 듣기 시작한다.
+  function attachLane(){
+    if(!fb.ready)return;
+    const lane=Number(els.firingLane.value);
+    if(fb.lane===lane&&fb.cmdRef)return;
+    if(fb.cmdRef)fb.cmdRef.off();
+    if(fb.laneRef){fb.laneRef.onDisconnect().cancel();fb.laneRef.update({online:false}).catch(()=>{})}
+    fb.lane=lane;fb.seen=null;
+    fb.laneRef=fb.db.ref('lanes/'+lane);
+    fb.cmdRef=fb.db.ref('cmds/'+lane);
+    armPresence();pushLive();
+    fb.cmdRef.on('value',snap=>handleCmdSnapshot(snap.val()||{},lane),err=>{els.liveStatus.textContent='📡 명령 수신 오류: '+((err&&err.message)||err)});
+  }
+  function ensureRemotePolling(){attachLane()}   // 예전 이름 호환(카메라 시작 시 호출됨)
+
+  function handleCmdSnapshot(c,lane){
+    if(lane!==Number(els.firingLane.value))return;
+    const events=(c.events&&typeof c.events==='object')?c.events:{};
+    const keys=Object.keys(events).sort();   // push 키는 시간 순서대로 정렬된다
+    const endId=(c.end&&c.end.endId)||'';
+    if(fb.seen===null){
+      // 처음 연결(또는 사로 변경) 시 이미 쌓여 있던 취소·수동입력·종료 신호는 과거 것이므로 무시한다.
+      fb.seen={events:new Set(keys),endId};
+    }else{
+      if(endId&&endId!==fb.seen.endId){fb.seen.endId=endId;reset();pushLive();toast('📡 관전 화면에서 경기를 종료했어요 - 탄착군·점수가 초기화됐어요.')}
+      for(const k of keys){
+        if(fb.seen.events.has(k))continue;
+        fb.seen.events.add(k);
+        const e=events[k]||{};
+        if(e.type==='undo'){if(state.shots.length){undo();toast('📡 관전 화면에서 마지막 발을 취소했어요.')}}
+        else if(e.type==='manual'){
+          const sc=Math.min(10,Math.max(0,Math.round(Number(e.score)||0)));
+          if(state.running&&state.shots.length<state.maxShots){recordShot(null,null,sc);toast(`📡 관전 화면에서 수동 ${sc}점을 기록했어요.`)}
+          else toast('📡 수동 점수가 왔지만 진행 중인 경기가 없어요.');
+        }else if(e.type==='retrySave'){if(!state.running&&state.saveInfo&&state.saveInfo.status==='fail')saveMatch()}
+      }
+    }
+    if(c.start&&c.start.cmdId&&!state.running)applyRemoteCmd(c.start);
+  }
+
   function applyRemoteCmd(cmd){
     if(cmd.cmdId===lastCmdId)return;   // 이미 처리한 명령
-    if(Number(els.firingLane.value)!==cmd.firingLane)return;   // 다른 사로의 명령(정상이라면 오지 않음)
-    if(Number.isFinite(cmd.ageMs)&&cmd.ageMs>CMD_MAX_AGE_MS){lastCmdId=cmd.cmdId;return}   // 너무 오래된 명령은 조용히 소비
-    // 아직 표적 보정 전이면 명령을 소비만 하고 끝낸다 - 보정 후 라이브에서 다시 눌러야 한다.
+    if(Number(cmd.lane)!==Number(els.firingLane.value))return;
+    const issuedAt=Number(cmd.issuedAt);
+    if(issuedAt&&Date.now()+fb.offset-issuedAt>CMD_MAX_AGE_MS){lastCmdId=cmd.cmdId;return}   // 너무 오래된 명령은 조용히 소비
+    // 아직 표적 보정 전이면 명령을 소비만 하고 끝낸다 - 보정 후 관전 화면에서 다시 눌러야 한다.
     if(!(state.center&&state.radius)){
       lastCmdId=cmd.cmdId;
-      toast(`📡 ${cmd.firingLane}사로 명령을 받았지만 아직 표적 보정 전이에요 - 보정 후 라이브에서 다시 눌러주세요.`);
+      toast(`📡 ${cmd.lane}사로 명령을 받았지만 아직 표적 보정 전이에요 - 보정 후 다시 눌러주세요.`);
       return;
     }
     if(state.running)return;
     // 보정 직후 3초 안에는 시작하지 않는다 - 보정 결과를 눈으로 확인할 시간을 보장.
     if(state.calibratedAt&&performance.now()-state.calibratedAt<3000){
       lastCmdId=cmd.cmdId;
-      toast(`📡 ${cmd.firingLane}사로 명령을 받았지만 방금 보정이 끝나서 안전을 위해 대기 중이에요 - 라이브에서 다시 눌러주세요.`);
+      toast(`📡 ${cmd.lane}사로 명령을 받았지만 방금 보정이 끝나서 안전을 위해 대기 중이에요 - 다시 눌러주세요.`);
       return;
     }
-    if(cmd.eventName!=null&&cmd.eventName!=='')els.eventName.value=cmd.eventName;
-    if(cmd.player)els.player.value=cmd.player;
-    if(cmd.laserColor&&cmd.laserColor!==els.laserColor.value){els.laserColor.value=cmd.laserColor;clearDetectorBackground();showDetectorInfo()}
-    if(cmd.detectKind)els.detectKind.value=cmd.detectKind;
-    if(cmd.maxShots){els.maxShots.value=String(cmd.maxShots);updateScore()}
+    const mode=cmd.mode==='team'?'team':'individual';
+    const members=Array.isArray(cmd.members)?cmd.members.map(m=>({id:String(m.id||''),shots:Number(m.shots)||0})).filter(m=>m.id&&m.shots>0):[];
+    state.matchCfg={
+      evalType:['practice','eval','check'].includes(cmd.evalType)?cmd.evalType:'check',
+      mode,studentId:String(cmd.studentId||''),cls:String(cmd.cls||''),teamName:String(cmd.teamName||''),
+      teamKey:String(cmd.teamKey||''),members,label:String(cmd.label||'')
+    };
+    state.saveInfo=null;
+    els.player.value=mode==='team'?(state.matchCfg.teamName||'단체전'):(state.matchCfg.studentId||'점수 확인');
+    els.laserColor.value='red';els.detectKind.value='laser';
+    els.maxShots.value=String(LANE_SHOTS[mode]);updateScore();
     startMatch();lastCmdId=cmd.cmdId;els.firingLane.disabled=true;
-    toast(`📡 ${cmd.firingLane}사로 연결됨 - 경기를 시작했어요: `+(cmd.player||''));
+    toast(`📡 ${cmd.lane}사로 연결됨 - 경기를 시작했어요.`);
   }
-  function handlePoll(res,lane){
-    if(!res||res.ok===false)return;
-    // 사로를 바꾸면, 새 사로에 이미 남아 있던 취소·종료 신호는 과거 것이므로 무시하고 지금 값을 새 기준으로 삼는다.
-    if(lane!==pollLane){pollLane=lane;lastEventSeq=null;lastEndId=null}
-    // 종료 신호
-    if(lastEndId===null)lastEndId=res.endId||'';
-    else if(res.endId&&res.endId!==lastEndId){
-      lastEndId=res.endId;
-      reset();pushLive(true);toast('📡 라이브에서 경기를 종료했어요 - 탄착군·점수가 초기화됐어요.');
-    }
-    // 취소·수동 점수 신호: 서버가 번호(seq)를 1씩 늘려 가며 쌓아 두므로, 여러 번 눌러도 누른 횟수·순서 그대로 처리한다.
-    const curSeq=Number(res.eventSeq)||0;
-    if(lastEventSeq===null)lastEventSeq=curSeq;   // 처음 연결(또는 사로 변경) 시 지금까지 쌓인 신호는 과거 것이므로 무시
-    else if(curSeq>lastEventSeq){
-      const evs=(Array.isArray(res.events)?res.events:[]).filter(e=>Number(e.seq)>lastEventSeq).sort((a,b)=>a.seq-b.seq);
-      for(const e of evs){
-        lastEventSeq=Number(e.seq);
-        if(e.type==='undo'){if(state.shots.length){undo();toast('📡 라이브에서 마지막 발을 취소했어요.')}}
-        else if(e.type==='manual'){
-          const sc=Math.min(10,Math.max(0,Math.round(Number(e.score)||0)));
-          if(state.running&&state.shots.length<state.maxShots){recordShot(null,null,sc);toast(`📡 라이브에서 수동 ${sc}점을 기록했어요.`)}
-          else toast('📡 수동 점수가 왔지만 진행 중인 경기가 없어요.');
-        }
-      }
-      lastEventSeq=curSeq;
-    }
-    // 시작 명령(사격 중에는 확인하지 않음)
-    if(!state.running&&res.cmd&&res.cmd.cmdId)applyRemoteCmd(res.cmd);
-  }
-  function pollRemote(){
-    if(!isServerConfigured()){setTimeout(pollRemote,3000);return}
-    els.firingLane.disabled=!!state.running;   // 사격 중에는 사로를 못 바꾸게 잠근다
-    const lane=Number(els.firingLane.value);
-    const cbName='pollCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-    const script=document.createElement('script');
-    let done=false;
-    const timer=setTimeout(()=>finish(null),6000);
-    function finish(res){
-      if(done)return;done=true;
-      clearTimeout(timer);window[cbName]=function(){};script.remove();
-      if(res&&lane===Number(els.firingLane.value))handlePoll(res,lane);   // 그사이 사로가 바뀌었으면 버린다
-      setTimeout(pollRemote,REMOTE_POLL_MS);
-    }
-    window[cbName]=res=>finish(res);
-    script.onerror=()=>finish(null);
-    script.src=`${APPS_SCRIPT_URL}?action=phonePoll&lane=${lane}&callback=${cbName}&t=${Date.now()}`;
-    document.head.appendChild(script);
-  }
-  function ensureRemotePolling(){if(remotePollOn)return;remotePollOn=true;pollRemote()}
-  // 경기 중에는 15초마다 현재 상태를 다시 보내 "이 사로는 아직 사격 중"임을 알린다.
-  // (관전 화면은 60초 넘게 소식이 없으면 연결이 끊긴 것으로 보고 시작 버튼 잠금을 푼다.)
-  setInterval(()=>{if(state.running)pushLive(true)},15000);
 
   function recordShot(x,y,manualScore=null,kind){
     if(!state.running||state.shots.length>=state.maxShots)return;
@@ -775,7 +839,7 @@
     if(state.warmupFrames<warmupLimit&&!warmupTimedOut)return;
     // 카운트다운이 끝나기 전에는 레이저를 인식하지 않는다(기준 화면만 계속 최신으로 유지).
     if(state.countdownEnd&&performance.now()<state.countdownEnd){blendBackground(data,lum,sw,x0,x1,y0,y1,.1);state.prevLum.set(lum);return}
-    if(!state.detectorReady){state.detectorReady=true;if(state.detectKind!=='laser'){state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}state.objTracks=[];state.objKnown=[];state.objBusySince=0;state.objBusy=false}els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');state.readyAt=performance.now();showGo();return}
+    if(!state.detectorReady){state.detectorReady=true;if(state.detectKind!=='laser'){state.objRef=new Float32Array(total*3);for(let p=0,i=0;p<total;p++,i+=4){state.objRef[p*3]=data[i];state.objRef[p*3+1]=data[i+1];state.objRef[p*3+2]=data[i+2]}state.objTracks=[];state.objKnown=[];state.objBusySince=0;state.objBusy=false}els.matchBtn.textContent='경기 진행 중';els.guide.textContent='레이저 감지 대기 중 · 짧게 발사하세요.';els.livePill.textContent='● LIVE';setStatus('레이저 감지 대기','#ff4d66');state.readyAt=performance.now();showGo();pushLive();return}
     // 사격 시작 직후 잠깐(0.7초)은 인식하지 않고 기준 화면만 최신으로 맞춘다 - 시작 순간에 카메라 노출·색이 다시 맞춰지며 튀는 것을 레이저로 착각하지 않게.
     if(state.settleMs>0&&state.readyAt&&performance.now()-state.readyAt<state.settleMs){blendBackground(data,lum,sw,x0,x1,y0,y1,.1);state.prevLum.set(lum);return}
     const tca=Math.cos(t.a),tsa=Math.sin(t.a),irx=1/t.rx,iry=1/t.ry;
@@ -948,11 +1012,11 @@
     else state.pendingLaser={x:px,y:py,frames:1,maxSignal:strongest.delta,maxContrast:localContrast,maxColorBoost:clusterColorBoost,maxBright:strongest.bright,maxRedRise:strongest.redRise};
   }
 
-  function undo(){if(!state.shots.length)return;const reopened=!state.running;state.shots.pop();state.running=true;
+  function undo(){if(!state.shots.length)return;const reopened=!state.running;state.shots.pop();state.running=true;if(reopened){saveToken++;state.saveInfo=null}
     // 이미 끝난 경기를 다시 연 경우: 오래된 기준 화면으로 감지하면 오인식 위험이 있어 감지기를 처음부터 다시 준비한다(약 1~2초).
     if(reopened){clearDetectorBackground();state.detectorReady=false;state.warmupFrames=0;state.warmupStart=performance.now();state.readyAt=0;state.announced=true;lockCamera(true);document.body.classList.add('match-live');setTimeout(resize,60)}
     els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
-  function reset(){clearCountdown();lockCamera(false);state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
+  function reset(){saveToken++;state.matchCfg=null;state.saveInfo=null;clearCountdown();lockCamera(false);state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
@@ -973,6 +1037,8 @@
   els.cameraBtn.onclick=startCamera;els.calibrateBtn.onclick=beginCalibration;els.matchBtn.title='라이브 관전 페이지에서 사로를 맞춰 경기 시작 명령을 보내면 자동으로 시작돼요.';els.undoBtn.onclick=undo;els.resetBtn.onclick=reset;els.leaderBtn.onclick=loadLeaderboard;els.fullscreenBtn.onclick=toggleFullscreen;els.zoomOut.onclick=()=>changeZoom(-1);els.zoomIn.onclick=()=>changeZoom(1);els.manualBtn.onclick=()=>els.manualDialog.showModal();els.manualConfirm.onclick=()=>{recordShot(null,null,els.manualScore.value);els.manualDialog.close()};els.maxShots.onchange=updateScore;
   function showDetectorInfo(){els.fpsPill.textContent='고감도 레이저 '+state.sensitivity+(state.actualFps?' · '+Math.round(state.actualFps)+'fps':'')+(state.cameraLocked?' · 🔒':'')+(state.running&&state.seenPct!==''&&state.seenPct!=null?' · 분석 '+state.seenPct+'%':'')}
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
+  els.firingLane.addEventListener('change',attachLane);   // 사로를 바꾸면 그 사로의 명령을 듣는다
+  fbInit();
   window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
 })();
 </script>
