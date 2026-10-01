@@ -382,7 +382,8 @@
     try{const root=document.documentElement,req=root.requestFullscreen||root.webkitRequestFullscreen;if(req&&!document.fullscreenElement)req.call(root,{navigationUI:'hide'}).catch(()=>{})}catch(e){}
   }
 
-  function finishMatch(){clearCountdown();lockCamera(false);state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
+  function finishMatch(){if(!state.running||state.shots.length<state.maxShots)return;   // 완료 예약 사이에 취소됐으면 완료하지 않음
+    clearCountdown();lockCamera(false);state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
   async function saveMatch(){
     const payload={matchId:state.matchId,eventName:els.eventName.value.trim(),player:els.player.value.trim(),firingLane:Number(els.firingLane.value),maxShots:state.maxShots,totalScore:state.shots.reduce((a,s)=>a+s.score,0),device:navigator.userAgent,shots:state.shots};
     localStorage.setItem('laserMatchLast',JSON.stringify(payload));
@@ -475,7 +476,7 @@
   /* ===== 원격 명령 수신 (사로별) =====
      폰은 자기 사로(firingLane)의 신호만 가져온다. 시작·취소·종료를 한 번의 요청으로 함께 확인한다. */
   let lastCmdId=null,lastNotifiedCmdId=null,remotePollOn=false;
-  let lastUndoId=null,lastEndId=null,pollLane=null;
+  let lastEventSeq=null,lastEndId=null,pollLane=null;
   const REMOTE_POLL_MS=900;
   const CMD_MAX_AGE_MS=30000;   // 30초보다 오래된 시작 명령은 실행하지 않는다(예전 명령이 갑자기 실행되는 사고 방지)
   function applyRemoteCmd(cmd){
@@ -506,18 +507,28 @@
   function handlePoll(res,lane){
     if(!res||res.ok===false)return;
     // 사로를 바꾸면, 새 사로에 이미 남아 있던 취소·종료 신호는 과거 것이므로 무시하고 지금 값을 새 기준으로 삼는다.
-    if(lane!==pollLane){pollLane=lane;lastUndoId=null;lastEndId=null}
+    if(lane!==pollLane){pollLane=lane;lastEventSeq=null;lastEndId=null}
     // 종료 신호
     if(lastEndId===null)lastEndId=res.endId||'';
     else if(res.endId&&res.endId!==lastEndId){
       lastEndId=res.endId;
       reset();pushLive(true);toast('📡 라이브에서 경기를 종료했어요 - 탄착군·점수가 초기화됐어요.');
     }
-    // 마지막 발 취소 신호
-    if(lastUndoId===null)lastUndoId=res.undoId||'';
-    else if(res.undoId&&res.undoId!==lastUndoId){
-      lastUndoId=res.undoId;
-      if(state.shots.length){undo();toast('📡 라이브에서 마지막 발을 취소했어요.')}
+    // 취소·수동 점수 신호: 서버가 번호(seq)를 1씩 늘려 가며 쌓아 두므로, 여러 번 눌러도 누른 횟수·순서 그대로 처리한다.
+    const curSeq=Number(res.eventSeq)||0;
+    if(lastEventSeq===null)lastEventSeq=curSeq;   // 처음 연결(또는 사로 변경) 시 지금까지 쌓인 신호는 과거 것이므로 무시
+    else if(curSeq>lastEventSeq){
+      const evs=(Array.isArray(res.events)?res.events:[]).filter(e=>Number(e.seq)>lastEventSeq).sort((a,b)=>a.seq-b.seq);
+      for(const e of evs){
+        lastEventSeq=Number(e.seq);
+        if(e.type==='undo'){if(state.shots.length){undo();toast('📡 라이브에서 마지막 발을 취소했어요.')}}
+        else if(e.type==='manual'){
+          const sc=Math.min(10,Math.max(0,Math.round(Number(e.score)||0)));
+          if(state.running&&state.shots.length<state.maxShots){recordShot(null,null,sc);toast(`📡 라이브에서 수동 ${sc}점을 기록했어요.`)}
+          else toast('📡 수동 점수가 왔지만 진행 중인 경기가 없어요.');
+        }
+      }
+      lastEventSeq=curSeq;
     }
     // 시작 명령(사격 중에는 확인하지 않음)
     if(!state.running&&res.cmd&&res.cmd.cmdId)applyRemoteCmd(res.cmd);
@@ -937,7 +948,10 @@
     else state.pendingLaser={x:px,y:py,frames:1,maxSignal:strongest.delta,maxContrast:localContrast,maxColorBoost:clusterColorBoost,maxBright:strongest.bright,maxRedRise:strongest.redRise};
   }
 
-  function undo(){if(!state.shots.length)return;state.shots.pop();state.running=true;els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
+  function undo(){if(!state.shots.length)return;const reopened=!state.running;state.shots.pop();state.running=true;
+    // 이미 끝난 경기를 다시 연 경우: 오래된 기준 화면으로 감지하면 오인식 위험이 있어 감지기를 처음부터 다시 준비한다(약 1~2초).
+    if(reopened){clearDetectorBackground();state.detectorReady=false;state.warmupFrames=0;state.warmupStart=performance.now();state.readyAt=0;state.announced=true;lockCamera(true);document.body.classList.add('match-live');setTimeout(resize,60)}
+    els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
   function reset(){clearCountdown();lockCamera(false);state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
