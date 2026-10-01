@@ -1049,6 +1049,17 @@
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
   els.firingLane.addEventListener('change',attachLane);   // 사로를 바꾸면 그 사로의 명령을 듣는다
   fbInit();
+  // 페이지를 열면 카메라를 자동으로 켠다(카메라 시작 버튼은 비상용으로 그대로 둠).
+  // 처음 한 번은 브라우저가 카메라 허용을 물어보고, 허용하면 다음부터는 묻지 않는다.
+  (async()=>{
+    try{
+      if(navigator.permissions&&navigator.permissions.query){
+        const st=await navigator.permissions.query({name:'camera'});
+        if(st.state==='denied'){els.guide.textContent='카메라 권한이 막혀 있어요. 브라우저 설정에서 카메라를 허용한 뒤 [카메라 시작]을 누르세요.';return}
+      }
+    }catch(e){/* 권한 조회를 지원하지 않는 브라우저는 그냥 시도 */}
+    if(!state.stream)startCamera();
+  })();
   window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,280));document.addEventListener('fullscreenchange',updateFullscreenButton);document.addEventListener('webkitfullscreenchange',updateFullscreenButton);document.addEventListener('visibilitychange',()=>{if(document.hidden){state.candidate=null;state.candidateFrames=0}});updateScore();
 })();
 </script>
