@@ -119,6 +119,8 @@
   .dupwarn{border-radius:12px;border:2px solid var(--gold);background:#2e2610;color:var(--gold);font-weight:800;padding:10px 14px;margin-bottom:14px;text-align:center}
   [hidden]{display:none!important}
 </style>
+<!-- 주소·Firebase 설정(따로 관리하는 파일) -->
+<script src="config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -212,18 +214,10 @@
 <script>
 (() => {
   'use strict';
-  // ★ 기존 감일고 레이저 사격 시스템(Apps Script) 웹앱의 /exec 주소를 넣으세요. (index.html과 같은 주소)
-  const APPS_SCRIPT_URL = '여기에_기존_웹앱_exec_주소';
-  // 실시간 통신(Firebase) 설정 - index.html과 같은 값
-  const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBe8XGq4Vz-e0HrvRrxV8uyyiE10ozBEvc",
-    authDomain: "laser-9893f.firebaseapp.com",
-    databaseURL: "https://laser-9893f-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "laser-9893f",
-    storageBucket: "laser-9893f.firebasestorage.app",
-    messagingSenderId: "790272136984",
-    appId: "1:790272136984:web:304af6db9ff926f71bb06d"
-  };
+  // 주소와 Firebase 설정은 config.js 파일에서 읽어 온다(이 파일을 고쳐도 다시 넣을 필요 없음).
+  const LASER_CONFIG = window.LASER_CONFIG || {};
+  const APPS_SCRIPT_URL = String(LASER_CONFIG.APPS_SCRIPT_URL || '').trim();
+  const FIREBASE_CONFIG = LASER_CONFIG.FIREBASE || null;
   const LANE_COUNT = 7;
   const LANE_SHOTS = { individual: 10, team: 20 };   // index.html과 같은 값
   const TYPE_LABEL = { practice: '연습', eval: '수행', check: '점수 확인' };
@@ -246,7 +240,8 @@
   function serverReady() { return /^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/.+\/exec$/.test(APPS_SCRIPT_URL); }
   function jsonp(action, params, timeoutMs) {
     return new Promise((resolve, reject) => {
-      if (!serverReady()) { reject(new Error('live.html에 Apps Script 주소를 넣어 주세요.')); return; }
+      if (!window.LASER_CONFIG) { reject(new Error('config.js 설정 파일을 찾을 수 없어요. live.html과 같은 폴더에 올렸는지 확인하세요.')); return; }
+      if (!serverReady()) { reject(new Error('config.js에 Apps Script 주소를 넣어 주세요.')); return; }
       const cb = 'lvCb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
       const script = document.createElement('script'); let done = false;
       const timer = setTimeout(() => finish(new Error('응답 시간 초과')), timeoutMs || 25000);
@@ -834,6 +829,7 @@
       $('setupMsg').textContent = '⚠️ ' + err.message;
     });
 
+    if (!FIREBASE_CONFIG) { $('connPill').textContent = 'config.js 설정 파일을 찾을 수 없어요'; $('connPill').className = 'pill bad'; return; }
     if (!window.firebase || !firebase.initializeApp) { $('connPill').textContent = '실시간 연결 실패(인터넷 확인)'; $('connPill').className = 'pill bad'; return; }
     try {
       firebase.initializeApp(FIREBASE_CONFIG);
