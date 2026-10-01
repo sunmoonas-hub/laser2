@@ -438,7 +438,7 @@
     };
     try{localStorage.setItem('laserMatchLast',JSON.stringify(payload))}catch(e){}
     if(cfg.evalType!=='practice'&&cfg.evalType!=='eval'){
-      setStatus('점수 확인 완료');els.guide.textContent='점수 확인 모드 · 기록은 저장하지 않았습니다.';setSaveInfo('skip','점수 확인 모드 · 저장 안 함');return;
+      setStatus('영점 조준 완료');els.guide.textContent='영점 조준 · 기록은 저장하지 않았습니다.';setSaveInfo('skip','영점 조준 · 저장 안 함');return;
     }
     if(!isServerConfigured()){setStatus('저장 실패','#ff4d66');setSaveInfo('fail','config.js에 Apps Script 주소가 없어요');return}
     const token=++saveToken;
@@ -634,7 +634,7 @@
       teamKey:String(cmd.teamKey||''),members,label:String(cmd.label||'')
     };
     state.saveInfo=null;
-    els.player.value=mode==='team'?(state.matchCfg.teamName||'단체전'):(state.matchCfg.studentId||'점수 확인');
+    els.player.value=mode==='team'?(state.matchCfg.teamName||'단체전'):(state.matchCfg.studentId||'영점 조준');
     els.laserColor.value='red';els.detectKind.value='laser';
     els.maxShots.value=String(LANE_SHOTS[mode]);updateScore();
     startMatch();els.firingLane.disabled=true;ackStart(cmd,'started','');
