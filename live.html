@@ -70,14 +70,15 @@
   .slot.next{border-color:var(--gold)}
   .slot.next .s{color:var(--gold)}
   .sec-title{font-size:.88rem;font-weight:800}
-  .rec-row{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 8px;flex-wrap:wrap}
-  .rec-row .lab{font-weight:800;min-width:76px}
-  .rec-row .sc{flex:1;min-width:90px;font-size:.88rem}
-  .rec-row button{min-height:44px;padding:0 10px;border-radius:9px;font-size:.8rem;font-weight:700}
-  .rec-move{border:1px solid #34506f;background:#142941;color:var(--text)}
-  .rec-del{border:1px solid var(--red);background:transparent;color:var(--red2)}
-  .hist-grid{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:start}
-  @media(max-width:620px){.hist-grid{grid-template-columns:1fr}}
+  /* 지난 기록: 큰 덩어리 사이 18px, 묶음 안(제목↔칸) 8px */
+  .hist-body{display:flex;flex-direction:column;gap:18px}
+  .hist-group{display:flex;flex-direction:column;gap:8px}
+  .hist-target{width:100%;max-width:440px;margin:0 auto}
+  .shot-cells{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;width:100%;max-width:440px;margin:0 auto}
+  .shot-cell{border-radius:8px;padding:6px 0;text-align:center;font-weight:900;font-size:.95rem;background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+  .shot-cell .n{display:block;font-size:.62rem;font-weight:700;opacity:.8}
+  .shot-cell.hit{background:var(--lime);border-color:var(--lime);color:#07111f}
+  .shot-cell.miss{background:var(--red);border-color:var(--red);color:#fff}
   .canvas-box{background:var(--panel2);border:1px solid var(--line);border-radius:14px;overflow:hidden}
   .canvas-box canvas{width:100%;height:auto;display:block;aspect-ratio:1}
   .banner{border-radius:16px;border:2px solid var(--cyan);background:#0d2a33;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -140,16 +141,16 @@
   <div class="layout" id="setupView">
     <section class="panel" id="histPanel">
       <div class="hint" id="histHint">오른쪽에서 학생 또는 조를 고르면 지난 기록이 여기에 보여요.</div>
-      <div id="histBody" hidden></div>
+      <div id="histBody" class="hist-body" hidden></div>
     </section>
 
     <section class="panel">
       <h2>새 경기 시작</h2>
       <div class="lbl">구분
         <div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))" id="segType">
+          <button type="button" data-v="check">영점 조준</button>
           <button type="button" data-v="practice">연습</button>
           <button type="button" data-v="eval">수행</button>
-          <button type="button" data-v="check">점수 확인</button>
         </div>
       </div>
       <div class="lbl">방식
@@ -220,7 +221,7 @@
   const FIREBASE_CONFIG = LASER_CONFIG.FIREBASE || null;
   const LANE_COUNT = 7;
   const LANE_SHOTS = { individual: 10, team: 20 };   // index.html과 같은 값
-  const TYPE_LABEL = { practice: '연습', eval: '수행', check: '점수 확인' };
+  const TYPE_LABEL = { check: '영점 조준', practice: '연습', eval: '수행' };
 
   const $ = id => document.getElementById(id);
   const esc = v => String(v === undefined || v === null ? '' : v).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
@@ -279,16 +280,23 @@
   }
 
   /* ---------- 과녁 그리기 ---------- */
-  function drawTarget(canvas, shots, colorOf) {
+  // opts.fit: 탄착 위치에 맞춰 과녁을 확대해서 그린다(지난 기록용). 모든 발이 과녁 안이면 상자를 거의 꽉 채운다.
+  function drawTarget(canvas, shots, colorOf, opts) {
     const ctx = canvas.getContext('2d');
-    const W = canvas.width, cx = W / 2, cy = W / 2, R = W * 0.28;
+    const W = canvas.width, cx = W / 2, cy = W / 2;
+    let R = W * 0.28;
+    if (opts && opts.fit) {
+      let far = 1;
+      shots.forEach(s => { if (s && s.k !== 'manual') far = Math.max(far, Math.hypot(Number(s.u) || 0, Number(s.v) || 0)); });
+      R = Math.min(W * 0.46, (W * 0.47) / (far + 0.04));
+    }
     ctx.clearRect(0, 0, W, W);
     ctx.beginPath(); ctx.arc(cx, cy, R * 0.4, 0, Math.PI * 2); ctx.fillStyle = '#1d3550'; ctx.fill();
     for (let i = 10; i >= 1; i--) {
       ctx.beginPath(); ctx.arc(cx, cy, R * i / 10, 0, Math.PI * 2);
       ctx.strokeStyle = i === 10 ? '#b7ff3ccc' : '#b7ff3c55'; ctx.lineWidth = i === 10 ? W / 240 : W / 430; ctx.stroke();
     }
-    const dot = W / 60;
+    const dot = (opts && opts.dot) || W / 60;
     shots.forEach((s, i) => {
       if (!s || s.k === 'manual') return;   // 수동 입력 발은 위치가 없음
       const px = cx + (Number(s.u) || 0) * R, py = cy + (Number(s.v) || 0) * R;
@@ -327,7 +335,7 @@
     const sel = $('selStudent');
     if (!S.cls) { sel.innerHTML = '<option value="">-- 반을 먼저 고르세요 --</option>'; return; }
     const list = S.students.filter(s => String(s.cls) === String(S.cls));
-    const first = S.type === 'check' ? '-- 학생 선택 안 함 (점수만 확인) --' : '-- 학생 선택 --';
+    const first = S.type === 'check' ? '-- 학생 선택 안 함 (영점 조준만) --' : '-- 학생 선택 --';
     sel.innerHTML = `<option value="">${first}</option>` + list.map(s => `<option value="${esc(s.id)}">${esc(s.number)}번 ${esc(s.name)}</option>`).join('');
     sel.value = S.studentId;
   }
@@ -363,7 +371,7 @@
     if (S.mode === 'individual') {
       if (S.type !== 'check' && !S.studentId) { r.reason = '학생을 선택하세요.'; r.big = '학생을 선택하세요'; return r; }
       const who = S.studentId ? labelOfStudent(S.studentId) : '학생 선택 안 함';
-      if (S.type === 'check') { r.ok = true; r.big = `${who} · 점수 확인`; r.sub = '기록은 저장하지 않아요'; return r; }
+      if (S.type === 'check') { r.ok = true; r.big = `${who} · ${TYPE_LABEL.check}`; r.sub = '기록은 저장하지 않아요'; return r; }
       if (S.histLoading) { r.big = `${who}`; r.sub = '지난 기록을 불러오는 중…'; r.reason = '기록을 불러오는 중이에요.'; return r; }
       if (!S.hist || S.hist.kind !== 'student' || S.hist.id !== S.studentId) { r.big = who; r.sub = S.histError || '지난 기록을 불러오지 못했어요'; r.reason = '지난 기록 확인이 필요해요.'; return r; }
       const next = S.hist.data.next[S.type];
@@ -376,7 +384,7 @@
     const n = presentMembers().length;
     if (n < 3 || n > 5) { r.cls = 'warn'; r.big = `출석 ${n}명`; r.sub = '단체전은 3~5명이 쏴야 해요'; r.reason = '출석 인원을 확인하세요.'; return r; }
     const split = splitShots(n).map(x => x + '발').join(' · ');
-    if (S.type === 'check') { r.ok = true; r.big = `${S.cls}반 ${team.teamName} · 점수 확인`; r.sub = `${n}명 → ${split} · 저장 안 함`; return r; }
+    if (S.type === 'check') { r.ok = true; r.big = `${S.cls}반 ${team.teamName} · ${TYPE_LABEL.check}`; r.sub = `${n}명 → ${split} · 저장 안 함`; return r; }
     if (S.histLoading) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = '지난 기록을 불러오는 중…'; r.reason = '기록을 불러오는 중이에요.'; return r; }
     if (!S.hist || S.hist.kind !== 'team' || S.hist.id !== teamKey()) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = S.histError || '지난 기록을 불러오지 못했어요'; r.reason = '지난 기록 확인이 필요해요.'; return r; }
     const nth = S.hist.data.next[S.type];
@@ -439,12 +447,8 @@
   function renderStudentHistory(d) {
     const st = d.student || {};
     const nextP = S.type === 'practice' ? d.next.practice : 0, nextE = S.type === 'eval' ? d.next.eval : 0;
-    const recs = (d.records || []).map((r, i) => `<div class="rec-row">
-        <span class="lab" style="color:${r.sheet === 'eval' ? 'var(--red2)' : 'var(--cyan)'}">${TYPE_LABEL[r.sheet]} ${esc(r.session)}차시</span>
-        <span class="sc">${esc(r.score)}점 · ${esc(r.src)}<br><span class="small muted">${esc(r.at)}</span></span>
-        <button type="button" class="rec-move" data-rec="${i}" data-act="move">${r.sheet === 'eval' ? '연습으로 이동' : '수행으로 이동'}</button>
-        <button type="button" class="rec-del" data-rec="${i}" data-act="del">삭제</button>
-      </div>`).join('') || '<div class="small muted">저장된 기록이 없어요.</div>';
+    const last = d.lastShots || [];
+    const cells = last.map((x, i) => `<div class="shot-cell ${Number(x.s) ? 'hit' : 'miss'}"><span class="n">${i + 1}</span>${esc(x.s)}</div>`).join('');
     $('histBody').innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
         <h2>${esc(st.cls)}반 ${esc(st.number)}번 ${esc(st.name)}</h2><span class="small muted">지난 기록</span>
@@ -454,55 +458,37 @@
         <div class="stat"><div class="k">평균</div><div class="v" style="color:var(--cyan)">${d.recordCount ? esc(d.averageScore) : '-'}</div></div>
         <div class="stat"><div class="k">기록 수</div><div class="v">${esc(d.recordCount)} / 12</div></div>
       </div>
-      <div class="sec-title" style="color:var(--cyan)">연습 1~10차시</div>
-      <div class="slots10">${(d.practice || []).map((v, i) => slotHtml(i + 1, v, nextP === i + 1)).join('')}</div>
-      <div class="sec-title" style="color:var(--red2)">수행 1~2차시</div>
-      <div class="slots10">${(d.eval || []).map((v, i) => slotHtml(i + 1, v, nextE === i + 1)).join('')}</div>
-      <div class="hist-grid">
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
-          <div class="canvas-box" style="width:100%"><canvas id="cvHist" width="400" height="400"></canvas></div>
-          <span class="small muted">${(d.lastShots || []).length ? '최근 레이저 경기 탄착군' : '레이저 경기 기록 없음'}</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div class="sec-title">기록 관리</div>
-          ${recs}
-        </div>
+      <div class="hist-group">
+        <div class="sec-title" style="color:var(--cyan)">연습 1~10차시</div>
+        <div class="slots10">${(d.practice || []).map((v, i) => slotHtml(i + 1, v, nextP === i + 1)).join('')}</div>
+      </div>
+      <div class="hist-group">
+        <div class="sec-title" style="color:var(--red2)">수행 1~2차시</div>
+        <div class="slots10">${(d.eval || []).map((v, i) => slotHtml(i + 1, v, nextE === i + 1)).join('')}</div>
+      </div>
+      <div class="hist-group">
+        <div class="sec-title">${last.length ? '최근 레이저 경기 탄착군' : '최근 레이저 경기 탄착군 · 기록 없음'}</div>
+        <div class="canvas-box hist-target"><canvas id="cvHist" width="600" height="600"></canvas></div>
+        ${last.length ? `<div class="shot-cells">${cells}</div>` : ''}
       </div>`;
-    drawTarget($('cvHist'), d.lastShots || [], s => ({ fill: Number(s.s) ? '#b7ff3c' : '#ff4d66' }));
+    // 점에 발 번호를 적어서, 아래 발별 점수 칸과 맞춰 볼 수 있게 한다.
+    drawTarget($('cvHist'), last, (x, i) => ({ fill: Number(x.s) ? '#b7ff3c' : '#ff4d66', label: true, ring: i === last.length - 1 ? '#ffc940' : '' }), { fit: true, dot: 600 / 40 });
   }
   function renderTeamHistory(d) {
     const team = S.drafts[S.teamIdx] || {};
-    const list = (arr, type) => arr.length ? arr.map(r => `${r.n}번째 ${esc(r.total)}점`).join(' · ') : '기록 없음';
+    const list = arr => arr.length ? arr.map(r => `${r.n}번째 ${esc(r.total)}점`).join(' · ') : '기록 없음';
     $('histBody').innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
         <h2>${esc(S.cls)}반 ${esc(team.teamName)}</h2><span class="small muted">이 팀원 구성의 지난 기록</span>
       </div>
       <div class="grid2">
-        <div class="stat" style="text-align:left"><div class="sec-title" style="color:var(--cyan)">연습</div><div class="small muted" style="margin-top:6px">${list(d.practice || [])}</div><div class="small muted" style="margin-top:4px">다음은 ${esc(d.next.practice)}번째</div></div>
-        <div class="stat" style="text-align:left"><div class="sec-title" style="color:var(--red2)">수행</div><div class="small muted" style="margin-top:6px">${list(d.eval || [])}</div><div class="small muted" style="margin-top:4px">다음은 ${esc(d.next.eval)}번째 · 수행은 팀별 최고 합계가 반영돼요</div></div>
+        <div class="stat hist-group" style="text-align:left"><div class="sec-title" style="color:var(--cyan)">연습</div><div class="small muted">${list(d.practice || [])}</div><div class="small muted">다음은 ${esc(d.next.practice)}번째</div></div>
+        <div class="stat hist-group" style="text-align:left"><div class="sec-title" style="color:var(--red2)">수행</div><div class="small muted">${list(d.eval || [])}</div><div class="small muted">다음은 ${esc(d.next.eval)}번째 · 수행은 팀별 최고 합계가 반영돼요</div></div>
       </div>
-      <div class="sec-title">최근 경기 팀원별 점수</div>
-      <div class="small muted" style="line-height:1.7">${d.lastMemberScores ? esc(d.lastMemberScores) : '팀원별 점수 기록 없음'}</div>`;
-  }
-
-  /* ---------- 기록 관리: 이동·삭제 ---------- */
-  function manageRecord(act, i) {
-    const d = S.hist && S.hist.kind === 'student' ? S.hist.data : null;
-    const r = d && d.records[i];
-    if (!r) return;
-    const st = d.student;
-    const what = `${st.name} · ${TYPE_LABEL[r.sheet]} ${r.session}차시 (${r.score}점)`;
-    const q = act === 'move'
-      ? `${what} 기록을 ${r.sheet === 'eval' ? '연습' : '수행'}으로 옮길까요?\n옮길 쪽의 비어 있는 가장 앞 차시로 들어가요.`
-      : `${what} 기록을 삭제할까요?\n삭제하면 되돌릴 수 없어요.`;
-    if (!confirm(q)) return;
-    $('setupMsg').textContent = '처리 중…';
-    const payload = JSON.stringify({ sheet: r.sheet, row: r.row, studentId: st.id, session: r.session, at: r.at });
-    jsonp(act === 'move' ? 'moveRecord' : 'deleteRecord', { payload }, 60000).then(res => {
-      if (!res || !res.ok) throw new Error((res && res.error) || '실패');
-      $('setupMsg').textContent = '✅ ' + res.message;
-    }).catch(err => { $('setupMsg').textContent = '⚠️ ' + err.message; })
-      .then(() => loadHistory());
+      <div class="hist-group">
+        <div class="sec-title">최근 경기 팀원별 점수</div>
+        <div class="small muted" style="line-height:1.7">${d.lastMemberScores ? esc(d.lastMemberScores) : '팀원별 점수 기록 없음'}</div>
+      </div>`;
   }
 
   /* ---------- 명령 보내기 (Firebase) ---------- */
@@ -663,7 +649,7 @@
       $('banNext').textContent = finished ? '' : (members[curIdx + 1] ? `다음: ${nameOf(members[curIdx + 1].id)}` : '마지막 사수');
     } else {
       $('banSub').textContent = `${ls.label || typeLabel} · 개인전 · ${statusText}`;
-      $('banWho').textContent = ls.studentId ? labelOfStudent(ls.studentId) : '점수 확인';
+      $('banWho').textContent = ls.studentId ? labelOfStudent(ls.studentId) : TYPE_LABEL.check;
       $('banCnt').textContent = `${shots.length} / ${max}발`;
       $('banNext').textContent = '';
     }
@@ -791,10 +777,6 @@
     else if (b.dataset.act === 'down' && i < S.order.length - 1) [S.order[i + 1], S.order[i]] = [S.order[i], S.order[i + 1]];
     else if (b.dataset.act === 'abs') S.order[i].absent = !S.order[i].absent;
     renderOrder(); renderSummary();
-  });
-  $('histBody').addEventListener('click', e => {
-    const b = e.target.closest('button[data-rec]'); if (!b) return;
-    manageRecord(b.dataset.act, Number(b.dataset.rec));
   });
   $('btnStart').addEventListener('click', sendStart);
   $('btnEnd').addEventListener('click', sendEnd);
