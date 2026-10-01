@@ -34,8 +34,6 @@
   .metric strong{font-size:1.6rem}
   .metric:first-child strong{color:var(--lime);font-size:2rem}
   .updated{text-align:center;color:var(--muted);font-size:.72rem;margin-top:6px}
-  .watchRow{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;font-size:.82rem;color:var(--muted)}
-  .watchRow select{background:#091426;color:#fff;border:1px solid #29415e;border-radius:8px;padding:6px 10px;font-size:.85rem}
   .startPanel{background:linear-gradient(160deg,#14243aee,#0c1728ee);border:1px solid #29415e;border-radius:16px;padding:16px}
   .startPanel h2{font-size:1rem;margin:0 0 12px}
   .startPanel .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
@@ -57,6 +55,12 @@
   .scoreGrid .slot.miss{background:var(--red);border-color:var(--red);color:#fff}
   .scoreGrid .slot.flash{animation:scorePop .5s ease}
   @keyframes scorePop{0%{transform:scale(1.35)}100%{transform:scale(1)}}
+  .manualTitle{font-size:.9rem;margin:18px 0 8px;color:var(--muted);font-weight:800}
+  .manualGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+  .manualGrid button{min-height:46px;border:1px solid #34506f;border-radius:10px;background:#142941;color:#fff;font-weight:900;font-size:1.05rem}
+  .manualGrid button:active{background:var(--cyan);color:#07111f}
+  .manualGrid button:disabled{opacity:.35}
+  .manualGrid button.zero{border-color:var(--red);color:var(--red)}
   .undoBtnLive{width:100%;min-height:48px;border:1px solid var(--red);border-radius:12px;background:transparent;color:var(--red);font-weight:800;font-size:.88rem;margin-top:16px}
   .undoBtnLive:disabled{opacity:.4}
   .undoMsg{text-align:center;color:var(--muted);font-size:.76rem;margin-top:8px;min-height:1.1em}
@@ -70,13 +74,7 @@
   </header>
   <div class="layout">
     <div class="left">
-      <div class="watchRow">지금 보는 사로
-        <select id="watchLane">
-          <option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option>
-          <option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option>
-        </select>
-      </div>
-      <div id="idleHint" class="idle"><b>대기 중…</b>선택한 사로에서 아직 경기가 시작되지 않았어요.</div>
+      <div id="idleHint" class="idle"><b>대기 중…</b>오른쪽에서 선택한 사로에서 아직 경기가 시작되지 않았어요.</div>
       <div id="liveBox" hidden>
         <div class="who">
           <div><div class="name" id="pName">–</div><div class="lane" id="pLane"></div></div>
@@ -97,8 +95,6 @@
         <div class="grid">
           <div class="field"><label>선수명</label><input id="rPlayer" placeholder="선수 이름" maxlength="40"></div>
           <div class="field"><label>사로</label><select id="rLane"><option value="1">1사로</option><option value="2">2사로</option><option value="3">3사로</option><option value="4">4사로</option><option value="5">5사로</option><option value="6">6사로</option><option value="7">7사로</option><option value="8">8사로</option></select></div>
-          <div class="field"><label>레이저 색상</label><select id="rColor"><option value="red">빨간색</option><option value="green">초록색</option></select></div>
-          <div class="field"><label>감지 대상</label><select id="rKind"><option value="both">레이저+물체</option><option value="laser" selected>레이저만</option><option value="object">물체만</option></select></div>
           <div class="field"><label>대회명</label><input id="rEvent" placeholder="예: 교내 사격대회" maxlength="80"></div>
           <div class="field"><label>경기 발수</label><select id="rMax"><option>5</option><option selected>10</option><option>20</option></select></div>
         </div>
@@ -111,6 +107,8 @@
       <section class="shotPanel" id="shotPanel" hidden>
         <h2>🎯 획득 점수</h2>
         <div class="scoreGrid" id="scoreGrid"></div>
+        <div class="manualTitle">✍️ 수동 점수 입력 (누르면 바로 1발 기록)</div>
+        <div class="manualGrid" id="manualGrid"></div>
         <button class="undoBtnLive" id="undoBtnLive">↩️ 마지막 발 취소</button>
         <p class="undoMsg" id="undoMsg"></p>
       </section>
@@ -128,10 +126,9 @@
 
   // "지금 보는 사로"와 "시작할 사로"는 항상 같은 사로로 맞춘다.
   // 그래야 시작·취소·종료 버튼이 지금 화면에 보이는 사로에만 적용된다.
-  function currentLane(){ return Number($('watchLane').value) || 1; }
+  function currentLane(){ return Number($('rLane').value) || 1; }
   function setLane(lane){
     lane = String(lane);
-    $('watchLane').value = lane;
     $('rLane').value = lane;
     $('rStart').textContent = `🕹️ ${lane}사로 경기 시작`;
     $('rEnd').textContent = `🛑 ${lane}사로 종료`;
@@ -141,7 +138,6 @@
     applyView(); syncStartLock();
     restartPoll();
   }
-  $('watchLane').addEventListener('change', e => setLane(e.target.value));
   $('rLane').addEventListener('change', e => setLane(e.target.value));
 
   let lastShotCount = -1;
@@ -176,6 +172,7 @@
     }
     ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.strokeStyle='#b7ff3c';ctx.lineWidth=2;ctx.stroke();
     (shots||[]).forEach((s,i) => {
+      if(s.kind==='manual') return;   // 수동 입력 발은 위치가 없어 점수 칸에만 표시
       const px = cx + (s.u||0)*R, py = cy + (s.v||0)*R;
       ctx.beginPath();
       if(s.kind==='object'){ctx.moveTo(px,py-11);ctx.lineTo(px+11,py);ctx.lineTo(px,py+11);ctx.lineTo(px-11,py);ctx.closePath()}
@@ -197,6 +194,8 @@
     const stale = lastState && lastState.updatedAt && (Date.now() - lastState.updatedAt > 60000);
     const busy = !!(lastState && lastState.running && !stale);
     $('rStart').disabled = busy;
+    const canManual = busy && Array.isArray(lastState.shots) && lastState.shots.length < (lastState.maxShots || 10);
+    for(const b of $('manualGrid').children) b.disabled = !canManual;
   }
   function applyView(){
     const state = lastState;
@@ -282,8 +281,8 @@
       eventName: $('rEvent').value.trim(),
       player: $('rPlayer').value.trim(),
       firingLane: currentLane(),
-      laserColor: $('rColor').value,
-      detectKind: $('rKind').value,
+      laserColor: 'red',     // 빨간 레이저로 고정
+      detectKind: 'laser',   // 레이저만 감지(물체·자국 감지는 사용하지 않음)
       maxShots: Number($('rMax').value)
     };
     if(!cmd.player){ $('rMsg').textContent = '선수 이름을 입력해 주세요.'; return; }
@@ -317,6 +316,30 @@
     sendLaneSignal('remoteEnd', $('rEnd'), $('rMsg'), '📡 종료 신호를 보내는 중…', '경기를 종료했어요 - 탄착군·점수가 초기화돼요.',
       () => { $('rEnd').disabled = false; });
   });
+
+  // 수동 점수 버튼(10~0). 확인 창 없이 바로 보낸다 - 잘못 눌렀으면 '마지막 발 취소' 후 다시 입력.
+  // 서버가 누른 순서대로 번호를 붙여 쌓으므로 빠르게 여러 번 눌러도 누른 횟수만큼 정확히 기록된다.
+  for(let sc=10; sc>=0; sc--){
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = sc; if(sc===0) b.className = 'zero';
+    b.addEventListener('click', () => sendManual(sc));
+    $('manualGrid').appendChild(b);
+  }
+  function sendManual(score){
+    const lane = currentLane(), msg = $('undoMsg');
+    msg.textContent = `📡 ${lane}사로에 ${score}점 보내는 중…`;
+    const cb = 'manualCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => finish(null), 8000);
+    function finish(res){
+      clearTimeout(timer); window[cb] = function(){}; script.remove();
+      msg.textContent = (res && res.ok) ? `✅ ${lane}사로: 수동 ${score}점을 보냈어요 - 사대에 곧 반영돼요.` : '⚠️ 전송에 실패했어요. 다시 시도해 주세요.';
+    }
+    window[cb] = res => finish(res);
+    script.onerror = () => finish(null);
+    script.src = `${APPS_SCRIPT_URL}?action=remoteManual&lane=${lane}&score=${score}&callback=${cb}&t=${Date.now()}`;
+    document.head.appendChild(script);
+  }
 
   drawTarget([]);
   setLane(1);
