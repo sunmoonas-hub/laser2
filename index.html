@@ -37,6 +37,16 @@
     .side-panel{display:contents}
     dialog{border:1px solid var(--line);border-radius:20px;padding:0;background:#0c1728;color:white;width:min(92%,560px);box-shadow:0 25px 80px #000b}dialog::backdrop{background:#020712cc}.modal{padding:20px}.modal h3{margin:0 0 15px}.leader-row{display:grid;grid-template-columns:34px 1fr 60px 55px;gap:8px;padding:11px 4px;border-bottom:1px solid #263a53;align-items:center}.rank{color:var(--gold);font-weight:900}.empty{color:var(--muted);text-align:center;padding:30px}.footer-actions{display:flex;gap:8px;margin-top:16px}.footer-actions .btn{flex:1}.toast{position:fixed;z-index:20;left:50%;bottom:28px;transform:translate(-50%,120px);background:#effffb;color:#07111f;padding:11px 16px;border-radius:12px;font-weight:700;box-shadow:0 10px 35px #0009;transition:.25s}.toast.show{transform:translate(-50%,0)}
     @media(min-width:700px){.app{max-width:760px;margin:auto}.grid{grid-template-columns:1fr 1fr}}
+    /* 카운트다운·사격 시작·점수 글자를 카메라 화면 크기에 비례해 크게 표시한다.
+       cqh = 카메라 화면 높이의 1%, cqw = 폭의 1%. 높이 기준으로 키우되, 폭을 넘지 않게 폭 기준 상한도 둔다.
+       (이 기능을 지원하지 않는 오래된 브라우저는 위의 기존 크기를 그대로 쓴다) */
+    @supports (width:1cqh){
+      .camera{container-type:size}
+      .countdown b{font-size:min(70cqh,60cqw)}
+      .countdown b.go{font-size:min(34cqh,21cqw)}
+      .score-pop{font-size:min(55cqh,60cqw)}
+      .score-pop.miss{font-size:min(40cqh,32cqw)}
+    }
     @media(max-width:520px){.shot-grid{grid-template-columns:repeat(5,1fr)}}
     @media(max-width:420px){.status{display:none}.fullscreen-btn{padding:7px 9px;font-size:.68rem}}
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
