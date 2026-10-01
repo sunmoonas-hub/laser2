@@ -42,6 +42,8 @@
     @media(max-width:380px){:root{font-size:19px}.camera{height:66svh}.btn{font-size:.96rem}}
     @media(orientation:landscape) and (max-height:700px){:root{font-size:16px}html,body{height:100%;overflow:hidden}.app{display:grid;width:100%;height:100svh;min-height:0;max-width:none;overflow:hidden;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side";gap:8px;padding:4px 8px 8px}.camera{height:100%;min-height:0;position:relative;top:auto}.side-panel{grid-area:side;display:block;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 3px 18px 0;scrollbar-gutter:stable}.setup{margin:0 0 7px;padding:9px}.setup .grid{grid-template-columns:1fr 1fr;gap:7px}.field label{font-size:.66rem;margin-bottom:3px}.field input,.field select{min-height:40px;padding:6px 9px;font-size:.82rem}.controls{margin:0 0 7px;gap:6px}.btn{min-height:43px;padding:6px;font-size:.78rem}.scoreboard{margin:0 0 7px}.metric{padding:7px 3px}.metric strong{font-size:1.1rem}.metric:first-child strong{font-size:1.35rem}.shots{margin:0 0 7px;padding:9px}.section-title{margin-bottom:6px}.shot-grid{grid-template-columns:repeat(10,1fr);gap:3px}.shot{font-size:.6rem}.hint{display:block;font-size:.65rem;line-height:1.35;margin-top:7px}.footer-controls{margin-bottom:10px}.zoom-controls{top:50px;grid-template-columns:40px 52px 40px}.zoom-controls button{width:40px;height:40px}.guide{font-size:.67rem;bottom:8px}}
   </style>
+  <!-- 주소·Firebase 설정(따로 관리하는 파일) -->
+  <script src="config.js"></script>
   <!-- 실시간 통신(Firebase) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -120,18 +122,10 @@
 (() => {
   'use strict';
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
-  // ★ 기존 감일고 레이저 사격 시스템(Apps Script) 웹앱의 /exec 주소를 넣으세요. (live.html과 같은 주소)
-  const APPS_SCRIPT_URL = '여기에_기존_웹앱_exec_주소';
-  // 실시간 통신(Firebase) 설정 - live.html과 같은 값
-  const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBe8XGq4Vz-e0HrvRrxV8uyyiE10ozBEvc",
-    authDomain: "laser-9893f.firebaseapp.com",
-    databaseURL: "https://laser-9893f-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "laser-9893f",
-    storageBucket: "laser-9893f.firebasestorage.app",
-    messagingSenderId: "790272136984",
-    appId: "1:790272136984:web:304af6db9ff926f71bb06d"
-  };
+  // 주소와 Firebase 설정은 config.js 파일에서 읽어 온다(이 파일을 고쳐도 다시 넣을 필요 없음).
+  const LASER_CONFIG = window.LASER_CONFIG || {};
+  const APPS_SCRIPT_URL = String(LASER_CONFIG.APPS_SCRIPT_URL || '').trim();
+  const FIREBASE_CONFIG = LASER_CONFIG.FIREBASE || null;
   const $ = id => document.getElementById(id);
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn','countdown','countdownText'].map(id => [id,$(id)]));
   // 주소 끝에 ?lane=3 처럼 사로 번호가 있으면 그 사로로 고정하고, 화면에서 바꿀 수 없게 잠근다(태블릿마다 바로가기로 사용).
@@ -436,7 +430,7 @@
     if(cfg.evalType!=='practice'&&cfg.evalType!=='eval'){
       setStatus('점수 확인 완료');els.guide.textContent='점수 확인 모드 · 기록은 저장하지 않았습니다.';setSaveInfo('skip','점수 확인 모드 · 저장 안 함');return;
     }
-    if(!isServerConfigured()){setStatus('저장 실패','#ff4d66');setSaveInfo('fail','index.html에 Apps Script 주소가 없어요');return}
+    if(!isServerConfigured()){setStatus('저장 실패','#ff4d66');setSaveInfo('fail','config.js에 Apps Script 주소가 없어요');return}
     const token=++saveToken;
     setStatus('저장 중','#ffc940');els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';setSaveInfo('saving','저장 중…');
     const attempt=n=>{
@@ -540,6 +534,7 @@
   let lastCmdId=null,lastNotifiedCmdId=null;
 
   function fbInit(){
+    if(!window.LASER_CONFIG||!FIREBASE_CONFIG){els.liveStatus.textContent='📡 config.js 설정 파일을 찾을 수 없어요';return}
     if(!window.firebase||!firebase.initializeApp){els.liveStatus.textContent='📡 Firebase를 불러오지 못했어요(인터넷 확인)';return}
     try{
       firebase.initializeApp(FIREBASE_CONFIG);
