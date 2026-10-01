@@ -121,7 +121,7 @@
   'use strict';
   // Apps Script를 웹 앱으로 배포한 뒤 아래 따옴표 안에 /exec 주소를 넣으세요.
   // ★ 기존 감일고 레이저 사격 시스템(Apps Script) 웹앱의 /exec 주소를 넣으세요. (live.html과 같은 주소)
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFR3r_0IBj335qmebcyng187aj7yuYYtDn79pZyIDkld8X5c3xWFo6rQrIp7_dHu57/exec';
+  const APPS_SCRIPT_URL = '여기에_기존_웹앱_exec_주소';
   // 실시간 통신(Firebase) 설정 - live.html과 같은 값
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyBe8XGq4Vz-e0HrvRrxV8uyyiE10ozBEvc",
@@ -134,6 +134,13 @@
   };
   const $ = id => document.getElementById(id);
   const els = Object.fromEntries(['video','overlay','work','cameraMsg','cameraBtn','calibrateBtn','matchBtn','manualBtn','undoBtn','guide','livePill','fpsPill','zoomOut','zoomIn','zoomValue','flash','scorePop','clrPill','liveStatus','eventName','player','firingLane','laserColor','detectKind','maxShots','totalScore','shotCount','shotMax','average','shotGrid','calibrationInfo','leaderBtn','leaderDialog','leaderList','manualDialog','manualScore','manualConfirm','resetBtn','sensitivityDown','sensitivityUp','toast','status','fullscreenBtn','countdown','countdownText'].map(id => [id,$(id)]));
+  // 주소 끝에 ?lane=3 처럼 사로 번호가 있으면 그 사로로 고정하고, 화면에서 바꿀 수 없게 잠근다(태블릿마다 바로가기로 사용).
+  const LANE_FIXED=(()=>{const n=Number(new URLSearchParams(location.search).get('lane'));return Number.isInteger(n)&&n>=1&&n<=7?n:0})();
+  if(LANE_FIXED){
+    els.firingLane.value=String(LANE_FIXED);els.firingLane.disabled=true;
+    const lb=els.firingLane.closest('.field')&&els.firingLane.closest('.field').querySelector('label');
+    if(lb)lb.textContent='사로 지정 (주소로 고정: '+LANE_FIXED+'사로)';
+  }
   // 느슨한 기준의 '보조 경로'. 밝은 환경 오인식의 주범이라 기본은 끈다. 아주 어두운 곳에서 약한 레이저를 놓치면 true로.
   const USE_FALLBACK = false;
   // 진짜 레이저는 짧게 번쩍이고 사라진다. 이 시간(ms)보다 오래 켜져 있는 빛은 조명·그림자 같은 장면 변화로 보고 버린다.
@@ -150,7 +157,7 @@
   // 분석은 어차피 가로 400(보정은 640)으로 줄여서 하므로 인식 정밀도는 같다. 화면 미리보기만 약간 덜 선명해진다.
   const CAMERA_W = 640, CAMERA_H = 480;
   // 진단 기록: 레이저 후보가 생길 때마다(기록/거부 모두) 구글 시트 '진단기록' 탭에 한 줄씩 저장한다. 조정이 끝나면 false로.
-  const DIAG = false;
+  const DIAG = true;
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
   const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null,countdownSec:5,countdownEnd:0,settleMs:700,readyAt:0,announced:false,bgRoi:null};
@@ -585,24 +592,32 @@
         }else if(e.type==='retrySave'){if(!state.running&&state.saveInfo&&state.saveInfo.status==='fail')saveMatch()}
       }
     }
-    if(c.start&&c.start.cmdId&&!state.running)applyRemoteCmd(c.start);
+    if(c.start&&c.start.cmdId)applyRemoteCmd(c.start);
   }
 
+  // 시작 명령을 처리한 결과를 cmds/{사로}/start/ack 에 남긴다. 관전 화면은 이걸 보고 성공·거절 이유를 표시하고,
+  // 다른 크롬북은 '아직 처리 안 된 시작 명령'이 있으면 덮어쓰지 못한다.
+  function ackStart(cmd,result,reason){
+    if(!fb.ready||!fb.db)return;
+    fb.db.ref('cmds/'+Number(cmd.lane)+'/start/ack').set({cmdId:cmd.cmdId,result,reason:reason||'',at:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+  }
   function applyRemoteCmd(cmd){
     if(cmd.cmdId===lastCmdId)return;   // 이미 처리한 명령
     if(Number(cmd.lane)!==Number(els.firingLane.value))return;
+    if(cmd.ack&&cmd.ack.cmdId===cmd.cmdId){lastCmdId=cmd.cmdId;return}   // 이미 처리 결과가 있는 명령(새로고침 등)은 다시 처리하지 않음
+    lastCmdId=cmd.cmdId;   // 어떤 결과든 이 명령은 한 번만 처리한다
     const issuedAt=Number(cmd.issuedAt);
-    if(issuedAt&&Date.now()+fb.offset-issuedAt>CMD_MAX_AGE_MS){lastCmdId=cmd.cmdId;return}   // 너무 오래된 명령은 조용히 소비
-    // 아직 표적 보정 전이면 명령을 소비만 하고 끝낸다 - 보정 후 관전 화면에서 다시 눌러야 한다.
+    if(issuedAt&&Date.now()+fb.offset-issuedAt>CMD_MAX_AGE_MS){ackStart(cmd,'rejected','시작 명령이 너무 오래됐어요');return}
+    if(state.running){ackStart(cmd,'rejected','이 사로는 이미 사격 중이에요');return}
+    // 아직 표적 보정 전이면 시작하지 않는다 - 보정 후 관전 화면에서 다시 눌러야 한다.
     if(!(state.center&&state.radius)){
-      lastCmdId=cmd.cmdId;
+      ackStart(cmd,'rejected','사대 태블릿이 아직 표적 보정 전이에요');
       toast(`📡 ${cmd.lane}사로 명령을 받았지만 아직 표적 보정 전이에요 - 보정 후 다시 눌러주세요.`);
       return;
     }
-    if(state.running)return;
     // 보정 직후 3초 안에는 시작하지 않는다 - 보정 결과를 눈으로 확인할 시간을 보장.
     if(state.calibratedAt&&performance.now()-state.calibratedAt<3000){
-      lastCmdId=cmd.cmdId;
+      ackStart(cmd,'rejected','방금 표적 보정이 끝났어요. 잠시 후 다시 눌러 주세요');
       toast(`📡 ${cmd.lane}사로 명령을 받았지만 방금 보정이 끝나서 안전을 위해 대기 중이에요 - 다시 눌러주세요.`);
       return;
     }
@@ -617,7 +632,7 @@
     els.player.value=mode==='team'?(state.matchCfg.teamName||'단체전'):(state.matchCfg.studentId||'점수 확인');
     els.laserColor.value='red';els.detectKind.value='laser';
     els.maxShots.value=String(LANE_SHOTS[mode]);updateScore();
-    startMatch();lastCmdId=cmd.cmdId;els.firingLane.disabled=true;
+    startMatch();els.firingLane.disabled=true;ackStart(cmd,'started','');
     toast(`📡 ${cmd.lane}사로 연결됨 - 경기를 시작했어요.`);
   }
 
@@ -1016,7 +1031,7 @@
     // 이미 끝난 경기를 다시 연 경우: 오래된 기준 화면으로 감지하면 오인식 위험이 있어 감지기를 처음부터 다시 준비한다(약 1~2초).
     if(reopened){clearDetectorBackground();state.detectorReady=false;state.warmupFrames=0;state.warmupStart=performance.now();state.readyAt=0;state.announced=true;lockCamera(true);document.body.classList.add('match-live');setTimeout(resize,60)}
     els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
-  function reset(){saveToken++;state.matchCfg=null;state.saveInfo=null;clearCountdown();lockCamera(false);state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=false;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
+  function reset(){saveToken++;state.matchCfg=null;state.saveInfo=null;clearCountdown();lockCamera(false);state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=!!LANE_FIXED;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
