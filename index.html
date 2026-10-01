@@ -595,9 +595,20 @@
           if(state.running&&state.shots.length<state.maxShots){recordShot(null,null,sc);toast(`📡 관전 화면에서 수동 ${sc}점을 기록했어요.`)}
           else toast('📡 수동 점수가 왔지만 진행 중인 경기가 없어요.');
         }else if(e.type==='retrySave'){if(!state.running&&state.saveInfo&&state.saveInfo.status==='fail')saveMatch()}
+        else if(e.type==='restart'){if(state.running&&state.matchCfg){restartMatch();toast('📡 관전 화면에서 경기를 처음부터 다시 시작했어요.')}}
       }
     }
     if(c.start&&c.start.cmdId)applyRemoteCmd(c.start);
+  }
+
+  // '다시 시작': 지금 경기를 저장하지 않고 지운 뒤, 같은 학생·같은 설정으로 카운트다운부터 다시 시작한다.
+  function restartMatch(){
+    const cfg=state.matchCfg;
+    reset();
+    state.matchCfg=cfg;state.saveInfo=null;
+    els.player.value=cfg.mode==='team'?(cfg.teamName||'단체전'):(cfg.studentId||'영점 조준');
+    els.maxShots.value=String(LANE_SHOTS[cfg.mode==='team'?'team':'individual']);updateScore();
+    startMatch();els.firingLane.disabled=true;
   }
 
   // 시작 명령을 처리한 결과를 cmds/{사로}/start/ack 에 남긴다. 관전 화면은 이걸 보고 성공·거절 이유를 표시하고,
