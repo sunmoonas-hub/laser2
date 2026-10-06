@@ -185,7 +185,7 @@
     body.setup-mode .setup-right.ind:has(#startWarn:not([hidden])) select{min-height:clamp(42px,7.4vh,60px)}
     body.setup-mode .setup-right.ind:has(#startWarn:not([hidden])) .start-row .summary,
     body.setup-mode .setup-right.ind:has(#startWarn:not([hidden])) .start-row .btn-start{min-height:clamp(50px,8.6vh,72px)}
-    body.setup-mode #rowOrder{flex:1 1 auto;min-height:0}
+    body.setup-mode #rowOrder{flex:0 0 auto;min-height:auto}   /* 줄어들지 않음 → 모자라면 겹치지 않고 스크롤 */
     body.setup-mode .order-list{flex:1;min-height:0}
     body.setup-mode .order-row{flex:1 1 0;min-height:40px;max-height:52px;padding:4px 8px}
     body.setup-mode .order-row .icon-btn,body.setup-mode .order-row .tog-btn{height:100%;min-height:0;max-height:44px}
@@ -346,6 +346,12 @@
     body.setup-mode #setupView #setupRight .order-row .nm,body.setup-mode #setupView #setupRight .order-row .rank,body.setup-mode #setupView #setupRight .order-row .sh{font-size:var(--fs)}
     body.setup-mode #setupView #setupRight .order-row .icon-btn{width:calc(var(--h-row) - 10px);height:calc(var(--h-row) - 10px);max-height:none}
     body.setup-mode #setupView #setupRight .order-row .tog-btn{height:calc(var(--h-row) - 10px);max-height:none;font-size:var(--fs-label)}
+    /* 단체전에서 같은 사로 경고가 떠 있으면, 그만큼 사격 순서 줄과 버튼·선택 칸 높이를 조금 줄여 한 화면에 맞춘다 */
+    body.setup-mode #setupView #setupRight:not(.ind):has(#startWarn:not([hidden])){--h-row:calc(var(--fs)*2.3);--h-ctl:calc(var(--fs)*2.7)}
+  }
+  @media(min-width:860px) and (max-height:700px){
+    /* 세로가 낮은 화면의 단체전: 간격과 사격 순서 줄을 조금 줄여 한 화면에 맞춘다 */
+    body.setup-mode #setupView #setupRight:not(.ind){gap:10px;--h-row:calc(var(--fs)*2.7)}
     /* 왼쪽 */
     body.setup-mode #setupView #histPanel .hint{font-size:var(--fs)}
     body.setup-mode #setupView #histPanel .ih-top h2{font-size:var(--fs-title)}
@@ -377,6 +383,17 @@
     body.live-mode #liveView .savebox,body.live-mode #liveView .live-actions button{font-size:var(--fs)}
     body.live-mode #liveView .msg{font-size:var(--fs-label)}
   }
+  /* 안내 알림: 화면 아래 가운데에 잠깐 떴다가 사라진다(다른 내용의 자리를 차지하지 않음) */
+  .toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:40;max-width:min(560px,92vw);
+    background:#0d2a33;border:1px solid var(--cyan);color:var(--text);border-radius:14px;padding:12px 18px;font-weight:700;font-size:var(--fs,15px);
+    box-shadow:0 12px 40px #000a;text-align:center;line-height:1.5}
+  .toast.warn{background:#2e1018;border-color:var(--red);color:#ffd6dc}
+  /* 단체전 팀원 줄: [이름] [점수 칸] [상태·소계] */
+  #liveView .member-box{display:grid;grid-template-columns:auto minmax(0,1fr) 66px;align-items:center;gap:10px}
+  #liveView .member-box .mn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+  #liveView .member-box .ms{text-align:right;white-space:nowrap}
+  #liveView .ms-slot{container-type:inline-size;display:flex;align-items:center;justify-content:center}
+  #liveView .ms-slot span{font-size:min(var(--fs-num,18px),56cqw);line-height:1.2}   /* 칸이 좁아지면 숫자만 조금 작아짐 */
   [hidden]{display:none!important}
 </style>
 <!-- 주소·Firebase 설정(따로 관리하는 파일) -->
@@ -447,7 +464,7 @@
         </div>
         <button type="button" class="btn-start" id="btnStart" disabled>경기 시작</button>
       </div>
-      <p class="msg" id="setupMsg"></p>
+      <p class="msg" id="setupMsg" hidden></p>
     </section>
   </div>
 
@@ -483,10 +500,12 @@
         <button type="button" class="btn-start" id="btnNextMatch">바로 다음 경기</button>
         <button type="button" class="btn-line gray" id="btnHome">처음 화면으로</button>
       </div>
-      <p class="msg" id="liveMsg"></p>
+      <p class="msg" id="liveMsg" hidden></p>
     </section>
   </div>
 </div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <div class="modal-bg" id="modal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -1030,6 +1049,8 @@
     if (isTeam) {
       $('scoreTitle').textContent = '팀원별 점수';
       let cursor = 0;
+      // 점수 칸 수 = 이 팀에서 가장 많이 쏘는 사람의 발수 (4명이면 5칸, 3명이면 7칸) → 빈자리 없이 꽉 채운다
+      const cols = Math.max(1, ...members.map(m => Number(m.shots) || 0));
       $('scoreArea').innerHTML = members.map((m, mi) => {
         const n = Number(m.shots) || 0;
         const own = shots.slice(cursor, cursor + n);
@@ -1037,12 +1058,12 @@
         let cells = '';
         for (let k = 0; k < n; k++) {
           const s = own[k];
-          cells += `<div class="ms-slot ${slotCls(s, cursor + k === shots.length && ls.running)}">${s ? esc(s.s) : '-'}</div>`;
+          cells += `<div class="ms-slot ${slotCls(s, cursor + k === shots.length && ls.running)}"><span>${s ? esc(s.s) : '-'}</span></div>`;
         }
         cursor += n;
         const cur = mi === curIdx && ls.running && shots.length < max;
         const state = own.length >= n ? `${sub}점` : (cur ? '사격 중' : (own.length ? `${sub}점…` : '대기'));
-        return `<div class="member-box${cur ? ' cur' : ''}"><div class="mh"><span class="mn">${mi + 1}. ${esc(nameOf(m.id))} · ${n}발</span><span class="ms">${state}</span></div><div class="mslots">${cells}</div></div>`;
+        return `<div class="member-box${cur ? ' cur' : ''}"><span class="mn">${mi + 1}. ${esc(nameOf(m.id))}</span><div class="mslots" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${cells}</div><span class="ms">${state}</span></div>`;
       }).join('');
     } else {
       $('scoreTitle').textContent = '획득 점수';
@@ -1159,6 +1180,23 @@
   $('keys').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
     sendEvent({ type: 'manual', score: Number(b.dataset.v) }, $('liveMsg'));
+  });
+
+  /* ---------- 안내 알림 ----------
+     기존 코드는 안내 문구를 setupMsg/liveMsg에 쓴다. 그 칸은 숨겨 두고, 문구가 바뀌면 화면 아래 알림으로 보여 준다. */
+  let toastTimer = 0;
+  function showToast(text) {
+    const t = $('toast');
+    if (!text) return;
+    t.textContent = text;
+    t.className = 'toast' + (/^⚠/.test(text) ? ' warn' : '');
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, /^⚠/.test(text) ? 6000 : 4000);   // 경고는 조금 더 오래
+  }
+  ['setupMsg', 'liveMsg'].forEach(id => {
+    new MutationObserver(() => { const v = $(id).textContent.trim(); if (v) showToast(v); })
+      .observe($(id), { childList: true, characterData: true, subtree: true });
   });
 
   /* ---------- 시작 ---------- */
