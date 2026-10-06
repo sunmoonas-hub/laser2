@@ -119,6 +119,49 @@
   .hint{color:var(--muted);text-align:center;padding:28px 10px;line-height:1.7}
   .dupwarn{border-radius:12px;border:2px solid var(--gold);background:#2e2610;color:var(--gold);font-weight:800;padding:10px 14px;margin-bottom:14px;text-align:center}
   .startwarn{border-radius:10px;border:2px solid var(--gold);background:#2e2610;color:var(--gold);font-weight:800;font-size:.85rem;padding:8px 12px;text-align:center}
+  /* ===== 시작 전 화면 배치 ===== */
+  .sel3{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,.8fr) minmax(0,1.6fr);gap:8px}
+  .setup-right .summary{padding:10px 12px}
+  .setup-right .msg:empty{display:none}   /* 안내 문구가 없을 땐 자리도 차지하지 않게 */
+  .setup-right .summary .big{font-size:1.08rem;margin-top:2px}
+  .ih{display:flex;flex-direction:column;gap:14px;min-height:0}
+  .ih-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .ih-stats{display:flex;gap:8px;flex-wrap:wrap}
+  .ih-stat{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.85rem;color:var(--muted);white-space:nowrap}
+  .ih-stat b{color:var(--text);font-size:1.05rem;margin-left:4px}
+  .ih-sess{display:grid;grid-template-columns:repeat(10,minmax(0,1fr)) 6px repeat(2,minmax(0,1fr));gap:6px}
+  .ih-sess .slot,.ih-sess .ih-sep{grid-row:2}
+  .ih-sess .slot{padding:5px 0}
+  .ih-sess .slot .n{font-size:.66rem}
+  .ih-sep{border-left:2px dashed var(--line);justify-self:center;width:0}
+  .ih-main-wrap{display:flex;flex-direction:column;gap:8px;min-height:0}
+  .ih-main{display:flex;justify-content:center;gap:10px;min-height:0;height:360px;container-type:size}
+  .ih-target{width:min(100cqh,calc(100cqw - 78px));height:min(100cqh,calc(100cqw - 78px));flex:none}
+  .ih-main.noshots .ih-target{width:min(100cqh,100cqw);height:min(100cqh,100cqw);margin:0 auto}
+  .ih-target .canvas-box{width:100%;height:100%}
+  .ih-shots{display:flex;flex-direction:column;gap:4px;width:68px;flex:none}
+  .ih-shots .shot-cell{flex:1;min-height:0;max-height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:1rem}
+  .ih-shots .shot-cell .n{display:inline;font-size:.66rem}
+  .tb{display:flex;flex-direction:column;gap:14px;min-height:0}
+  /* 넓은 화면(크롬북 등)에서는 시작 전 화면도 스크롤 없이 한 화면에 들어오게 한다 */
+  @media(min-width:860px){
+    body.setup-mode .wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;padding-bottom:12px}
+    body.setup-mode header{flex:none}
+    body.setup-mode #setupView{flex:1;min-height:0;align-items:stretch}
+    body.setup-mode #setupView > .panel{min-height:0;overflow-y:auto}
+    body.setup-mode #histPanel{overflow:hidden}
+    body.setup-mode #dupWarn{display:none}   /* 시작 전 화면에서는 시작 버튼 위 경고(startWarn)로 충분 */
+    body.setup-mode .ih{flex:1}
+    body.setup-mode .ih-main-wrap{flex:1}
+    body.setup-mode .ih-main{flex:1;height:auto}
+  }
+  @media(min-width:860px) and (max-height:700px){
+    body.setup-mode .setup-right{gap:10px}
+    body.setup-mode .setup-right .seg button{min-height:42px}
+    body.setup-mode .setup-right select{min-height:42px}
+    body.setup-mode .setup-right .btn-start{min-height:50px}
+    body.setup-mode #histPanel,body.setup-mode .ih,body.setup-mode .tb{gap:10px}
+  }
   /* ===== 경기 화면 배치 ===== */
   .live-left{display:flex;flex-direction:column;gap:12px;min-width:0}
   .live-target{container-type:size;aspect-ratio:1;display:flex;align-items:center;justify-content:center;min-height:0}
@@ -222,10 +265,19 @@
   <div class="layout" id="setupView">
     <section class="panel" id="histPanel">
       <div class="hint" id="histHint">오른쪽에서 학생 또는 조를 고르면 지난 기록이 여기에 보여요.</div>
-      <div id="histBody" class="hist-body" hidden></div>
+      <div id="histBody" class="ih" hidden></div>
+      <!-- 단체전: 팀 정보 · 사격 순서 · 지난 기록 -->
+      <div id="teamBox" class="tb" hidden>
+        <div class="ih-top" id="teamTop"></div>
+        <div class="hist-group">
+          <div class="sec-title">사격 순서 <span class="small muted">(화살표로 바꾸기, 결석은 빼기)</span></div>
+          <div id="orderList" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+        <div class="hist-group" id="teamLast"></div>
+      </div>
     </section>
 
-    <section class="panel">
+    <section class="panel setup-right">
       <h2>새 경기 시작</h2>
       <div class="lbl">구분
         <div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))" id="segType">
@@ -240,21 +292,16 @@
           <button type="button" data-v="team">단체전 20발</button>
         </div>
       </div>
-      <div class="grid2">
+      <div class="sel3">
         <label class="lbl">사로<select id="selLane"></select></label>
         <label class="lbl">반<select id="selClass"><option value="">불러오는 중…</option></select></label>
-      </div>
-      <label class="lbl" id="rowStudent">학생<select id="selStudent"><option value="">-- 반을 먼저 고르세요 --</option></select></label>
-      <div id="rowTeam" hidden style="display:flex;flex-direction:column;gap:10px">
-        <label class="lbl">조 (드래프트 결과)<select id="selTeam"><option value="">-- 반을 먼저 고르세요 --</option></select></label>
-        <div class="lbl">사격 순서 (화살표로 바꾸기, 결석은 빼기)
-          <div id="orderList" style="display:flex;flex-direction:column;gap:6px"></div>
-        </div>
+        <label class="lbl" id="rowStudent">학생<select id="selStudent"><option value="">-- 반을 먼저 고르세요 --</option></select></label>
+        <label class="lbl" id="rowTeam" hidden>조 (드래프트)<select id="selTeam"><option value="">-- 반을 먼저 고르세요 --</option></select></label>
       </div>
       <div class="summary" id="summaryBox">
         <div class="small muted">이렇게 저장돼요</div>
         <div class="big" id="sumBig">-</div>
-        <div class="small muted" id="sumSub" style="margin-top:4px"></div>
+        <div class="small muted" id="sumSub" style="margin-top:2px"></div>
       </div>
       <div class="startwarn" id="startWarn" hidden></div>
       <div class="btnrow">
@@ -528,19 +575,31 @@
     });
   }
   function renderHistory() {
-    const hint = $('histHint'), body = $('histBody');
-    const showHint = t => { hint.textContent = t; hint.hidden = false; body.hidden = true; };
-    if (S.mode === 'individual' && !S.studentId) return showHint('오른쪽에서 학생을 고르면 지난 기록이 여기에 보여요.');
-    if (S.mode === 'team' && !teamKey()) return showHint('오른쪽에서 반과 조를 고르면 이 팀의 지난 기록이 여기에 보여요.');
+    const hint = $('histHint'), body = $('histBody'), tb = $('teamBox');
+    const showHint = t => { hint.textContent = t; hint.hidden = false; body.hidden = true; tb.hidden = true; };
+    if (S.mode === 'team') {
+      body.hidden = true;
+      if (!teamKey()) return showHint('오른쪽에서 반과 조를 고르면 사격 순서와 이 팀의 지난 기록이 여기에 보여요.');
+      hint.hidden = true; tb.hidden = false;
+      if (S.histLoading || !S.hist || S.hist.kind !== 'team') {
+        const team = S.drafts[S.teamIdx] || {};
+        $('teamTop').innerHTML = `<h2>${esc(S.cls)}반 ${esc(team.teamName)}</h2><span class="small muted">${S.histLoading ? '지난 기록을 불러오는 중…' : esc(S.histError || '지난 기록이 없어요.')}</span>`;
+        $('teamLast').innerHTML = '';
+        return;
+      }
+      return renderTeamHistory(S.hist.data);
+    }
+    tb.hidden = true;
+    if (!S.studentId) return showHint('오른쪽에서 학생을 고르면 지난 기록이 여기에 보여요.');
     if (S.histLoading) return showHint('지난 기록을 불러오는 중…');
-    if (!S.hist) return showHint(S.histError || '지난 기록이 없어요.');
+    if (!S.hist || S.hist.kind !== 'student') return showHint(S.histError || '지난 기록이 없어요.');
     hint.hidden = true; body.hidden = false;
-    S.hist.kind === 'student' ? renderStudentHistory(S.hist.data) : renderTeamHistory(S.hist.data);
+    renderStudentHistory(S.hist.data);
   }
   function slotHtml(n, v, next) {
     const filled = v !== '' && v !== null && v !== undefined;
     const cls = filled ? 'filled' : (next ? 'next' : '');
-    return `<div class="slot ${cls}"><div class="n">${n}차시</div><div class="s">${filled ? esc(v) : (next ? '다음' : '-')}</div></div>`;
+    return `<div class="slot ${cls}"><div class="n">${n}</div><div class="s">${filled ? esc(v) : (next ? '다음' : '-')}</div></div>`;
   }
   function renderStudentHistory(d) {
     const st = d.student || {};
@@ -548,45 +607,45 @@
     const last = d.lastShots || [];
     const cells = last.map((x, i) => `<div class="shot-cell ${Number(x.s) ? 'hit' : 'miss'}"><span class="n">${i + 1}</span>${esc(x.s)}</div>`).join('');
     $('histBody').innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
-        <h2>${esc(st.cls)}반 ${esc(st.number)}번 ${esc(st.name)}</h2><span class="small muted">지난 기록</span>
+      <div class="ih-top">
+        <h2>${esc(st.cls)}반 ${esc(st.number)}번 ${esc(st.name)}</h2>
+        <div class="ih-stats">
+          <span class="ih-stat">최고<b style="color:var(--gold)">${d.recordCount ? esc(d.bestScore) : '-'}</b></span>
+          <span class="ih-stat">평균<b style="color:var(--cyan)">${d.recordCount ? esc(d.averageScore) : '-'}</b></span>
+          <span class="ih-stat">기록<b>${esc(d.recordCount)} / 12</b></span>
+        </div>
       </div>
-      <div class="stats3">
-        <div class="stat"><div class="k">최고점</div><div class="v" style="color:var(--gold)">${d.recordCount ? esc(d.bestScore) : '-'}</div></div>
-        <div class="stat"><div class="k">평균</div><div class="v" style="color:var(--cyan)">${d.recordCount ? esc(d.averageScore) : '-'}</div></div>
-        <div class="stat"><div class="k">기록 수</div><div class="v">${esc(d.recordCount)} / 12</div></div>
+      <div class="ih-sess">
+        <div class="sec-title" style="grid-column:1/11;color:var(--cyan)">연습 1~10차시</div>
+        <div class="sec-title" style="grid-column:12/14;color:var(--red2)">수행</div>
+        ${(d.practice || []).map((v, i) => slotHtml(i + 1, v, nextP === i + 1)).join('')}
+        <div class="ih-sep"></div>
+        ${(d.eval || []).map((v, i) => slotHtml(i + 1, v, nextE === i + 1)).join('')}
       </div>
-      <div class="hist-group">
-        <div class="sec-title" style="color:var(--cyan)">연습 1~10차시</div>
-        <div class="slots10">${(d.practice || []).map((v, i) => slotHtml(i + 1, v, nextP === i + 1)).join('')}</div>
-      </div>
-      <div class="hist-group">
-        <div class="sec-title" style="color:var(--red2)">수행 1~2차시</div>
-        <div class="slots10">${(d.eval || []).map((v, i) => slotHtml(i + 1, v, nextE === i + 1)).join('')}</div>
-      </div>
-      <div class="hist-group">
+      <div class="ih-main-wrap">
         <div class="sec-title">${last.length ? '최근 레이저 경기 탄착군' : '최근 레이저 경기 탄착군 · 기록 없음'}</div>
-        <div class="canvas-box hist-target"><canvas id="cvHist" width="600" height="600"></canvas></div>
-        ${last.length ? `<div class="shot-cells">${cells}</div>` : ''}
+        <div class="ih-main${last.length ? '' : ' noshots'}">
+          <div class="ih-target"><div class="canvas-box"><canvas id="cvHist" width="600" height="600"></canvas></div></div>
+          ${last.length ? `<div class="ih-shots">${cells}</div>` : ''}
+        </div>
       </div>`;
-    // 점에 발 번호를 적어서, 아래 발별 점수 칸과 맞춰 볼 수 있게 한다.
+    // 점에 발 번호를 적어서, 옆의 발별 점수 칸과 맞춰 볼 수 있게 한다.
     drawTarget($('cvHist'), last, (x, i) => ({ fill: Number(x.s) ? '#b7ff3c' : '#ff4d66', label: true, ring: i === last.length - 1 ? '#ffc940' : '' }), { fit: true, dot: 600 / 40 });
   }
   function renderTeamHistory(d) {
     const team = S.drafts[S.teamIdx] || {};
     const list = arr => arr.length ? arr.map(r => `${r.n}번째 ${esc(r.total)}점`).join(' · ') : '기록 없음';
-    $('histBody').innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
-        <h2>${esc(S.cls)}반 ${esc(team.teamName)}</h2><span class="small muted">이 팀원 구성의 지난 기록</span>
-      </div>
-      <div class="grid2">
-        <div class="stat hist-group" style="text-align:left"><div class="sec-title" style="color:var(--cyan)">연습</div><div class="small muted">${list(d.practice || [])}</div><div class="small muted">다음은 ${esc(d.next.practice)}번째</div></div>
-        <div class="stat hist-group" style="text-align:left"><div class="sec-title" style="color:var(--red2)">수행</div><div class="small muted">${list(d.eval || [])}</div><div class="small muted">다음은 ${esc(d.next.eval)}번째 · 수행은 팀별 최고 합계가 반영돼요</div></div>
-      </div>
-      <div class="hist-group">
-        <div class="sec-title">최근 경기 팀원별 점수</div>
-        <div class="small muted" style="line-height:1.7">${d.lastMemberScores ? esc(d.lastMemberScores) : '팀원별 점수 기록 없음'}</div>
+    $('teamTop').innerHTML = `
+      <h2>${esc(S.cls)}반 ${esc(team.teamName)}</h2>
+      <div class="ih-stats">
+        <span class="ih-stat">연습 다음<b style="color:var(--cyan)">${esc(d.next.practice)}번째</b></span>
+        <span class="ih-stat">수행 다음<b style="color:var(--red2)">${esc(d.next.eval)}번째</b></span>
       </div>`;
+    $('teamLast').innerHTML = `
+      <div class="sec-title">지난 기록 <span class="small muted">(수행은 팀별 최고 합계가 반영돼요)</span></div>
+      <div class="small muted" style="line-height:1.7"><b style="color:var(--cyan)">연습</b> ${list(d.practice || [])}<br><b style="color:var(--red2)">수행</b> ${list(d.eval || [])}</div>
+      <div class="sec-title">최근 경기 팀원별 점수</div>
+      <div class="small muted" style="line-height:1.7">${d.lastMemberScores ? esc(d.lastMemberScores) : '팀원별 점수 기록 없음'}</div>`;
   }
 
   /* ---------- 명령 보내기 (Firebase) ---------- */
@@ -884,6 +943,7 @@
     const live = inMatchView();
     $('setupView').hidden = live; $('liveView').hidden = !live;
     document.body.classList.toggle('live-mode', live);
+    document.body.classList.toggle('setup-mode', !live);
     if (live) renderLive(); else renderSummary();
   }
 
