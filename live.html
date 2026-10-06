@@ -121,9 +121,22 @@
   .startwarn{border-radius:10px;border:2px solid var(--gold);background:#2e2610;color:var(--gold);font-weight:800;font-size:.85rem;padding:8px 12px;text-align:center}
   /* ===== 시작 전 화면 배치 ===== */
   .sel3{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,.8fr) minmax(0,1.6fr);gap:8px}
-  .setup-right .summary{padding:10px 12px}
   .setup-right .msg:empty{display:none}   /* 안내 문구가 없을 땐 자리도 차지하지 않게 */
-  .setup-right .summary .big{font-size:1.08rem;margin-top:2px}
+  /* 맨 아래: 요약 상자 + 시작 버튼 한 줄 */
+  .start-row{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;align-items:stretch}
+  .start-row .summary{padding:8px 12px;display:flex;flex-direction:column;justify-content:center}
+  .start-row .summary .big{font-size:1rem;margin-top:0;line-height:1.35;word-break:keep-all}
+  .start-row .btn-start{min-height:60px;line-height:1.3;word-break:keep-all}
+  /* 단체전 사격 순서(오른쪽, 1열) */
+  .order-list{display:flex;flex-direction:column;gap:6px}
+  /* 단체전 탄착군 옆 팀원별 점수 */
+  .ih-main.legend .ih-target{width:min(100cqh,calc(100cqw - 160px));height:min(100cqh,calc(100cqw - 160px))}
+  .ih-legend{display:flex;flex-direction:column;justify-content:center;gap:8px;width:150px;flex:none}
+  .lg{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:4px 8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+  .lg i{width:14px;height:14px;border-radius:50%;grid-column:1;grid-row:1/3}
+  .lg .nm{font-weight:800;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;grid-column:2;grid-row:1}
+  .lg .sh{font-size:.72rem;color:var(--muted);grid-column:2;grid-row:2}
+  .lg b{font-size:1rem;color:var(--gold);grid-column:3;grid-row:1/3}
   .ih{display:flex;flex-direction:column;gap:14px;min-height:0}
   .ih-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .ih-stats{display:flex;gap:8px;flex-wrap:wrap}
@@ -151,7 +164,13 @@
     body.setup-mode #setupView > .panel{min-height:0;overflow-y:auto}
     body.setup-mode #histPanel{overflow:hidden}
     body.setup-mode #dupWarn{display:none}   /* 시작 전 화면에서는 시작 버튼 위 경고(startWarn)로 충분 */
-    body.setup-mode .ih{flex:1}
+    body.setup-mode .ih,body.setup-mode .tb{flex:1}
+    body.setup-mode .start-row{margin-top:auto}
+    body.setup-mode #rowOrder{flex:1 1 auto;min-height:0}
+    body.setup-mode .order-list{flex:1;min-height:0}
+    body.setup-mode .order-row{flex:1 1 0;min-height:40px;max-height:52px;padding:4px 8px}
+    body.setup-mode .order-row .icon-btn,body.setup-mode .order-row .tog-btn{height:100%;min-height:0;max-height:44px}
+    body.setup-mode .order-row .icon-btn{width:40px}
     body.setup-mode .ih-main-wrap{flex:1}
     body.setup-mode .ih-main{flex:1;height:auto}
   }
@@ -159,7 +178,7 @@
     body.setup-mode .setup-right{gap:10px}
     body.setup-mode .setup-right .seg button{min-height:42px}
     body.setup-mode .setup-right select{min-height:42px}
-    body.setup-mode .setup-right .btn-start{min-height:50px}
+    body.setup-mode .setup-right .start-row .btn-start{min-height:54px}
     body.setup-mode #histPanel,body.setup-mode .ih,body.setup-mode .tb{gap:10px}
   }
   /* ===== 경기 화면 배치 ===== */
@@ -266,19 +285,21 @@
     <section class="panel" id="histPanel">
       <div class="hint" id="histHint">오른쪽에서 학생 또는 조를 고르면 지난 기록이 여기에 보여요.</div>
       <div id="histBody" class="ih" hidden></div>
-      <!-- 단체전: 팀 정보 · 사격 순서 · 지난 기록 -->
+      <!-- 단체전: 팀 정보 · 지난 기록 · 최근 경기 탄착군(팀원별 색) -->
       <div id="teamBox" class="tb" hidden>
         <div class="ih-top" id="teamTop"></div>
-        <div class="hist-group">
-          <div class="sec-title">사격 순서 <span class="small muted">(화살표로 바꾸기, 결석은 빼기)</span></div>
-          <div id="orderList" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div class="small muted" id="teamPast" style="line-height:1.6"></div>
+        <div class="ih-main-wrap">
+          <div class="sec-title" id="teamShotTitle">최근 경기 탄착군</div>
+          <div class="ih-main legend" id="teamMain">
+            <div class="ih-target"><div class="canvas-box"><canvas id="cvTeam" width="600" height="600"></canvas></div></div>
+            <div class="ih-legend" id="teamLegend"></div>
+          </div>
         </div>
-        <div class="hist-group" id="teamLast"></div>
       </div>
     </section>
 
     <section class="panel setup-right">
-      <h2>새 경기 시작</h2>
       <div class="lbl">구분
         <div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))" id="segType">
           <button type="button" data-v="check">영점 조준</button>
@@ -298,13 +319,16 @@
         <label class="lbl" id="rowStudent">학생<select id="selStudent"><option value="">-- 반을 먼저 고르세요 --</option></select></label>
         <label class="lbl" id="rowTeam" hidden>조 (드래프트)<select id="selTeam"><option value="">-- 반을 먼저 고르세요 --</option></select></label>
       </div>
-      <div class="summary" id="summaryBox">
-        <div class="small muted">이렇게 저장돼요</div>
-        <div class="big" id="sumBig">-</div>
-        <div class="small muted" id="sumSub" style="margin-top:2px"></div>
+      <div class="lbl" id="rowOrder" hidden>
+        <span>사격 순서 <span class="small muted">(▲▼로 바꾸기, 결석은 빼기)</span></span>
+        <div id="orderList" class="order-list"></div>
       </div>
       <div class="startwarn" id="startWarn" hidden></div>
-      <div class="btnrow">
+      <div class="start-row">
+        <div class="summary" id="summaryBox">
+          <div class="big" id="sumBig">-</div>
+          <div class="small muted" id="sumSub" hidden></div>
+        </div>
         <button type="button" class="btn-start" id="btnStart" disabled>경기 시작</button>
       </div>
       <p class="msg" id="setupMsg"></p>
@@ -463,6 +487,7 @@
     document.querySelectorAll('#segMode button').forEach(b => { b.className = b.dataset.v === S.mode ? 'on-mode' : ''; });
     $('rowStudent').hidden = S.mode !== 'individual';
     $('rowTeam').hidden = S.mode !== 'team';
+    $('rowOrder').hidden = S.mode !== 'team';
   }
   function renderLaneOptions() {
     let h = '';
@@ -516,31 +541,30 @@
     if (S.mode === 'individual') {
       if (S.type !== 'check' && !S.studentId) { r.reason = '학생을 선택하세요.'; r.big = '학생을 선택하세요'; return r; }
       const who = S.studentId ? labelOfStudent(S.studentId) : '학생 선택 안 함';
-      if (S.type === 'check') { r.ok = true; r.big = `${who} · ${TYPE_LABEL.check}`; r.sub = '기록은 저장하지 않아요'; return r; }
+      if (S.type === 'check') { r.ok = true; r.big = `${who} · ${TYPE_LABEL.check}`; r.sub = '저장 안 함'; return r; }
       if (S.histLoading) { r.big = `${who}`; r.sub = '지난 기록을 불러오는 중…'; r.reason = '기록을 불러오는 중이에요.'; return r; }
       if (!S.hist || S.hist.kind !== 'student' || S.hist.id !== S.studentId) { r.big = who; r.sub = S.histError || '지난 기록을 불러오지 못했어요'; r.reason = '지난 기록 확인이 필요해요.'; return r; }
       const next = S.hist.data.next[S.type];
-      if (!next) { r.cls = 'warn'; r.big = `${typeLabel} 차시가 모두 찼어요`; r.sub = '왼쪽 기록 관리에서 정리한 뒤 다시 시도하세요'; r.reason = '차시가 모두 찼어요.'; return r; }
-      r.ok = true; r.big = `${who} · ${typeLabel} ${next}차시 · 개인전`; r.sub = '비어 있는 가장 앞 차시로 자동 지정'; r.label = `${typeLabel} ${next}차시`;
+      if (!next) { r.cls = 'warn'; r.big = `${typeLabel} 차시가 모두 찼어요`; r.sub = '선생님께 기록 정리를 요청하세요'; r.reason = '차시가 모두 찼어요.'; return r; }
+      r.ok = true; r.big = `${who} · ${typeLabel} ${next}차시 · 개인전`; r.sub = ''; r.label = `${typeLabel} ${next}차시`;
       return r;
     }
     const team = S.drafts[S.teamIdx];
     if (!S.cls || !team) { r.reason = '반과 조를 선택하세요.'; r.big = '반과 조를 선택하세요'; return r; }
     const n = presentMembers().length;
     if (n < 3 || n > 5) { r.cls = 'warn'; r.big = `출석 ${n}명`; r.sub = '단체전은 3~5명이 쏴야 해요'; r.reason = '출석 인원을 확인하세요.'; return r; }
-    const split = splitShots(n).map(x => x + '발').join(' · ');
-    if (S.type === 'check') { r.ok = true; r.big = `${S.cls}반 ${team.teamName} · ${TYPE_LABEL.check}`; r.sub = `${n}명 → ${split} · 저장 안 함`; return r; }
+    if (S.type === 'check') { r.ok = true; r.big = `${S.cls}반 ${team.teamName} · ${TYPE_LABEL.check}`; r.sub = '저장 안 함'; return r; }
     if (S.histLoading) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = '지난 기록을 불러오는 중…'; r.reason = '기록을 불러오는 중이에요.'; return r; }
     if (!S.hist || S.hist.kind !== 'team' || S.hist.id !== teamKey()) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = S.histError || '지난 기록을 불러오지 못했어요'; r.reason = '지난 기록 확인이 필요해요.'; return r; }
     const nth = S.hist.data.next[S.type];
-    r.ok = true; r.big = `${S.cls}반 ${team.teamName} · ${typeLabel} ${nth}번째 · 단체전`; r.sub = `${n}명 출석 → ${split} 자동 배분`; r.label = `${typeLabel} ${nth}번째`;
+    r.ok = true; r.big = `${S.cls}반 ${team.teamName} · ${typeLabel} ${nth}번째 · 단체전`; r.sub = ''; r.label = `${typeLabel} ${nth}번째`;
     return r;
   }
   function laneBusy() { const ls = S.laneState; return !!(ls && ls.running && ls.online); }
   function renderSummary() {
     const r = evaluateSetup();
     $('summaryBox').className = 'summary ' + (r.cls === 'warn' ? 'warn' : S.type === 'eval' ? 'eval' : S.type === 'check' ? 'check' : '');
-    $('sumBig').textContent = r.big; $('sumSub').textContent = r.sub;
+    $('sumBig').textContent = r.big; $('sumSub').textContent = r.sub; $('sumSub').hidden = !r.sub;
     const btn = $('btnStart');
     btn.textContent = `${S.lane}사로 경기 시작`;
     btn.disabled = !r.ok || !S.fbReady || laneBusy();
@@ -584,7 +608,9 @@
       if (S.histLoading || !S.hist || S.hist.kind !== 'team') {
         const team = S.drafts[S.teamIdx] || {};
         $('teamTop').innerHTML = `<h2>${esc(S.cls)}반 ${esc(team.teamName)}</h2><span class="small muted">${S.histLoading ? '지난 기록을 불러오는 중…' : esc(S.histError || '지난 기록이 없어요.')}</span>`;
-        $('teamLast').innerHTML = '';
+        $('teamPast').innerHTML = ''; $('teamLegend').innerHTML = '';
+        $('teamShotTitle').textContent = '최근 경기 탄착군';
+        drawTarget($('cvTeam'), [], () => ({ fill: '#b7ff3c' }), { fit: true });
         return;
       }
       return renderTeamHistory(S.hist.data);
@@ -632,6 +658,8 @@
     // 점에 발 번호를 적어서, 옆의 발별 점수 칸과 맞춰 볼 수 있게 한다.
     drawTarget($('cvHist'), last, (x, i) => ({ fill: Number(x.s) ? '#b7ff3c' : '#ff4d66', label: true, ring: i === last.length - 1 ? '#ffc940' : '' }), { fit: true, dot: 600 / 40 });
   }
+  // 단체전 탄착군에서 팀원을 구분하는 색 (사격 순서대로)
+  const MEMBER_COLORS = ['#29e7d6', '#ffc940', '#c78bff', '#ff8a3d', '#7aa2ff'];
   function renderTeamHistory(d) {
     const team = S.drafts[S.teamIdx] || {};
     const list = arr => arr.length ? arr.map(r => `${r.n}번째 ${esc(r.total)}점`).join(' · ') : '기록 없음';
@@ -641,11 +669,17 @@
         <span class="ih-stat">연습 다음<b style="color:var(--cyan)">${esc(d.next.practice)}번째</b></span>
         <span class="ih-stat">수행 다음<b style="color:var(--red2)">${esc(d.next.eval)}번째</b></span>
       </div>`;
-    $('teamLast').innerHTML = `
-      <div class="sec-title">지난 기록 <span class="small muted">(수행은 팀별 최고 합계가 반영돼요)</span></div>
-      <div class="small muted" style="line-height:1.7"><b style="color:var(--cyan)">연습</b> ${list(d.practice || [])}<br><b style="color:var(--red2)">수행</b> ${list(d.eval || [])}</div>
-      <div class="sec-title">최근 경기 팀원별 점수</div>
-      <div class="small muted" style="line-height:1.7">${d.lastMemberScores ? esc(d.lastMemberScores) : '팀원별 점수 기록 없음'}</div>`;
+    $('teamPast').innerHTML = `<b style="color:var(--cyan)">연습</b> ${list(d.practice || [])} &nbsp;·&nbsp; <b style="color:var(--red2)">수행</b> ${list(d.eval || [])}`;
+    const shots = d.lastShots || [], members = d.lastMembers || [];
+    const colorOf = {}; members.forEach((m, i) => { colorOf[m.id] = MEMBER_COLORS[i % MEMBER_COLORS.length]; });
+    $('teamShotTitle').textContent = shots.length ? '최근 레이저 경기 탄착군 (팀원별 색)' : '최근 레이저 경기 탄착군 · 기록 없음';
+    $('teamMain').className = 'ih-main legend' + (shots.length ? '' : ' noshots');
+    $('teamLegend').innerHTML = members.map(m => `<div class="lg"><i style="background:${colorOf[m.id]}"></i><span class="nm">${esc(m.name)}</span><b>${esc(m.total)}점</b><span class="sh">${esc(m.shots)}발</span></div>`).join('');
+    // 팀원별 색으로 칠하고, 0점은 빨간 점에 팀원 색 테두리
+    drawTarget($('cvTeam'), shots, (x, i) => {
+      const c = colorOf[x.who] || '#b7ff3c';
+      return Number(x.s) ? { fill: c, label: true } : { fill: '#ff4d66', ring: c, label: true };
+    }, { fit: true, dot: 600 / 44 });
   }
 
   /* ---------- 명령 보내기 (Firebase) ---------- */
