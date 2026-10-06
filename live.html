@@ -160,7 +160,7 @@
   .ih-main.noshots .ih-target{width:min(100cqh,100cqw);height:min(100cqh,100cqw);margin:0 auto}
   .ih-target .canvas-box{width:100%;height:100%}
   .ih-shots{display:flex;flex-direction:column;gap:4px;width:76px;flex:none}
-  .ih-shots .shot-cell{flex:1;min-height:0;max-height:52px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 6px;font-size:1rem}
+  .ih-shots .shot-cell{flex:1;min-height:0;max-height:52px;display:grid;grid-template-columns:1fr 1fr;align-items:center;justify-items:center;padding:0;font-size:1rem}
   .ih-shots .shot-cell .n{display:inline;font-size:.78rem;opacity:.85}
   .tb{display:flex;flex-direction:column;gap:14px;min-height:0}
   /* 넓은 화면(크롬북 등)에서는 시작 전 화면도 스크롤 없이 한 화면에 들어오게 한다 */
@@ -279,6 +279,40 @@
     body.live-mode .live-right .member-box{padding:3px 10px;min-height:30px}
     body.live-mode .live-right .ms-slot{padding:2px 0}
     body.live-mode #manualArea{gap:4px}
+  }
+  /* ===== 글자 크기: 칸 크기에 비례 (칸 높이의 약 35~45%, 최소·최대 있음) ===== */
+  /* 시작 전 화면 - 왼쪽 */
+  .ih-shots .shot-cell{container-type:size}
+  .ih-shots .shot-cell .v{font-size:clamp(14px,46cqh,24px);font-weight:900;line-height:1}
+  .ih-shots .shot-cell .n{font-size:clamp(11px,36cqh,19px);line-height:1}
+  .ih-stat b{font-size:clamp(15px,2.6vh,20px)}
+  .ih-stat{font-size:clamp(12px,2vh,15px)}
+  .ih-sess .slot .s{font-size:clamp(14px,2.6vh,20px)}
+  .ih-sess .slot .n{font-size:clamp(10px,1.7vh,13px)}
+  @media(min-width:860px){
+    /* 시작 전 화면 - 오른쪽(개인전): 칸 높이와 같은 기준(vh)으로 비례 */
+    body.setup-mode .setup-right.ind .seg button{font-size:clamp(15px,2.85vh,20.5px)}
+    body.setup-mode .setup-right.ind select{font-size:clamp(16px,2.9vh,21px)}
+    body.setup-mode .setup-right.ind .start-row .summary .big{font-size:clamp(16px,2.85vh,22px)}
+    body.setup-mode .setup-right.ind .start-row .btn-start{font-size:clamp(17px,3.05vh,23px)}
+    /* 시작 전 화면 - 단체전 사격 순서 줄(40~52px) */
+    body.setup-mode .order-row{container-type:size}
+    body.setup-mode .order-row .nm,body.setup-mode .order-row .rank,body.setup-mode .order-row .sh{font-size:clamp(14px,46cqh,20px)}
+    body.setup-mode .order-row .tog-btn{font-size:clamp(12px,36cqh,16px)}
+    /* 경기 화면 - 점수 칸(개인전 2줄): 한 줄 높이 ≈ 칸 묶음 높이의 절반 */
+    body.live-mode .live-slots{container-type:size}
+    body.live-mode .live-right .lslot .v{font-size:clamp(18px,21cqh,34px)}
+    body.live-mode .live-right .lslot .n{font-size:clamp(10px,9cqh,15px)}
+    /* 경기 화면 - 단체전 팀원 줄(34~54px) */
+    body.live-mode .live-right .member-box{container-type:size}
+    body.live-mode .live-right .ms-slot{font-size:clamp(13px,46cqh,22px)}
+    body.live-mode .live-right .member-box .mn{font-size:clamp(12px,38cqh,17px)}
+    body.live-mode .live-right .member-box .ms{font-size:clamp(11px,32cqh,15px)}
+    /* 경기 화면 - 수동 점수 버튼(2줄): 한 줄 높이 ≈ 버튼 묶음 높이의 절반 */
+    body.live-mode .live-right .keys{container-type:size}
+    body.live-mode .live-right .keys button{font-size:clamp(15px,19cqh,28px)}
+    /* 경기 화면 - 아래 버튼(56px) */
+    body.live-mode .live-right .live-actions button{font-size:clamp(15px,2.6vh,18px)}
   }
   [hidden]{display:none!important}
 </style>
@@ -651,7 +685,7 @@
     const st = d.student || {};
     const nextP = S.type === 'practice' ? d.next.practice : 0, nextE = S.type === 'eval' ? d.next.eval : 0;
     const last = d.lastShots || [];
-    const cells = last.map((x, i) => `<div class="shot-cell ${Number(x.s) ? 'hit' : 'miss'}"><span class="n">${i + 1}</span>${esc(x.s)}</div>`).join('');
+    const cells = last.map((x, i) => `<div class="shot-cell ${Number(x.s) ? 'hit' : 'miss'}"><span class="n">${i + 1}</span><span class="v">${esc(x.s)}</span></div>`).join('');
     $('histBody').innerHTML = `
       <div class="ih-top">
         <h2>${esc(st.cls)}반 ${esc(st.number)}번 ${esc(st.name)}</h2>
