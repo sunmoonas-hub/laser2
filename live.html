@@ -314,6 +314,69 @@
     /* 경기 화면 - 아래 버튼(56px) */
     body.live-mode .live-right .live-actions button{font-size:clamp(15px,2.6vh,18px)}
   }
+  /* ===== 통일된 글자·칸 크기 체계 (시작 전 화면, 폭 860px 이상) =====
+     기준 글자(--fs) 하나를 화면 높이에 맞춰 정하고, 모든 글자와 칸 높이를 그 배수로 정한다.
+     그래서 화면이 커지거나 작아져도 글자끼리, 칸끼리의 크기 관계가 그대로 유지된다. */
+  @media(min-width:860px){
+    body.setup-mode,body.live-mode{
+      --fs:clamp(14px,2.4vh,20px);
+      --fs-label:calc(var(--fs)*.8);   /* 이름표·보조: 구분, 사로, 차시 번호, 발 번호 */
+      --fs-sec:calc(var(--fs)*.9);     /* 섹션 제목: 연습 1~10차시, 사격 순서 */
+      --fs-num:calc(var(--fs)*1.2);    /* 강조 숫자: 차시 점수, 발별 점수, 최고·평균 */
+      --fs-title:calc(var(--fs)*1.25); /* 큰 제목: 학생 이름, 팀 이름 */
+      --fs-cta:calc(var(--fs)*1.15);   /* 요약 상자·시작 버튼 */
+      --h-ctl:calc(var(--fs)*3.2);     /* 버튼·선택 칸 높이 */
+      --h-row:calc(var(--fs)*2.8);     /* 사격 순서 줄 높이 */
+      --h-cta:calc(var(--fs)*3.6);     /* 요약 상자·시작 버튼 높이 */
+      --h-slot:calc(var(--fs)*3);      /* 차시 칸 높이 */
+      --fs-key:calc(var(--fs)*1.3);    /* 경기 화면: 수동 점수 버튼 숫자 */
+      --fs-big:calc(var(--fs)*1.8);    /* 경기 화면: 개인전 점수 칸 큰 숫자 */
+    }
+    /* 오른쪽 (개인전·단체전 같은 크기) */
+    body.setup-mode #setupView #setupRight{gap:12px}
+    body.setup-mode #setupView #setupRight .lbl{font-size:var(--fs-label)}
+    body.setup-mode #setupView #setupRight .seg button{min-height:var(--h-ctl);font-size:var(--fs)}
+    body.setup-mode #setupView #setupRight select{min-height:var(--h-ctl);font-size:var(--fs)}
+    body.setup-mode #setupView #setupRight .start-row .summary{min-height:var(--h-cta)}
+    body.setup-mode #setupView #setupRight .start-row .summary .big{font-size:var(--fs-cta)}
+    body.setup-mode #setupView #setupRight .start-row .summary .small{font-size:var(--fs-label)}
+    body.setup-mode #setupView #setupRight .start-row .btn-start{min-height:var(--h-cta);font-size:var(--fs-cta)}
+    body.setup-mode #setupView #setupRight .startwarn,body.setup-mode #setupView #setupRight .msg{font-size:var(--fs-label)}
+    body.setup-mode #setupView #setupRight .order-row{flex:none;height:var(--h-row);min-height:0;max-height:none}
+    body.setup-mode #setupView #setupRight .order-row .nm,body.setup-mode #setupView #setupRight .order-row .rank,body.setup-mode #setupView #setupRight .order-row .sh{font-size:var(--fs)}
+    body.setup-mode #setupView #setupRight .order-row .icon-btn{width:calc(var(--h-row) - 10px);height:calc(var(--h-row) - 10px);max-height:none}
+    body.setup-mode #setupView #setupRight .order-row .tog-btn{height:calc(var(--h-row) - 10px);max-height:none;font-size:var(--fs-label)}
+    /* 왼쪽 */
+    body.setup-mode #setupView #histPanel .hint{font-size:var(--fs)}
+    body.setup-mode #setupView #histPanel .ih-top h2{font-size:var(--fs-title)}
+    body.setup-mode #setupView #histPanel .ih-stat{font-size:var(--fs-label)}
+    body.setup-mode #setupView #histPanel .ih-stat b{font-size:var(--fs-num)}
+    body.setup-mode #setupView #histPanel .sec-title{font-size:var(--fs-sec)}
+    body.setup-mode #setupView #histPanel .sec-title .small,body.setup-mode #setupView #histPanel #teamPast{font-size:var(--fs-label)}
+    body.setup-mode #setupView #histPanel .ih-sess .slot{min-height:var(--h-slot);display:flex;flex-direction:column;justify-content:center}
+    body.setup-mode #setupView #histPanel .ih-sess .slot .n{font-size:var(--fs-label)}
+    body.setup-mode #setupView #histPanel .ih-sess .slot .s{font-size:var(--fs-num)}
+    body.setup-mode #setupView #histPanel .ih-shots .shot-cell .v{font-size:var(--fs-num)}
+    body.setup-mode #setupView #histPanel .ih-shots .shot-cell .n{font-size:var(--fs-label)}
+    body.setup-mode #setupView #histPanel .lg .nm{font-size:var(--fs)}
+    body.setup-mode #setupView #histPanel .lg b{font-size:var(--fs-num)}
+    body.setup-mode #setupView #histPanel .lg .sh{font-size:var(--fs-label)}
+    /* 경기 화면 (같은 기준) */
+    body.live-mode #liveView .banner .sub{font-size:var(--fs-label)}
+    body.live-mode #liveView .banner .who,body.live-mode #liveView .banner .cnt{font-size:var(--fs-title)}
+    body.live-mode #liveView .metric small{font-size:var(--fs-label)}
+    body.live-mode #liveView .metric strong{font-size:var(--fs-num)}
+    body.live-mode #liveView .metric:first-child strong{font-size:var(--fs-title)}
+    body.live-mode #liveView .live-right h2,body.live-mode #liveView .sec-title{font-size:var(--fs-sec)}
+    body.live-mode #liveView .lslot .n{font-size:var(--fs-label)}
+    body.live-mode #liveView .lslot .v{font-size:var(--fs-big)}
+    body.live-mode #liveView .member-box .mn{font-size:var(--fs)}
+    body.live-mode #liveView .member-box .ms{font-size:var(--fs-label)}
+    body.live-mode #liveView .ms-slot{font-size:var(--fs-num)}
+    body.live-mode #liveView .keys button{font-size:var(--fs-key)}
+    body.live-mode #liveView .savebox,body.live-mode #liveView .live-actions button{font-size:var(--fs)}
+    body.live-mode #liveView .msg{font-size:var(--fs-label)}
+  }
   [hidden]{display:none!important}
 </style>
 <!-- 주소·Firebase 설정(따로 관리하는 파일) -->
