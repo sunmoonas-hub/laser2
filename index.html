@@ -75,7 +75,7 @@
     <div class="pill" id="clrPill" style="position:absolute;left:9px;bottom:9px;font-size:.66rem;opacity:.9">–</div>
     <div class="pill" id="liveStatus" style="position:absolute;left:9px;bottom:34px;font-size:.66rem;opacity:.9">📡 관전 연결 안 됨</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
-    <div class="countdown" id="countdown"><b id="countdownText">5</b></div>
+    <div class="countdown" id="countdown"><b id="countdownText">3</b></div>
   </section>
 
   <div class="side-panel" id="sidePanel">
@@ -164,7 +164,7 @@
   const DIAG = true;
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
-  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null,countdownSec:5,countdownEnd:0,settleMs:700,readyAt:0,announced:false,bgRoi:null};
+  const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null,countdownSec:3,countdownEnd:0,settleMs:700,readyAt:0,announced:false,bgRoi:null};
 
   /* ===== [R40에서 이식] 동심원 표적 자동 인식 =====
      검은 중심부 후보를 여러 임계값으로 모두 모은 뒤, 각 후보 중심에서 바깥으로 링 선(어두운 선)을 찾아
@@ -482,7 +482,7 @@
       mode:cfg.mode||'individual',evalType:cfg.evalType||'check',
       studentId:cfg.studentId||'',cls:cfg.cls||'',teamName:cfg.teamName||'',teamKey:cfg.teamKey||'',
       members:(cfg.members||[]).map(m=>({id:m.id,shots:m.shots})),
-      label:cfg.label||'',maxShots:state.maxShots||10,
+      label:cfg.label||'',maxShots:state.maxShots||10,by:cfg.by||'',
       shots:state.shots.map(s=>{const p=shotUV(s);return{s:s.score,u:p.u,v:p.v,k:shotKind(s)}}),
       save:state.saveInfo?{status:state.saveInfo.status||'',msg:state.saveInfo.msg||''}:null,
       updatedAt:firebase.database.ServerValue.TIMESTAMP
@@ -551,12 +551,24 @@
       fb.db=firebase.database();
       fb.db.ref('.info/serverTimeOffset').on('value',s=>{fb.offset=Number(s.val())||0});
       fb.db.ref('.info/connected').on('value',s=>{
-        if(s.val()===true){if(fb.ready){armPresence();pushLive()}}
+        if(s.val()===true){if(fb.ready){armPresence();syncAfterReconnect()}}
         else els.liveStatus.textContent='📡 실시간 연결 끊김 · 재연결 중…';
       });
       els.liveStatus.textContent='📡 실시간 연결 중…';
       firebase.auth().signInAnonymously().then(()=>{fb.ready=true;attachLane()}).catch(err=>{els.liveStatus.textContent='📡 실시간 로그인 실패: '+((err&&err.message)||err)});
     }catch(err){els.liveStatus.textContent='📡 실시간 준비 오류: '+((err&&err.message)||err)}
+  }
+  // 연결(또는 재연결)될 때: 연결이 끊긴 사이에 관전 화면에서 이 사로를 '정리'했으면(cleared) 남아 있던 경기를 지운다.
+  // 그렇지 않으면 지금 상태를 그대로 올린다.
+  function syncAfterReconnect(){
+    if(!fb.laneRef)return;
+    const ref=fb.laneRef;
+    ref.once('value').then(snap=>{
+      if(ref!==fb.laneRef)return;   // 그사이 사로가 바뀌었으면 무시
+      const v=snap.val();
+      if(v&&v.cleared&&(state.running||state.shots.length)){reset();toast('📡 관전 화면에서 이 사로를 정리해서, 남아 있던 경기를 초기화했어요.')}
+      pushLive();
+    }).catch(()=>pushLive());
   }
   function armPresence(){if(fb.laneRef)fb.laneRef.onDisconnect().update({online:false})}
 
@@ -570,7 +582,7 @@
     fb.lane=lane;fb.seen=null;
     fb.laneRef=fb.db.ref('lanes/'+lane);
     fb.cmdRef=fb.db.ref('cmds/'+lane);
-    armPresence();pushLive();
+    armPresence();syncAfterReconnect();
     fb.cmdRef.on('value',snap=>handleCmdSnapshot(snap.val()||{},lane),err=>{els.liveStatus.textContent='📡 명령 수신 오류: '+((err&&err.message)||err)});
   }
   function ensureRemotePolling(){attachLane()}   // 예전 이름 호환(카메라 시작 시 호출됨)
@@ -642,7 +654,7 @@
     state.matchCfg={
       evalType:['practice','eval','check'].includes(cmd.evalType)?cmd.evalType:'check',
       mode,studentId:String(cmd.studentId||''),cls:String(cmd.cls||''),teamName:String(cmd.teamName||''),
-      teamKey:String(cmd.teamKey||''),members,label:String(cmd.label||'')
+      teamKey:String(cmd.teamKey||''),members,label:String(cmd.label||''),by:String(cmd.by||'')
     };
     state.saveInfo=null;
     els.player.value=mode==='team'?(state.matchCfg.teamName||'단체전'):(state.matchCfg.studentId||'영점 조준');
