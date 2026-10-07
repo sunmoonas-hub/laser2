@@ -395,6 +395,19 @@
   #liveView .member-box .ms{text-align:center;white-space:nowrap;font-weight:800}
   #liveView .ms-slot{container-type:inline-size;display:flex;align-items:center;justify-content:center}
   #liveView .ms-slot span{font-size:min(var(--fs-num,18px),56cqw);line-height:1.2}   /* 칸이 좁아지면 숫자만 조금 작아짐 */
+  /* 단체전 탄착군: 기록이 없으면 빈 팀원 칸(150px)을 숨기고, 과녁만 폭에 맞춰 가운데에 */
+  .ih-main.legend.noshots .ih-legend{display:none}
+  .ih-main.legend.noshots .ih-target{width:min(100cqh,100cqw);height:min(100cqh,100cqw);margin:0 auto}
+  /* 머리글의 사로 선택(어느 화면에서나 사로를 바꿀 수 있음) */
+  .hdr-lane{appearance:none;-webkit-appearance:none;background:transparent;border:0;border-bottom:2px dashed #34506f;color:var(--text);font:inherit;font-weight:900;padding:0 22px 0 2px;min-height:0;width:auto;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 10px) 55%,calc(100% - 5px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+  .hdr-lane:focus{outline:2px solid var(--cyan);outline-offset:2px}
+  .hdr-lane option{background:#091426;color:var(--text)}
+  /* 사대 태블릿 연결이 끊긴 사로 안내 */
+  .lane-notice{border-radius:12px;border:2px solid var(--gold);background:#2e2610;color:var(--gold);padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-weight:700;font-size:var(--fs-label,13px);line-height:1.5}
+  .lane-notice span{flex:1;min-width:200px}
+  .lane-notice button{min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-weight:800;font-size:var(--fs-label,13px);flex:none}
+  .owner-note{color:var(--gold);font-weight:800}
   [hidden]{display:none!important}
 </style>
 <!-- 주소·Firebase 설정(따로 관리하는 파일) -->
@@ -406,7 +419,7 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>LASER MATCH · <span id="hdrLane">1</span>사로</h1>
+    <h1>LASER MATCH · <select id="hdrLane" class="hdr-lane" aria-label="사로 바꾸기"></select></h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <span class="pill" id="phonePill">사대 폰 확인 중…</span>
       <span class="pill" id="connPill">연결 중…</span>
@@ -417,6 +430,7 @@
   <!-- ===== 시작 전 화면 ===== -->
   <div class="layout" id="setupView">
     <section class="panel" id="histPanel">
+      <div class="lane-notice" id="laneNotice" hidden><span id="laneNoticeText"></span><button type="button" id="btnClearLane">이 사로 정리하기</button></div>
       <div class="hint" id="histHint">오른쪽에서 학생 또는 조를 고르면 지난 기록이 여기에 보여요.</div>
       <div id="histBody" class="ih" hidden></div>
       <!-- 단체전: 팀 정보 · 지난 기록 · 최근 경기 탄착군(팀원별 색) -->
@@ -476,7 +490,7 @@
     </section>
     <section class="panel live-right">
       <div class="banner" id="banner">
-        <div><div class="sub" id="banSub">-</div><div class="who" id="banWho">-</div></div>
+        <div><div class="sub" id="banSub">-</div><div class="who" id="banWho">-</div><div class="sub owner-note" id="banOwner" hidden>다른 크롬북에서 시작한 경기예요 · 수동 점수·중단은 신중하게</div></div>
         <div><div class="cnt" id="banCnt">-</div><div class="sub" id="banNext" style="text-align:right"></div></div>
       </div>
       <div class="scoreboard">
@@ -541,7 +555,14 @@
     hist: null, histReq: 0, histLoading: false, histError: '',
     laneState: null, dismissedMatch: '', db: null, fbReady: false,
     offset: 0, otherViewers: 0,
-    viewerId: 'v_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
+    viewerId: (() => {
+      try {
+        let v = localStorage.getItem('lm_viewer');
+        if (!v) { v = 'v_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); localStorage.setItem('lm_viewer', v); }
+        return v;
+      } catch (e) { return 'v_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); }
+    })(),
+    offlineSince: 0   // 사대 태블릿 연결이 끊긴 것을 처음 본 시각(0이면 연결됨)
   };
 
   /* ---------- Apps Script 호출 (JSONP) ---------- */
@@ -630,7 +651,7 @@
     let h = '';
     for (let i = 1; i <= LANE_COUNT; i++) h += `<option value="${i}">${i}사로</option>`;
     $('selLane').innerHTML = h; $('selLane').value = String(S.lane);
-    $('hdrLane').textContent = S.lane;
+    $('hdrLane').innerHTML = h; $('hdrLane').value = String(S.lane);
   }
   function renderClassOptions() {
     const sel = $('selClass');
@@ -982,6 +1003,8 @@
     S.laneState = null;
     laneRefCur = S.db.ref('lanes/' + S.lane);
     const lane = S.lane;
+    let first = true;   // 이 사로를 고른 뒤 처음 받는 상태인지
+    S.offlineSince = 0;
     laneRefCur.on('value', snap => {
       if (lane !== S.lane) return;
       const prev = S.laneState;
@@ -992,16 +1015,29 @@
       if (st === 'ok' && lastSaveStatus !== 'ok') loadHistory();
       lastSaveStatus = st || '';
       if (prev && ls && prev.matchId !== ls.matchId) S.dismissedMatch = '';
+      // 연결이 끊긴 걸 처음 본 시각 기록. 화면을 처음 열었을 때 이미 끊겨 있었다면 바로 끊긴 것으로 본다.
+      if (ls && !ls.online) { if (!S.offlineSince) S.offlineSince = prev === null && first ? 1 : Date.now(); }
+      else S.offlineSince = 0;
+      first = false;
       render();
     }, err => { $('connPill').textContent = '실시간 읽기 오류'; $('connPill').className = 'pill bad'; console.error(err); });
   }
 
   /* ---------- 경기 화면 ---------- */
+  const OFFLINE_GRACE_MS = 10000;        // 잠깐 끊겼다 다시 붙는 경우는 화면을 바꾸지 않음
+  const STALE_RESULT_MS = 10 * 60000;    // 끝난 지 10분이 지난 결과는 경기 결과 화면을 건너뜀
+  function tabletOffline() {
+    const ls = S.laneState;
+    return !!(ls && !ls.online && S.offlineSince && Date.now() - S.offlineSince >= OFFLINE_GRACE_MS);
+  }
   function inMatchView() {
     const ls = S.laneState;
     if (!ls || !ls.matchId) return false;
+    if (tabletOffline()) return false;   // 연결이 끊긴 태블릿의 마지막 상태는 믿지 않음 → 시작 화면 + 안내
     if (ls.running) return true;
-    return shotsArr(ls.shots).length > 0 && S.dismissedMatch !== ls.matchId;
+    if (!shotsArr(ls.shots).length || S.dismissedMatch === ls.matchId) return false;
+    const age = Date.now() + S.offset - (Number(ls.updatedAt) || 0);
+    return age < STALE_RESULT_MS;
   }
   function renderLive() {
     const ls = S.laneState || {};
@@ -1030,6 +1066,9 @@
       $('banCnt').textContent = `${shots.length} / ${max}발`;
       $('banNext').textContent = '';
     }
+
+    // 다른 크롬북에서 시작한 경기인지
+    $('banOwner').hidden = !(ls.running && ls.by && ls.by !== S.viewerId);
 
     // 과녁: 단체전은 지금 사수의 탄착만 밝게, 앞 사람들은 회색. 가장 최근 발은 노란 테두리.
     drawTarget($('cvLive'), shots, (s, i) => {
@@ -1111,8 +1150,36 @@
     else if (ls.running) { pp.textContent = `${S.lane}사로 사격 중`; pp.className = 'pill ok'; }
     else { pp.textContent = `${S.lane}사로 사대 폰 대기 중`; pp.className = 'pill ok'; }
   }
+  // 사대 태블릿 연결이 끊긴 사로에 남아 있는 경기가 있으면 안내하고, 정리할 수 있게 한다.
+  function renderLaneNotice() {
+    const ls = S.laneState, box = $('laneNotice');
+    const shots = ls ? shotsArr(ls.shots) : [];
+    const has = ls && ls.matchId && (ls.running || shots.length);
+    if (!tabletOffline() || !has) { box.hidden = true; return; }
+    const who = ls.mode === 'team' ? `${ls.cls ? ls.cls + '반 ' : ''}${ls.teamName || '단체전'}` : (ls.studentId ? labelOfStudent(ls.studentId) : TYPE_LABEL.check);
+    const max = Number(ls.maxShots) || 10;
+    const sv = ls.save && ls.save.status;
+    const st = ls.running ? '진행 중에 끊김 · 저장 안 됨' : (sv === 'ok' ? '저장됨' : sv === 'skip' ? '저장 안 함(영점 조준)' : '저장 안 됨');
+    $('laneNoticeText').textContent = `⚠ ${S.lane}사로 사대 태블릿이 연결되어 있지 않아요. 마지막 경기: ${who} ${shots.length}/${max}발 (${st})`;
+    box.hidden = false;
+  }
+  function clearLane() {
+    if (!S.fbReady) return;
+    const lane = S.lane;
+    askConfirm(`${lane}사로를 정리할까요?`, '사대 태블릿에 남아 있는 경기 상태를 지워요. 진행 중이던 경기는 저장되지 않아요. 태블릿이 다시 연결되면 그 경기도 초기화돼요.', '사로 정리').then(ok => {
+      if (!ok) return;
+      const TS = firebase.database.ServerValue.TIMESTAMP;
+      Promise.all([
+        S.db.ref('lanes/' + lane).set({ cleared: true, online: false, running: false, matchId: '', clearedAt: TS, updatedAt: TS }),
+        S.db.ref('cmds/' + lane).set(null)   // 처리되지 않은 시작·취소·종료 신호도 함께 지움
+      ]).then(() => { $('setupMsg').textContent = `✅ ${lane}사로를 정리했어요. 이제 새 경기를 시작할 수 있어요.`; })
+        .catch(err => { $('setupMsg').textContent = '⚠️ 정리 실패: ' + err.message; });
+    });
+  }
+
   function render() {
     renderPills();
+    renderLaneNotice();
     const live = inMatchView();
     $('setupView').hidden = live; $('liveView').hidden = !live;
     document.body.classList.toggle('live-mode', live);
@@ -1134,13 +1201,18 @@
     S.mode = b.dataset.v;
     renderSeg(); loadHistory();
   });
-  $('selLane').addEventListener('change', e => {
-    S.lane = Number(e.target.value) || 1;
+  // 사로 바꾸기: 시작 화면의 사로 칸과 머리글의 사로 선택 모두 같은 동작
+  function changeLane(n) {
+    const lane = Number(n) || 1;
+    if (lane === S.lane) return;
+    S.lane = lane;
     try { localStorage.setItem('lm_lane', String(S.lane)); } catch (e2) {}
-    S.dismissedMatch = ''; lastSaveStatus = '';
+    S.dismissedMatch = ''; lastSaveStatus = ''; S.offlineSince = 0;
     $('setupMsg').textContent = ''; $('liveMsg').textContent = '';
     renderLaneOptions(); subscribeLane(); registerViewer(); render();
-  });
+  }
+  $('selLane').addEventListener('change', e => changeLane(e.target.value));
+  $('hdrLane').addEventListener('change', e => changeLane(e.target.value));
   $('selClass').addEventListener('change', e => {
     S.cls = e.target.value; S.studentId = ''; S.teamIdx = ''; S.order = []; S.drafts = [];
     renderStudentOptions(); renderTeamOptions(); renderOrder(); loadHistory();
@@ -1171,6 +1243,7 @@
   });
   $('btnStart').addEventListener('click', sendStart);
   $('btnAbort').addEventListener('click', abortMatch);
+  $('btnClearLane').addEventListener('click', clearLane);
   $('btnRestart').addEventListener('click', restartMatch);
   $('btnNextMatch').addEventListener('click', nextMatch);
   $('btnUndo').addEventListener('click', () => sendEvent({ type: 'undo' }, $('liveMsg')));
@@ -1182,6 +1255,8 @@
     const b = e.target.closest('button'); if (!b || b.disabled) return;
     sendEvent({ type: 'manual', score: Number(b.dataset.v) }, $('liveMsg'));
   });
+
+  setInterval(() => { if (S.fbReady && S.laneState) render(); }, 5000);
 
   /* ---------- 안내 알림 ----------
      기존 코드는 안내 문구를 setupMsg/liveMsg에 쓴다. 그 칸은 숨겨 두고, 문구가 바뀌면 화면 아래 알림으로 보여 준다. */
