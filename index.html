@@ -19,6 +19,31 @@
     .mini-brand .fullscreen-btn{min-height:32px;padding:5px 8px;font-size:.64rem}
     .countdown{position:absolute;inset:0;z-index:6;display:none;place-items:center;background:#07111f99;pointer-events:none}
     .countdown.show{display:grid}
+    /* 사격 종료 결과 카드 */
+    .result-card{position:absolute;left:12px;right:12px;bottom:12px;z-index:5;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px;align-items:center;
+      background:#07111fe8;border:2px solid var(--lime);border-radius:16px;padding:10px 14px;color:var(--text);box-shadow:0 10px 30px #000a;font-size:15px;animation:rcIn .35s ease-out}
+    .result-card .rc-head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-weight:800;min-width:0}
+    .result-card .rc-who{color:var(--cyan);font-size:1.15em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .result-card .rc-label{color:var(--muted);white-space:nowrap}
+    .result-card .rc-total{text-align:center;padding-right:4px}
+    .result-card .rc-total small{display:block;color:var(--muted);font-size:.75em;font-weight:700}
+    .result-card .rc-total b{display:block;font-size:2.6em;line-height:1;color:var(--lime);font-weight:900}
+    .result-card .rc-detail{min-width:0}
+    .rc-cells{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}
+    .rc-cell{border-radius:7px;background:var(--lime);color:#07111f;font-weight:900;text-align:center;padding:3px 0;font-size:1.05em}
+    .rc-cell.miss{background:var(--red);color:#fff}
+    .rc-chips{display:flex;flex-wrap:wrap;gap:6px}
+    .rc-chip{background:#132238;border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-weight:800;white-space:nowrap}
+    .rc-chip b{color:var(--gold);margin-left:6px}
+    .result-card .rc-save{grid-column:1/-1;font-weight:800;font-size:.9em}
+    .result-card .rc-save.ok{color:var(--lime)}
+    .result-card .rc-save.saving{color:var(--gold)}
+    .result-card .rc-save.fail{color:var(--red)}
+    .result-card .rc-save.skip{color:var(--muted)}
+    .result-card[hidden]{display:none}   /* 위의 display:grid보다 숨김이 우선 */
+    body.result-show .guide{display:none}
+    @keyframes rcIn{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+    @media (prefers-reduced-motion:reduce){.result-card{animation:none}}
     .countdown b{font-size:clamp(6rem,38vw,11rem);font-weight:900;line-height:1;color:#fff;text-shadow:0 0 40px #29e7d9aa}
     .countdown b.go{font-size:clamp(3rem,15vw,6rem);color:var(--lime);text-shadow:0 0 30px #b7ff3c99}
     body.match-live .mini-brand{display:none}
@@ -46,6 +71,7 @@
       .countdown b.go{font-size:min(34cqh,21cqw)}
       .score-pop{font-size:min(55cqh,60cqw)}
       .score-pop.miss{font-size:min(40cqh,32cqw)}
+      .result-card{font-size:clamp(13px,min(3.6cqh,2.5cqw),24px)}
     }
     @media(max-width:520px){.shot-grid{grid-template-columns:repeat(5,1fr)}}
     @media(max-width:420px){.status{display:none}.fullscreen-btn{padding:7px 9px;font-size:.68rem}}
@@ -76,6 +102,13 @@
     <div class="pill" id="liveStatus" style="position:absolute;left:9px;bottom:34px;font-size:.66rem;opacity:.9">📡 관전 연결 안 됨</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
     <div class="countdown" id="countdown"><b id="countdownText">3</b></div>
+    <!-- 사격 종료 결과 카드: 과녁·탄착군은 가리지 않도록 카메라 화면 아래쪽에 -->
+    <div class="result-card" id="resultCard" role="status" aria-live="polite" hidden>
+      <div class="rc-head"><span class="rc-who" id="rcWho"></span><span class="rc-label" id="rcLabel"></span></div>
+      <div class="rc-total"><small id="rcTotalLabel">총점</small><b id="rcTotal">0</b></div>
+      <div class="rc-detail" id="rcDetail"></div>
+      <div class="rc-save" id="rcSave"></div>
+    </div>
   </section>
 
   <div class="side-panel" id="sidePanel">
@@ -409,7 +442,59 @@
   }
 
   function finishMatch(){if(!state.running||state.shots.length<state.maxShots)return;   // 완료 예약 사이에 취소됐으면 완료하지 않음
-    clearCountdown();lockCamera(false);state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
+    clearCountdown();showEndBanner();lockCamera(false);state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
+  // "사격 종료"를 카운트다운처럼 크게 1.6초 보여 준다(다음 경기 시작·초기화 때는 clearCountdown이 지움).
+  function showEndBanner(){
+    els.countdownText.className='go';els.countdownText.textContent='사격 종료';els.countdown.classList.add('show');
+    clearTimeout(goTimer);goTimer=setTimeout(()=>{els.countdown.classList.remove('show');goTimer=0},1600);
+  }
+
+  // 결과 카드에 이름을 보여 주려고 학생명단을 한 번 받아 둔다(실패하면 "3반 1번"처럼 번호로 표시).
+  const roster={};
+  function loadRoster(){
+    if(!isServerConfigured())return;
+    jsonp('roster',{},20000).then(res=>{((res&&res.students)||[]).forEach(st=>{roster[st.id]=st});renderResultCard()}).catch(()=>{});
+  }
+  function studentLabel(id){
+    const st=roster[id];if(st)return `${st.cls}반 ${st.number}번 ${st.name}`;
+    const m=/^(\d+)-(\d+)$/.exec(String(id||''));return m?`${m[1]}반 ${m[2]}번`:String(id||'');
+  }
+  function shortName(id){const st=roster[id];return st?st.name:studentLabel(id)}
+  const RC_TYPE={check:'영점 조준',practice:'연습',eval:'수행'};
+
+  // 사격 종료 결과 카드: 경기가 끝나 있으면 보여 주고, 다시 열리거나 초기화·새 경기면 숨긴다.
+  function renderResultCard(){
+    const card=document.getElementById('resultCard');if(!card)return;
+    const cfg=state.matchCfg;
+    const show=!!(cfg&&!state.running&&state.matchId&&state.shots.length&&state.shots.length>=state.maxShots);
+    document.body.classList.toggle('result-show',show);
+    if(!show){card.hidden=true;return}
+    const esc=v=>String(v===undefined||v===null?'':v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    const scores=state.shots.map(x=>Number(x.score)||0);
+    const total=scores.reduce((a,b)=>a+b,0);
+    const isTeam=cfg.mode==='team'&&cfg.members&&cfg.members.length;
+    document.getElementById('rcWho').textContent=isTeam?`${cfg.cls?cfg.cls+'반 ':''}${cfg.teamName||'단체전'}`:(cfg.studentId?studentLabel(cfg.studentId):RC_TYPE.check);
+    document.getElementById('rcLabel').textContent=(cfg.label||RC_TYPE[cfg.evalType]||'')+(isTeam?' · 단체전':' · 개인전');
+    document.getElementById('rcTotalLabel').textContent=isTeam?'팀 총점':'총점';
+    document.getElementById('rcTotal').textContent=total;
+    let detail='';
+    if(isTeam){
+      // 팀원별 소계(사격 순서대로)
+      let cur=0;
+      detail='<div class="rc-chips">'+cfg.members.map(m=>{const n=Number(m.shots)||0;const sub=scores.slice(cur,cur+n).reduce((a,b)=>a+b,0);cur+=n;return `<span class="rc-chip">${esc(shortName(m.id))}<b>${sub}점</b></span>`}).join('')+'</div>';
+    }else{
+      detail='<div class="rc-cells">'+scores.map(v=>`<span class="rc-cell${v?'':' miss'}">${v}</span>`).join('')+'</div>';
+    }
+    document.getElementById('rcDetail').innerHTML=detail;
+    const sv=state.saveInfo||{};
+    const save=document.getElementById('rcSave');
+    if(sv.status==='ok'){save.className='rc-save ok';save.textContent='✅ '+(sv.msg||'저장 완료')}
+    else if(sv.status==='fail'){save.className='rc-save fail';save.textContent='⚠ 저장 실패 · '+(sv.msg||'')+' (관전 화면에서 다시 시도할 수 있어요)'}
+    else if(sv.status==='skip'){save.className='rc-save skip';save.textContent='영점 조준 · 저장 안 함'}
+    else{save.className='rc-save saving';save.textContent='⏳ '+(sv.msg||'저장 준비 중…')}
+    card.hidden=false;
+  }
+
   // Apps Script 호출(JSONP). 응답을 실제로 받아서 성공 여부를 확인한다.
   function jsonp(action,params,timeoutMs){
     return new Promise((resolve,reject)=>{
@@ -473,6 +558,7 @@
 
   // 이 사로의 현재 상태를 Firebase에 통째로 쓴다. (점수 한 발마다, 시작·취소·완료·저장 결과마다 호출)
   function pushLive(){
+    renderResultCard();   // 화면의 결과 카드도 같은 시점에 갱신
     if(!fb.ready||!fb.laneRef)return;
     const cfg=state.matchCfg||{};
     const data={
@@ -1059,7 +1145,7 @@
     // 이미 끝난 경기를 다시 연 경우: 오래된 기준 화면으로 감지하면 오인식 위험이 있어 감지기를 처음부터 다시 준비한다(약 1~2초).
     if(reopened){clearDetectorBackground();state.detectorReady=false;state.warmupFrames=0;state.warmupStart=performance.now();state.readyAt=0;state.announced=true;lockCamera(true);document.body.classList.add('match-live');setTimeout(resize,60)}
     els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
-  function reset(){saveToken++;state.matchCfg=null;state.saveInfo=null;clearCountdown();lockCamera(false);state.running=false;state.shots=[];state.matchId=null;state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=!!LANE_FIXED;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
+  function reset(){saveToken++;state.matchCfg=null;state.saveInfo=null;clearCountdown();lockCamera(false);state.running=false;state.shots=[];state.matchId=null;renderResultCard();state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=!!LANE_FIXED;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
@@ -1082,6 +1168,7 @@
   els.sensitivityDown.onclick=()=>{state.sensitivity=Math.max(35,state.sensitivity-3);showDetectorInfo();toast('감도를 낮췄습니다.')};els.sensitivityUp.onclick=()=>{state.sensitivity=Math.min(98,state.sensitivity+3);showDetectorInfo();toast('감도를 높였습니다.')};els.laserColor.onchange=()=>{showDetectorInfo();clearDetectorBackground()};
   els.firingLane.addEventListener('change',attachLane);   // 사로를 바꾸면 그 사로의 명령을 듣는다
   fbInit();
+  loadRoster();
   // 페이지를 열면 카메라를 자동으로 켠다(카메라 시작 버튼은 비상용으로 그대로 둠).
   // 처음 한 번은 브라우저가 카메라 허용을 물어보고, 허용하면 다음부터는 묻지 않는다.
   (async()=>{
