@@ -348,10 +348,6 @@
     body.setup-mode #setupView #setupRight .order-row .tog-btn{height:calc(var(--h-row) - 10px);max-height:none;font-size:var(--fs-label)}
     /* 단체전에서 같은 사로 경고가 떠 있으면, 그만큼 사격 순서 줄과 버튼·선택 칸 높이를 조금 줄여 한 화면에 맞춘다 */
     body.setup-mode #setupView #setupRight:not(.ind):has(#startWarn:not([hidden])){--h-row:calc(var(--fs)*2.3);--h-ctl:calc(var(--fs)*2.7)}
-  }
-  @media(min-width:860px) and (max-height:700px){
-    /* 세로가 낮은 화면의 단체전: 간격과 사격 순서 줄을 조금 줄여 한 화면에 맞춘다 */
-    body.setup-mode #setupView #setupRight:not(.ind){gap:10px;--h-row:calc(var(--fs)*2.7)}
     /* 왼쪽 */
     body.setup-mode #setupView #histPanel .hint{font-size:var(--fs)}
     body.setup-mode #setupView #histPanel .ih-top h2{font-size:var(--fs-title)}
@@ -377,11 +373,15 @@
     body.live-mode #liveView .lslot .n{font-size:var(--fs-label)}
     body.live-mode #liveView .lslot .v{font-size:var(--fs-big)}
     body.live-mode #liveView .member-box .mn{font-size:var(--fs)}
-    body.live-mode #liveView .member-box .ms{font-size:var(--fs-label)}
+    body.live-mode #liveView .member-box .ms{font-size:var(--fs)}
     body.live-mode #liveView .ms-slot{font-size:var(--fs-num)}
     body.live-mode #liveView .keys button{font-size:var(--fs-key)}
     body.live-mode #liveView .savebox,body.live-mode #liveView .live-actions button{font-size:var(--fs)}
     body.live-mode #liveView .msg{font-size:var(--fs-label)}
+  }
+  @media(min-width:860px) and (max-height:700px){
+    /* 세로가 낮은 화면의 단체전: 간격과 사격 순서 줄을 조금 줄여 한 화면에 맞춘다 */
+    body.setup-mode #setupView #setupRight:not(.ind){gap:10px;--h-row:calc(var(--fs)*2.7)}
   }
   /* 안내 알림: 화면 아래 가운데에 잠깐 떴다가 사라진다(다른 내용의 자리를 차지하지 않음) */
   .toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:40;max-width:min(560px,92vw);
@@ -389,9 +389,10 @@
     box-shadow:0 12px 40px #000a;text-align:center;line-height:1.5}
   .toast.warn{background:#2e1018;border-color:var(--red);color:#ffd6dc}
   /* 단체전 팀원 줄: [이름] [점수 칸] [상태·소계] */
-  #liveView .member-box{display:grid;grid-template-columns:auto minmax(0,1fr) 66px;align-items:center;gap:10px}
-  #liveView .member-box .mn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
-  #liveView .member-box .ms{text-align:right;white-space:nowrap}
+  /* 이름 칸·상태 칸은 모든 줄에서 같은 폭(점수 칸이 줄마다 나란히 맞도록), 상태는 자기 칸 가운데 */
+  #liveView .member-box{display:grid;grid-template-columns:calc(var(--fs,15px)*4.6) minmax(0,1fr) calc(var(--fs,15px)*3.8);align-items:center;gap:10px}
+  #liveView .member-box .mn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #liveView .member-box .ms{text-align:center;white-space:nowrap;font-weight:800}
   #liveView .ms-slot{container-type:inline-size;display:flex;align-items:center;justify-content:center}
   #liveView .ms-slot span{font-size:min(var(--fs-num,18px),56cqw);line-height:1.2}   /* 칸이 좁아지면 숫자만 조금 작아짐 */
   [hidden]{display:none!important}
