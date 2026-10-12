@@ -408,6 +408,13 @@
   .lane-notice span{flex:1;min-width:200px}
   .lane-notice button{min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-weight:800;font-size:var(--fs-label,13px);flex:none}
   .owner-note{color:var(--gold);font-weight:800}
+  .dupwarn,.startwarn{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+  /* 시작 버튼 위 경고는 한 줄: 문구가 길면 말줄임, 버튼은 오른쪽 */
+  .startwarn{flex-wrap:nowrap;padding:3px 6px 3px 12px;text-align:left;line-height:1.3}
+  .startwarn #startWarnText{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .startwarn .warn-btn{min-height:28px;padding:0 10px}
+  .warn-btn{min-height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--gold);background:transparent;color:var(--gold);font:inherit;font-weight:800;flex:none;cursor:pointer}
+  .warn-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   [hidden]{display:none!important}
 </style>
 <!-- 주소·Firebase 설정(따로 관리하는 파일) -->
@@ -425,7 +432,7 @@
       <span class="pill" id="connPill">연결 중…</span>
     </div>
   </header>
-  <div class="dupwarn" id="dupWarn" hidden></div>
+  <div class="dupwarn" id="dupWarn" hidden><span id="dupWarnText"></span><button type="button" class="warn-btn" data-recheck>다시 확인</button></div>
 
   <!-- ===== 시작 전 화면 ===== -->
   <div class="layout" id="setupView">
@@ -471,7 +478,7 @@
         <span>사격 순서 <span class="small muted">(▲▼로 바꾸기, 결석은 빼기)</span></span>
         <div id="orderList" class="order-list"></div>
       </div>
-      <div class="startwarn" id="startWarn" hidden></div>
+      <div class="startwarn" id="startWarn" hidden><span id="startWarnText"></span><button type="button" class="warn-btn" data-recheck>다시 확인</button></div>
       <div class="start-row">
         <div class="summary" id="summaryBox">
           <div class="big" id="sumBig">-</div>
@@ -548,7 +555,7 @@
   const esc = v => String(v === undefined || v === null ? '' : v).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
 
   const S = {
-    lane: 1, type: 'practice', mode: 'individual',
+    lane: 0, type: 'practice', mode: 'individual',   // lane 0 = 아직 사로를 고르지 않음
     classes: [], students: [], byId: {},
     cls: '', studentId: '',
     drafts: [], teamIdx: '', order: [],          // order: [{id, name, absent}]
@@ -649,9 +656,10 @@
   }
   function renderLaneOptions() {
     let h = '';
+    if (!S.lane) h = '<option value="">사로 선택</option>';   // 아직 안 골랐을 때만 보이는 안내
     for (let i = 1; i <= LANE_COUNT; i++) h += `<option value="${i}">${i}사로</option>`;
-    $('selLane').innerHTML = h; $('selLane').value = String(S.lane);
-    $('hdrLane').innerHTML = h; $('hdrLane').value = String(S.lane);
+    $('selLane').innerHTML = h; $('selLane').value = S.lane ? String(S.lane) : '';
+    $('hdrLane').innerHTML = h; $('hdrLane').value = S.lane ? String(S.lane) : '';
   }
   function renderClassOptions() {
     const sel = $('selClass');
@@ -724,9 +732,9 @@
     $('summaryBox').className = 'summary ' + (r.cls === 'warn' ? 'warn' : S.type === 'eval' ? 'eval' : S.type === 'check' ? 'check' : '');
     $('sumBig').textContent = r.big; $('sumSub').textContent = r.sub; $('sumSub').hidden = !r.sub;
     const btn = $('btnStart');
-    btn.textContent = `${S.lane}사로 경기 시작`;
-    btn.disabled = !r.ok || !S.fbReady || laneBusy();
-    btn.title = !S.fbReady ? '실시간 연결 중이에요' : laneBusy() ? '이 사로는 사격 중이에요' : (r.reason || '');
+    btn.textContent = S.lane ? `${S.lane}사로 경기 시작` : '사로를 먼저 고르세요';
+    btn.disabled = !S.lane || !r.ok || !S.fbReady || laneBusy();
+    btn.title = !S.lane ? '사로를 먼저 고르세요' : !S.fbReady ? '실시간 연결 중이에요' : laneBusy() ? '이 사로는 사격 중이에요' : (r.reason || '');
     return r;
   }
 
@@ -847,7 +855,7 @@
   let ackRef = null, ackTimer = 0;
   function sendStart() {
     const r = renderSummary();
-    if (!r.ok || !S.fbReady || laneBusy()) return;
+    if (!S.lane || !r.ok || !S.fbReady || laneBusy()) return;
     const cmd = { lane: S.lane, evalType: S.type, mode: S.mode, label: r.label || '', studentId: '', cls: S.cls || '', teamName: '', teamKey: '', members: [] };
     if (S.mode === 'individual') {
       cmd.studentId = S.studentId || '';
@@ -909,7 +917,7 @@
   // 바로 다음 경기: 방금 경기와 같은 학생(팀)·같은 구분으로 다음 차시를 곧바로 시작한다.
   function nextMatch() {
     const ls = S.laneState;
-    if (!ls || ls.running || !S.fbReady) return;
+    if (!ls || ls.running || !S.fbReady || !S.lane) return;
     const msg = $('liveMsg'), btn = $('btnNextMatch');
     const mode = ls.mode === 'team' ? 'team' : 'individual';
     const type = ['check', 'practice', 'eval'].includes(ls.evalType) ? ls.evalType : 'check';
@@ -932,7 +940,7 @@
   }
 
   function sendEvent(ev, msgEl) {
-    if (!S.fbReady) return;
+    if (!S.fbReady || !S.lane) return;
     ev.at = firebase.database.ServerValue.TIMESTAMP;
     cmdRef('events').push(ev).then(() => { if (msgEl) msgEl.textContent = ''; })
       .catch(err => { if (msgEl) msgEl.textContent = '⚠️ 전송 실패: ' + err.message; });
@@ -952,7 +960,7 @@
     });
   }
   function abortMatch() {
-    if (!S.fbReady) return;
+    if (!S.fbReady || !S.lane) return;
     askConfirm(`${S.lane}사로 경기를 중단할까요?`, '사대 태블릿의 점수와 탄착군이 지워지고 처음 화면으로 돌아가요. 이 경기는 저장되지 않아요.', '경기 중단').then(ok => {
       if (!ok) return;
       cmdRef('end').set({ endId: 'end_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: firebase.database.ServerValue.TIMESTAMP })
@@ -961,46 +969,116 @@
     });
   }
   function restartMatch() {
-    if (!S.fbReady) return;
+    if (!S.fbReady || !S.lane) return;
     askConfirm('처음부터 다시 시작할까요?', '지금까지의 점수가 모두 지워지고, 같은 학생·같은 차시로 카운트다운부터 다시 시작해요. 이 경기는 저장되지 않아요.', '다시 시작').then(ok => {
       if (ok) sendEvent({ type: 'restart' }, $('liveMsg'));
     });
   }
 
   /* ---------- 같은 사로를 연 크롬북 확인 (Firebase viewers/{사로}) ---------- */
-  let viewerRef = null, viewersRef = null;
-  function registerViewer() {
-    if (!S.fbReady) return;
-    if (viewerRef) { viewerRef.onDisconnect().cancel(); viewerRef.remove().catch(() => {}); }
-    if (viewersRef) viewersRef.off();
-    const lane = S.lane;
-    viewerRef = S.db.ref('viewers/' + lane + '/' + S.viewerId);
-    viewerRef.onDisconnect().remove();
+  // 각 크롬북은 viewers/{사로}/{크롬북ID} 에 {at: 마지막 생존 신호 시각} 이름표를 붙인다.
+  // - 30초마다 시각을 갱신(사용자는 아무것도 안 해도 됨)
+  // - 90초 넘게 신호가 없는 이름표는 세지 않고, 2분이 넘으면 지운다(꺼진 크롬북의 유령 이름표 정리)
+  // - 화면이 안 보이면(다른 탭, 덮개 닫힘) 이름표를 떼고, 다시 보이면 붙인다
+  // - 누가 [다시 확인]으로 내 이름표를 지우면 바로 다시 붙인다 → 진짜 열려 있는 크롬북은 곧바로 다시 경고에 나타남
+  const VIEWER_BEAT_MS = 30000, VIEWER_FRESH_MS = 90000, VIEWER_STALE_MS = 120000;
+  let viewerRef = null, viewersRef = null, ownRef = null, viewerLane = 0, viewerSnap = {}, beatTimer = 0, lastReAdd = 0, reAddTimer = 0;
+  function viewerActive() { return !!(S.fbReady && S.lane && document.visibilityState !== 'hidden'); }
+  function writeViewer() {
+    if (!viewerRef) return;
     viewerRef.set({ at: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
-    S.otherViewers = 0; renderDup();
+  }
+  function unregisterViewer() {
+    clearInterval(beatTimer); beatTimer = 0;
+    clearTimeout(reAddTimer); reAddTimer = 0;
+    if (ownRef) { ownRef.off(); ownRef = null; }          // 먼저 감시를 끊어야 '다시 붙이기'가 일어나지 않음
+    if (viewersRef) { viewersRef.off(); viewersRef = null; }
+    if (viewerRef) {
+      const r = viewerRef; viewerRef = null;
+      r.onDisconnect().cancel().catch(() => {});
+      r.remove().catch(() => {});
+    }
+    viewerLane = 0; viewerSnap = {}; S.otherViewers = 0; renderDup();
+  }
+  function registerViewer() {
+    unregisterViewer();
+    if (!viewerActive()) return;
+    const lane = S.lane;
+    viewerLane = lane;
+    viewerRef = S.db.ref('viewers/' + lane + '/' + S.viewerId);
+    viewerRef.onDisconnect().remove().catch(() => {});
+    writeViewer();
+    beatTimer = setInterval(writeViewer, VIEWER_BEAT_MS);
+    // 내 이름표가 사라지면(다른 크롬북의 [다시 확인], 새로고침 직후 이전 연결의 정리 등) 바로 다시 붙인다.
+    // 쓰기가 계속 거절되는 경우 무한 반복하지 않도록 2초에 한 번까지만 붙이고, 그보다 빠르면 남은 시간 뒤에 붙인다.
+    ownRef = viewerRef;
+    const mine = ownRef;
+    mine.on('value', snap => {
+      if (snap.val() !== null || viewerRef !== mine || reAddTimer) return;
+      reAddTimer = setTimeout(() => {
+        reAddTimer = 0;
+        if (viewerRef !== mine || !viewerActive()) return;
+        lastReAdd = Date.now(); writeViewer();
+      }, Math.max(0, 2000 - (Date.now() - lastReAdd)));
+    }, () => {});
     viewersRef = S.db.ref('viewers/' + lane);
     viewersRef.on('value', snap => {
-      if (lane !== S.lane) return;
-      const v = snap.val() || {};
-      S.otherViewers = Object.keys(v).filter(k => k !== S.viewerId).length;
-      renderDup();
+      if (lane !== viewerLane) return;
+      viewerSnap = snap.val() || {};
+      countViewers();
     }, () => {});
+  }
+  function countViewers() {
+    if (!viewerLane) return;
+    const now = Date.now() + S.offset, stale = {};
+    let n = 0;
+    Object.keys(viewerSnap).forEach(k => {
+      if (k === S.viewerId) return;
+      const at = Number(viewerSnap[k] && viewerSnap[k].at) || 0;
+      const age = now - at;
+      if (age < VIEWER_FRESH_MS) n++;
+      else if (age > VIEWER_STALE_MS) stale[k] = null;
+    });
+    if (Object.keys(stale).length) S.db.ref('viewers/' + viewerLane).update(stale).catch(() => {});
+    S.otherViewers = n; renderDup();
+  }
+  // [다시 확인]: 이 사로의 다른 이름표를 모두 지운다. 진짜 열려 있는 크롬북은 1~2초 안에 다시 붙인다.
+  function recheckViewers() {
+    if (!viewerLane || !S.fbReady) return;
+    const upd = {};
+    Object.keys(viewerSnap).forEach(k => { if (k !== S.viewerId) upd[k] = null; });
+    S.otherViewers = 0; renderDup();
+    if (!Object.keys(upd).length) return;
+    S.db.ref('viewers/' + viewerLane).update(upd)
+      .then(() => { $('setupMsg').textContent = '🔎 다시 확인했어요. 정말 다른 크롬북이 이 사로를 열고 있으면 곧 경고가 다시 떠요.'; })
+      .catch(err => { $('setupMsg').textContent = '⚠️ 확인 실패: ' + err.message; });
   }
   function renderDup() {
     const el = $('dupWarn'), sw = $('startWarn');
-    if (S.otherViewers > 0) {
+    if (S.otherViewers > 0 && S.lane) {
       el.hidden = false; sw.hidden = false;
-      el.textContent = `⚠ 지금 ${S.lane}사로를 다른 크롬북 ${S.otherViewers}대도 열고 있어요. 내 사로 번호가 맞는지 확인하세요.`;
-      sw.textContent = `⚠ ${S.lane}사로를 다른 크롬북도 열고 있어요. 사로 번호를 확인한 뒤 시작하세요.`;
+      $('dupWarnText').textContent = `⚠ 지금 ${S.lane}사로를 다른 크롬북 ${S.otherViewers}대도 열고 있어요. 내 사로 번호가 맞는지 확인하세요.`;
+      $('startWarnText').textContent = `⚠ 다른 크롬북도 ${S.lane}사로를 열고 있어요`;
+      $('startWarnText').title = `다른 크롬북 ${S.otherViewers}대도 ${S.lane}사로를 열고 있어요. 사로 번호를 확인한 뒤 시작하세요.`;
     } else { el.hidden = true; sw.hidden = true; }
   }
+  document.querySelectorAll('[data-recheck]').forEach(b => b.addEventListener('click', recheckViewers));
+  // 화면이 안 보이면 이름표를 떼고, 다시 보이면 붙인다. 페이지를 닫거나 새로고침할 때도 바로 뗀다.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') unregisterViewer();
+    else if (S.fbReady) registerViewer();
+  });
+  window.addEventListener('pagehide', unregisterViewer);
+  // 시간이 지나 신호가 끊긴 이름표는 새 소식이 없어도 다시 세야 하므로 10초마다 다시 센다.
+  setInterval(countViewers, 10000);
 
   /* ---------- 사로 상태 구독 (Firebase) ---------- */
   let laneRefCur = null, lastSaveStatus = '';
   function subscribeLane() {
     if (!S.fbReady) return;
-    if (laneRefCur) laneRefCur.off();
+    if (laneRefCur) { laneRefCur.off(); laneRefCur = null; }
     S.laneState = null;
+    if (!S.lane) return;   // 아직 사로를 고르지 않음
     laneRefCur = S.db.ref('lanes/' + S.lane);
     const lane = S.lane;
     let first = true;   // 이 사로를 고른 뒤 처음 받는 상태인지
@@ -1145,7 +1223,8 @@
   function renderPills() {
     const ls = S.laneState;
     const pp = $('phonePill');
-    if (!S.fbReady) { pp.textContent = '사대 폰 확인 중…'; pp.className = 'pill'; }
+    if (!S.lane) { pp.textContent = '사로를 고르세요'; pp.className = 'pill bad'; }
+    else if (!S.fbReady) { pp.textContent = '사대 폰 확인 중…'; pp.className = 'pill'; }
     else if (!ls || !ls.online) { pp.textContent = `${S.lane}사로 사대 폰 연결 안 됨`; pp.className = 'pill bad'; }
     else if (ls.running) { pp.textContent = `${S.lane}사로 사격 중`; pp.className = 'pill ok'; }
     else { pp.textContent = `${S.lane}사로 사대 폰 대기 중`; pp.className = 'pill ok'; }
@@ -1164,7 +1243,7 @@
     box.hidden = false;
   }
   function clearLane() {
-    if (!S.fbReady) return;
+    if (!S.fbReady || !S.lane) return;
     const lane = S.lane;
     askConfirm(`${lane}사로를 정리할까요?`, '사대 태블릿에 남아 있는 경기 상태를 지워요. 진행 중이던 경기는 저장되지 않아요. 태블릿이 다시 연결되면 그 경기도 초기화돼요.', '사로 정리').then(ok => {
       if (!ok) return;
@@ -1203,10 +1282,9 @@
   });
   // 사로 바꾸기: 시작 화면의 사로 칸과 머리글의 사로 선택 모두 같은 동작
   function changeLane(n) {
-    const lane = Number(n) || 1;
-    if (lane === S.lane) return;
+    const lane = Number(n) || 0;
+    if (!lane || lane === S.lane) return;
     S.lane = lane;
-    try { localStorage.setItem('lm_lane', String(S.lane)); } catch (e2) {}
     S.dismissedMatch = ''; lastSaveStatus = ''; S.offlineSince = 0;
     $('setupMsg').textContent = ''; $('liveMsg').textContent = '';
     renderLaneOptions(); subscribeLane(); registerViewer(); render();
@@ -1278,8 +1356,7 @@
   /* ---------- 시작 ---------- */
   function init() {
     try {
-      const savedLane = Number(localStorage.getItem('lm_lane'));
-      if (savedLane >= 1 && savedLane <= LANE_COUNT) S.lane = savedLane;
+      // 크롬북을 섞어서 쓰므로, 마지막에 쓴 사로를 자동으로 고르지 않는다(매번 직접 고름).
       const savedType = localStorage.getItem('lm_type');
       if (savedType && TYPE_LABEL[savedType]) S.type = savedType;
     } catch (e) {}
