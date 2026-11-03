@@ -256,6 +256,8 @@
     body.live-mode .live-right .lslot .v{font-size:clamp(1.25rem,3.6vh,1.9rem)}
     body.live-mode .live-right .lslot .n{font-size:clamp(.62rem,1.5vh,.8rem)}
     body.live-mode .live-right .member-box{flex:1 1 0;min-height:34px;max-height:54px}
+    body.live-mode .live-right .member-box.two-line{min-height:64px;max-height:104px}   /* 2명(10발): 점수 칸 5칸 × 두 줄 */
+    body.live-mode .live-right .member-box.two-line .mslots{height:100%;grid-auto-rows:1fr;align-content:stretch}
     body.live-mode .live-right .ms-slot{font-size:clamp(.92rem,2.4vh,1.25rem)}
     body.live-mode #manualArea{flex:1 1 auto;min-height:0;max-height:174px}
     body.live-mode .live-right .keys{flex:1;min-height:0;grid-template-rows:repeat(2,minmax(40px,1fr));align-content:stretch}
@@ -558,7 +560,7 @@
     lane: 0, type: 'practice', mode: 'individual',   // lane 0 = 아직 사로를 고르지 않음
     classes: [], students: [], byId: {},
     cls: '', studentId: '',
-    drafts: [], teamIdx: '', order: [],          // order: [{id, name, absent}]
+    drafts: [], draftsNext: null, teamIdx: '', order: [],          // order: [{id, name, absent}]
     hist: null, histReq: 0, histLoading: false, histError: '',
     laneState: null, dismissedMatch: '', db: null, fbReady: false,
     offset: 0, otherViewers: 0,
@@ -593,7 +595,7 @@
   function nameOf(id) { const s = S.byId[id]; return s ? s.name : (id || ''); }
   function labelOfStudent(id) { const s = S.byId[id]; return s ? `${s.cls}반 ${s.number}번 ${s.name}` : (id || ''); }
   function presentMembers() { return S.order.filter(m => !m.absent); }
-  // 발수 자동 배분: 20발을 출석 인원으로 나누고, 남는 발은 앞 순서부터 1발씩 더 (4명 5-5-5-5, 3명 7-7-6)
+  // 발수 자동 배분: 20발을 출석 인원으로 나누고, 남는 발은 앞 순서부터 1발씩 더 (4명 5-5-5-5, 3명 7-7-6, 2명 10-10)
   function splitShots(n) {
     if (!n) return [];
     const base = Math.floor(LANE_SHOTS.team / n), rem = LANE_SHOTS.team % n;
@@ -718,7 +720,7 @@
     const team = S.drafts[S.teamIdx];
     if (!S.cls || !team) { r.reason = '반과 조를 선택하세요.'; r.big = '반과 조를 선택하세요'; return r; }
     const n = presentMembers().length;
-    if (n < 3 || n > 5) { r.cls = 'warn'; r.big = `출석 ${n}명`; r.sub = '단체전은 3~5명이 쏴야 해요'; r.reason = '출석 인원을 확인하세요.'; return r; }
+    if (n < 2 || n > 5) { r.cls = 'warn'; r.big = `출석 ${n}명`; r.sub = '단체전은 2~5명이 쏴야 해요'; r.reason = '출석 인원을 확인하세요.'; return r; }
     if (S.type === 'check') { r.ok = true; r.big = `${S.cls}반 ${team.teamName} · ${TYPE_LABEL.check}`; r.sub = '저장 안 함'; return r; }
     if (S.histLoading) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = '지난 기록을 불러오는 중…'; r.reason = '기록을 불러오는 중이에요.'; return r; }
     if (!S.hist || S.hist.kind !== 'team' || S.hist.id !== teamKey()) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = S.histError || '지난 기록을 불러오지 못했어요'; r.reason = '지난 기록 확인이 필요해요.'; return r; }
@@ -1162,13 +1164,17 @@
     $('mAvg').textContent = shots.length ? (total / shots.length).toFixed(1) : '0.0';
 
     // 오른쪽: 발별 점수 (점수 영역의 최대 높이 - 개인전 2줄, 단체전은 팀원 수만큼)
-    $('scoreArea').style.setProperty('--score-max', isTeam ? (members.length * 54 + (members.length - 1) * 6) + 'px' : '190px');
+    // 단체전 점수 칸: 가장 많이 쏘는 사람의 발수만큼(4명 5칸, 3명 7칸, 2명 10칸). 8칸 이상이면 한 줄이 너무 좁아지므로 두 줄로 나눈다.
+    const teamCols = isTeam ? Math.max(1, ...members.map(m => Number(m.shots) || 0)) : 0;
+    const twoLine = teamCols >= 8;
+    const rowMax = twoLine ? 104 : 54;
+    $('scoreArea').style.setProperty('--score-max', isTeam ? (members.length * rowMax + (members.length - 1) * 6) + 'px' : '190px');
     const slotCls = (s, isNow) => s ? (Number(s.s) ? 'hit' : 'miss') : (isNow ? 'now' : '');
     if (isTeam) {
       $('scoreTitle').textContent = '팀원별 점수';
       let cursor = 0;
       // 점수 칸 수 = 이 팀에서 가장 많이 쏘는 사람의 발수 (4명이면 5칸, 3명이면 7칸) → 빈자리 없이 꽉 채운다
-      const cols = Math.max(1, ...members.map(m => Number(m.shots) || 0));
+      const cols = teamCols, perLine = twoLine ? Math.ceil(cols / 2) : cols;
       $('scoreArea').innerHTML = members.map((m, mi) => {
         const n = Number(m.shots) || 0;
         const own = shots.slice(cursor, cursor + n);
@@ -1181,7 +1187,7 @@
         cursor += n;
         const cur = mi === curIdx && ls.running && shots.length < max;
         const state = own.length >= n ? `${sub}점` : (cur ? '사격 중' : (own.length ? `${sub}점…` : '대기'));
-        return `<div class="member-box${cur ? ' cur' : ''}"><span class="mn">${mi + 1}. ${esc(nameOf(m.id))}</span><div class="mslots" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${cells}</div><span class="ms">${state}</span></div>`;
+        return `<div class="member-box${cur ? ' cur' : ''}${twoLine ? ' two-line' : ''}"><span class="mn">${mi + 1}. ${esc(nameOf(m.id))}</span><div class="mslots" style="grid-template-columns:repeat(${perLine},minmax(0,1fr))">${cells}</div><span class="ms">${state}</span></div>`;
       }).join('');
     } else {
       $('scoreTitle').textContent = '획득 점수';
@@ -1279,6 +1285,7 @@
     if (S.mode === b.dataset.v) return;
     S.mode = b.dataset.v;
     renderSeg(); loadHistory();
+    if (S.mode === 'team' && S.cls) loadDrafts(false);   // 신호를 못 받은 경우를 대비한 안전장치
   });
   // 사로 바꾸기: 시작 화면의 사로 칸과 머리글의 사로 선택 모두 같은 동작
   function changeLane(n) {
@@ -1292,19 +1299,14 @@
   $('selLane').addEventListener('change', e => changeLane(e.target.value));
   $('hdrLane').addEventListener('change', e => changeLane(e.target.value));
   $('selClass').addEventListener('change', e => {
-    S.cls = e.target.value; S.studentId = ''; S.teamIdx = ''; S.order = []; S.drafts = [];
+    S.cls = e.target.value; S.studentId = ''; S.teamIdx = ''; S.order = []; S.drafts = []; S.draftsNext = null;
     renderStudentOptions(); renderTeamOptions(); renderOrder(); loadHistory();
-    if (S.cls) {
-      $('selTeam').innerHTML = '<option value="">불러오는 중…</option>';
-      const cls = S.cls;
-      jsonp('drafts', { cls }).then(res => {
-        if (cls !== S.cls) return;
-        S.drafts = (res && res.teams) || [];
-        renderTeamOptions();
-      }).catch(err => { if (cls === S.cls) $('selTeam').innerHTML = `<option value="">불러오기 실패: ${esc(err.message)}</option>`; });
-    }
+    watchDraftSignal();
+    if (S.cls) { $('selTeam').innerHTML = '<option value="">불러오는 중…</option>'; loadDrafts(false); }
   });
   $('selStudent').addEventListener('change', e => { S.studentId = e.target.value; loadHistory(); });
+  // 조를 이미 골라 둔 상태에서 드래프트가 바뀌었으면, 조 칸을 다시 누를 때 새 목록으로 바꾼다.
+  ['mousedown', 'focus', 'keydown'].forEach(ev => $('selTeam').addEventListener(ev, applyPendingDrafts));
   $('selTeam').addEventListener('change', e => {
     S.teamIdx = e.target.value === '' ? '' : Number(e.target.value);
     const team = S.drafts[S.teamIdx];
@@ -1335,6 +1337,60 @@
   });
 
   setInterval(() => { if (S.fbReady && S.laneState) render(); }, 5000);
+
+  /* ---------- 드래프트(조 목록) ----------
+     드래프트 페이지에서 저장하면 Firebase signals/drafts/{반} 의 시각이 바뀐다. 그 순간 이 반의 조 목록을 다시 받아 온다.
+     - 아직 조를 고르지 않았으면 바로 새 목록으로 바꾼다.
+     - 조를 이미 골라 사격 순서를 정해 둔 상태면 그대로 두고, 조 칸을 다시 누를 때 새 목록으로 바꾼다. */
+  let draftReq = 0, draftSigRef = null, draftSigCls = '', draftSigAt = null;
+  function sameTeam(a, b) {
+    if (!a || !b) return false;
+    const ids = t => (t.members || []).map(m => String(m.studentId)).sort().join(',');
+    return String(a.teamName) === String(b.teamName) && ids(a) === ids(b);
+  }
+  // 새 목록 적용. 골라 둔 조가 새 목록에도 똑같이(이름·팀원) 있으면 선택과 사격 순서를 그대로 두고, 없으면 선택을 비운다.
+  function applyDrafts(next) {
+    const cur = S.teamIdx === '' ? null : S.drafts[S.teamIdx];
+    S.drafts = next; S.draftsNext = null;
+    if (cur) {
+      const idx = next.findIndex(t => sameTeam(t, cur));
+      if (idx >= 0) S.teamIdx = idx;
+      else { S.teamIdx = ''; S.order = []; renderOrder(); loadHistory(); $('setupMsg').textContent = '⚠ 드래프트가 바뀌어서 고른 조를 다시 골라야 해요.'; }
+    }
+    renderTeamOptions(); renderSummary();
+  }
+  function applyPendingDrafts() { if (S.draftsNext) applyDrafts(S.draftsNext); }
+  function loadDrafts(fromSignal) {
+    const cls = S.cls; if (!cls) return;
+    const req = ++draftReq;
+    jsonp('drafts', { cls }).then(res => {
+      if (cls !== S.cls || req !== draftReq) return;   // 그사이 반이 바뀌었거나 더 새 요청이 있으면 버림
+      const next = (res && res.teams) || [];
+      if (S.teamIdx === '') { applyDrafts(next); if (fromSignal && S.mode === 'team') $('setupMsg').textContent = '🔄 드래프트가 저장되어 조 목록을 새로 받았어요.'; }
+      else {
+        const cur = S.drafts[S.teamIdx];
+        if (next.some(t => sameTeam(t, cur))) applyDrafts(next);   // 골라 둔 조가 그대로면 조용히 갱신
+        else { S.draftsNext = next; if (fromSignal) $('setupMsg').textContent = '🔄 드래프트가 바뀌었어요. 조 칸을 다시 누르면 새 목록이 보여요.'; }
+      }
+    }).catch(err => {
+      if (cls !== S.cls || req !== draftReq) return;
+      if (!S.drafts.length) $('selTeam').innerHTML = `<option value="">불러오기 실패: ${esc(err.message)}</option>`;
+    });
+  }
+  function watchDraftSignal() {
+    if (draftSigRef) { draftSigRef.off(); draftSigRef = null; }
+    draftSigCls = S.cls; draftSigAt = null;
+    if (!S.fbReady || !S.cls) return;
+    const cls = S.cls;
+    draftSigRef = S.db.ref('signals/drafts/' + cls);
+    draftSigRef.on('value', snap => {
+      if (cls !== S.cls) return;
+      const at = Number(snap.val() && snap.val().at) || 0;
+      const first = draftSigAt === null;
+      draftSigAt = at;
+      if (!first) loadDrafts(true);   // 처음 받은 값은 기준점일 뿐, 그 뒤로 바뀌면 다시 받아 온다
+    }, () => {});   // 규칙에 signals가 없으면 조용히 무시(아래 안전장치로 동작)
+  }
 
   /* ---------- 안내 알림 ----------
      기존 코드는 안내 문구를 setupMsg/liveMsg에 쓴다. 그 칸은 숨겨 두고, 문구가 바뀌면 화면 아래 알림으로 보여 준다. */
@@ -1385,7 +1441,7 @@
         $('connPill').className = 'pill ' + (on ? 'ok' : 'bad');
       });
       firebase.auth().signInAnonymously().then(() => {
-        S.fbReady = true; subscribeLane(); registerViewer(); render();
+        S.fbReady = true; subscribeLane(); registerViewer(); watchDraftSignal(); render();
       }).catch(err => { $('connPill').textContent = '실시간 로그인 실패: ' + err.message; $('connPill').className = 'pill bad'; });
     } catch (err) { $('connPill').textContent = '실시간 준비 오류: ' + err.message; $('connPill').className = 'pill bad'; }
   }
