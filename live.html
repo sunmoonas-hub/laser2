@@ -69,6 +69,7 @@
   .slot.filled .s{color:var(--text)}
   .slot.next{border-color:var(--gold)}
   .slot.next .s{color:var(--gold)}
+  .slot.pending{border-style:dashed}
   .sec-title{font-size:.88rem;font-weight:800}
   /* 지난 기록: 큰 덩어리 사이 18px, 묶음 안(제목↔칸) 8px */
   .hist-body{display:flex;flex-direction:column;gap:18px}
@@ -560,7 +561,7 @@
     lane: 0, type: 'practice', mode: 'individual',   // lane 0 = 아직 사로를 고르지 않음
     classes: [], students: [], byId: {},
     cls: '', studentId: '',
-    drafts: [], draftsNext: null, teamIdx: '', order: [],          // order: [{id, name, absent}]
+    drafts: [], draftsNext: null, teamIdx: '', order: [], pending: {},          // order: [{id, name, absent}]
     hist: null, histReq: 0, histLoading: false, histError: '',
     laneState: null, dismissedMatch: '', db: null, fbReady: false,
     offset: 0, otherViewers: 0,
@@ -712,7 +713,7 @@
       if (S.type === 'check') { r.ok = true; r.big = `${who} · ${TYPE_LABEL.check}`; r.sub = '저장 안 함'; return r; }
       if (S.histLoading) { r.big = `${who}`; r.sub = '지난 기록을 불러오는 중…'; r.reason = '기록을 불러오는 중이에요.'; return r; }
       if (!S.hist || S.hist.kind !== 'student' || S.hist.id !== S.studentId) { r.big = who; r.sub = S.histError || '지난 기록을 불러오지 못했어요'; r.reason = '지난 기록 확인이 필요해요.'; return r; }
-      const next = S.hist.data.next[S.type];
+      const next = adjustedNext('student', S.studentId, S.type, S.hist.data).next;   // 시트 반영 대기 중인 결과까지 포함
       if (!next) { r.cls = 'warn'; r.big = `${typeLabel} 차시가 모두 찼어요`; r.sub = '선생님께 기록 정리를 요청하세요'; r.reason = '차시가 모두 찼어요.'; return r; }
       r.ok = true; r.big = `${who} · ${typeLabel} ${next}차시 · 개인전`; r.sub = ''; r.label = `${typeLabel} ${next}차시`;
       return r;
@@ -724,7 +725,7 @@
     if (S.type === 'check') { r.ok = true; r.big = `${S.cls}반 ${team.teamName} · ${TYPE_LABEL.check}`; r.sub = '저장 안 함'; return r; }
     if (S.histLoading) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = '지난 기록을 불러오는 중…'; r.reason = '기록을 불러오는 중이에요.'; return r; }
     if (!S.hist || S.hist.kind !== 'team' || S.hist.id !== teamKey()) { r.big = `${S.cls}반 ${team.teamName}`; r.sub = S.histError || '지난 기록을 불러오지 못했어요'; r.reason = '지난 기록 확인이 필요해요.'; return r; }
-    const nth = S.hist.data.next[S.type];
+    const nth = adjustedNext('team', teamKey(), S.type, S.hist.data).next;   // 시트 반영 대기 중인 결과까지 포함
     r.ok = true; r.big = `${S.cls}반 ${team.teamName} · ${typeLabel} ${nth}번째 · 단체전`; r.sub = ''; r.label = `${typeLabel} ${nth}번째`;
     return r;
   }
@@ -790,15 +791,47 @@
     hint.hidden = true; body.hidden = false;
     renderStudentHistory(S.hist.data);
   }
-  function slotHtml(n, v, next) {
+  /* ---------- 시트에 아직 안 들어간 결과(Firebase results) ----------
+     사대 태블릿은 결과를 Firebase에 먼저 저장하고, 시트에는 바로 또는 1분 안에 들어간다.
+     그 사이에도 지난 기록·다음 차시가 맞도록, 시트 기록에 없는 대기 결과를 합쳐서 계산한다. */
+  // kind: 'student' | 'team', key: 학생ID | 팀구성키, data: 서버에서 받은 지난 기록
+  function pendingList(kind, key, type, data) {
+    const inSheet = id => {
+      if (!id || !data) return false;
+      if (kind === 'student') return (data.records || []).some(x => x.matchId === id);
+      return [].concat(data.practice || [], data.eval || []).some(x => x && x.matchId === id);
+    };
+    return Object.keys(S.pending || {}).map(id => Object.assign({ id }, S.pending[id]))
+      .filter(r => r && !r.error && (!type || r.evalType === type) &&
+        (kind === 'student' ? (r.mode !== 'team' && r.studentId === key) : (r.mode === 'team' && r.teamKey === key)) &&
+        !inSheet(r.matchId || r.id))
+      .sort((a, b) => (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0));
+  }
+  const pendTotal = r => (Array.isArray(r.shots) ? r.shots : Object.values(r.shots || {})).reduce((a, x) => a + (Number(x && x[0]) || 0), 0);
+  // 대기 결과까지 합친 다음 차시(개인전) / 다음 번째(단체전). 0이면 차시가 다 참.
+  function adjustedNext(kind, key, type, data) {
+    const pend = pendingList(kind, key, type, data);
+    if (kind === 'student') {
+      const empties = [];
+      (data[type] || []).forEach((v, i) => { if (v === '' || v === null || v === undefined) empties.push(i + 1); });
+      return { next: empties[pend.length] || 0, pend, empties };
+    }
+    return { next: (Number(data.next && data.next[type]) || 1) + pend.length, pend };
+  }
+  function slotHtml(n, v, next, pend) {
     const filled = v !== '' && v !== null && v !== undefined;
+    if (!filled && pend !== undefined) return `<div class="slot filled pending" title="시트 반영 중"><div class="n">${n}</div><div class="s">${esc(pend)}</div></div>`;
     const cls = filled ? 'filled' : (next ? 'next' : '');
     return `<div class="slot ${cls}"><div class="n">${n}</div><div class="s">${filled ? esc(v) : (next ? '다음' : '-')}</div></div>`;
   }
   function renderStudentHistory(d) {
     const st = d.student || {};
-    const nextP = S.type === 'practice' ? d.next.practice : 0, nextE = S.type === 'eval' ? d.next.eval : 0;
-    const last = d.lastShots || [];
+    const ap = adjustedNext('student', st.id, 'practice', d), ae = adjustedNext('student', st.id, 'eval', d);
+    const nextP = S.type === 'practice' ? ap.next : 0, nextE = S.type === 'eval' ? ae.next : 0;
+    const pendAt = (a, n) => { const k = a.empties.indexOf(n); return k >= 0 && k < a.pend.length ? pendTotal(a.pend[k]) : undefined; };
+    const allPend = pendingList('student', st.id, '', d);
+    const latestPend = allPend[allPend.length - 1];
+    const last = latestPend ? (Array.isArray(latestPend.shots) ? latestPend.shots : Object.values(latestPend.shots || {})).map(x => ({ s: Number(x[0]) || 0, u: Number(x[3]) || 0, v: Number(x[4]) || 0, k: x[5] || 'laser' })) : (d.lastShots || []);
     const cells = last.map((x, i) => `<div class="shot-cell ${Number(x.s) ? 'hit' : 'miss'}"><span class="n">${i + 1}</span><span class="v">${esc(x.s)}</span></div>`).join('');
     $('histBody').innerHTML = `
       <div class="ih-top">
@@ -812,12 +845,12 @@
       <div class="ih-sess">
         <div class="sec-title" style="grid-column:1/11;color:var(--cyan)">연습 1~10차시</div>
         <div class="sec-title" style="grid-column:12/14;color:var(--red2)">수행</div>
-        ${(d.practice || []).map((v, i) => slotHtml(i + 1, v, nextP === i + 1)).join('')}
+        ${(d.practice || []).map((v, i) => slotHtml(i + 1, v, nextP === i + 1, pendAt(ap, i + 1))).join('')}
         <div class="ih-sep"></div>
-        ${(d.eval || []).map((v, i) => slotHtml(i + 1, v, nextE === i + 1)).join('')}
+        ${(d.eval || []).map((v, i) => slotHtml(i + 1, v, nextE === i + 1, pendAt(ae, i + 1))).join('')}
       </div>
       <div class="ih-main-wrap">
-        <div class="sec-title">${last.length ? '최근 레이저 경기 탄착군' : '최근 레이저 경기 탄착군 · 기록 없음'}</div>
+        <div class="sec-title">${last.length ? (latestPend ? '최근 레이저 경기 탄착군 · 시트 반영 중' : '최근 레이저 경기 탄착군') : '최근 레이저 경기 탄착군 · 기록 없음'}</div>
         <div class="ih-main${last.length ? '' : ' noshots'}">
           <div class="ih-target"><div class="canvas-box"><canvas id="cvHist" width="600" height="600"></canvas></div></div>
           ${last.length ? `<div class="ih-shots">${cells}</div>` : ''}
@@ -830,14 +863,15 @@
   const MEMBER_COLORS = ['#29e7d6', '#ffc940', '#c78bff', '#ff8a3d', '#7aa2ff'];
   function renderTeamHistory(d) {
     const team = S.drafts[S.teamIdx] || {};
-    const list = arr => arr.length ? arr.map(r => `${r.n}번째 ${esc(r.total)}점`).join(' · ') : '기록 없음';
+    const tk = teamKey(), tp = adjustedNext('team', tk, 'practice', d), te = adjustedNext('team', tk, 'eval', d);
+    const listOf = (arr, a) => { const items = arr.map(r => `${r.n}번째 ${esc(r.total)}점`).concat(a.pend.map((r, i) => `${arr.length + i + 1}번째 ${pendTotal(r)}점(시트 반영 중)`)); return items.length ? items.join(' · ') : '기록 없음'; };
     $('teamTop').innerHTML = `
       <h2>${esc(S.cls)}반 ${esc(team.teamName)}</h2>
       <div class="ih-stats">
-        <span class="ih-stat">연습 다음<b style="color:var(--cyan)">${esc(d.next.practice)}번째</b></span>
-        <span class="ih-stat">수행 다음<b style="color:var(--red2)">${esc(d.next.eval)}번째</b></span>
+        <span class="ih-stat">연습 다음<b style="color:var(--cyan)">${esc(tp.next)}번째</b></span>
+        <span class="ih-stat">수행 다음<b style="color:var(--red2)">${esc(te.next)}번째</b></span>
       </div>`;
-    $('teamPast').innerHTML = `<b style="color:var(--cyan)">연습</b> ${list(d.practice || [])} &nbsp;·&nbsp; <b style="color:var(--red2)">수행</b> ${list(d.eval || [])}`;
+    $('teamPast').innerHTML = `<b style="color:var(--cyan)">연습</b> ${listOf(d.practice || [], tp)} &nbsp;·&nbsp; <b style="color:var(--red2)">수행</b> ${listOf(d.eval || [], te)}`;
     const shots = d.lastShots || [], members = d.lastMembers || [];
     const colorOf = {}; members.forEach((m, i) => { colorOf[m.id] = MEMBER_COLORS[i % MEMBER_COLORS.length]; });
     $('teamShotTitle').textContent = shots.length ? '최근 레이저 경기 탄착군 (팀원별 색)' : '최근 레이저 경기 탄착군 · 기록 없음';
@@ -933,7 +967,7 @@
     const req = mode === 'individual' ? jsonp('studentHistory', { studentId: fields.studentId }) : jsonp('teamHistory', { cls: fields.cls, teamKey: fields.teamKey });
     req.then(res => {
       if (!res || !res.ok) throw new Error((res && res.error) || '기록 확인 실패');
-      const nx = res.next[type];
+      const nx = mode === 'individual' ? adjustedNext('student', fields.studentId, type, res).next : adjustedNext('team', fields.teamKey, type, res).next;
       if (!nx) { msg.textContent = `⚠ ${TYPE_LABEL[type]} 차시가 모두 찼어요. 처음 화면에서 다른 구분을 골라 주세요.`; return; }
       fields.label = mode === 'individual' ? `${TYPE_LABEL[type]} ${nx}차시` : `${TYPE_LABEL[type]} ${nx}번째`;
       startWithCmd(fields, msg);
@@ -1338,6 +1372,24 @@
 
   setInterval(() => { if (S.fbReady && S.laneState) render(); }, 5000);
 
+  /* ---------- 시트 반영 대기 결과 듣기 ---------- */
+  let pendingRef = null;
+  function curKey() { return S.mode === 'individual' ? S.studentId : teamKey(); }
+  function watchPending() {
+    if (pendingRef) { pendingRef.off(); pendingRef = null; }
+    if (!S.fbReady) return;
+    pendingRef = S.db.ref('results');
+    pendingRef.on('value', snap => {
+      const prev = S.pending || {};
+      S.pending = snap.val() || {};
+      // 지금 보고 있는 학생·팀의 대기 결과가 시트에 들어가서 빠졌으면 지난 기록을 다시 받아 온다.
+      const kind = S.mode === 'individual' ? 'student' : 'team', key = curKey();
+      const gone = Object.keys(prev).some(id => !S.pending[id] && prev[id] &&
+        (kind === 'student' ? prev[id].studentId === key && prev[id].mode !== 'team' : prev[id].teamKey === key && prev[id].mode === 'team'));
+      if (gone && key) loadHistory(); else { renderHistory(); render(); }
+    }, () => {});   // 규칙에 results 읽기가 없으면 조용히 무시(시트 기록만으로 계산)
+  }
+
   /* ---------- 드래프트(조 목록) ----------
      드래프트 페이지에서 저장하면 Firebase signals/drafts/{반} 의 시각이 바뀐다. 그 순간 이 반의 조 목록을 다시 받아 온다.
      - 아직 조를 고르지 않았으면 바로 새 목록으로 바꾼다.
@@ -1441,7 +1493,7 @@
         $('connPill').className = 'pill ' + (on ? 'ok' : 'bad');
       });
       firebase.auth().signInAnonymously().then(() => {
-        S.fbReady = true; subscribeLane(); registerViewer(); watchDraftSignal(); render();
+        S.fbReady = true; subscribeLane(); registerViewer(); watchDraftSignal(); watchPending(); render();
       }).catch(err => { $('connPill').textContent = '실시간 로그인 실패: ' + err.message; $('connPill').className = 'pill bad'; });
     } catch (err) { $('connPill').textContent = '실시간 준비 오류: ' + err.message; $('connPill').className = 'pill bad'; }
   }
