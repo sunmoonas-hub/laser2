@@ -512,12 +512,73 @@
   let saveToken=0;
   function setSaveInfo(status,msg){state.saveInfo={status,msg};pushLive()}
 
-  // 경기 결과를 기존 연습기록/수행평가기록 형식으로 저장한다. 실패하면 2번 더 자동으로 다시 시도한다.
+  /* ===== 경기 결과 저장 (Firebase 먼저 + 시트 바로 저장 시도) =====
+     ① 결과를 Firebase results/{경기ID}에 먼저 저장한다. 와이파이가 흔들려도 Firebase가 들고 있다가 연결되면 올린다.
+        Firebase에 올라가기 전에 페이지가 닫혀도 잃지 않도록, 이 태블릿의 보관함(localStorage)에도 넣어 둔다.
+     ② 동시에 지금처럼 Apps Script로 바로 시트 저장을 시도한다. 성공하면 synced/{경기ID}에 결과를 남기고 대기 목록에서 지운다.
+     ③ 바로 저장이 실패해도, Apps Script가 1분마다 대기 목록을 가져가 시트에 기록한다(같은 경기ID는 한 번만 남음). */
+  const OUTBOX_KEY='laserOutbox';
+  const SAVE_DEFINITE=/모두 기록|학생명단|발을 모두|팀원|학급|경기ID|저장하지 않는/;   // 다시 해도 같은 결과인 거절
+  function outboxGet(){try{return JSON.parse(localStorage.getItem(OUTBOX_KEY)||'{}')||{}}catch(e){return {}}}
+  function outboxSet(o){try{localStorage.setItem(OUTBOX_KEY,JSON.stringify(o))}catch(e){}}
+  function outboxPut(id,rec){const o=outboxGet();o[id]=rec;outboxSet(o)}
+  function outboxDel(id){const o=outboxGet();if(o[id]){delete o[id];outboxSet(o)}}
+  // Firebase에 아직 못 올린 결과(지난번에 페이지가 닫힌 경우 등)를 다시 올린다.
+  function flushOutbox(){
+    if(!fb.ready||!fb.db)return;
+    const o=outboxGet();
+    Object.keys(o).forEach(id=>{
+      if(state.matchId===id&&state.running)return;   // 지금 다시 열려 진행 중인 경기는 제외
+      fb.db.ref('results/'+id).set(Object.assign({},o[id],{createdAt:firebase.database.ServerValue.TIMESTAMP})).then(()=>{
+        outboxDel(id);
+        // 지금 화면에 떠 있는 경기의 결과라면: 시트 반영을 지켜보고, '연결 기다리는 중' 안내를 바꿔 준다.
+        if(state.matchId!==id||state.running||state.sheetDone)return;
+        if(!resultWatch)watchResult(id,saveToken);
+        const si=state.saveInfo||{};
+        if(si.status==='saving'){setStatus('저장 완료');setSaveInfo('ok',`${o[id].label||'기록'} 저장 완료 · 시트에는 1분 안에 자동 반영돼요`)}
+      }).catch(()=>{});
+    });
+  }
+  // 이 경기의 시트 반영 결과(synced)와 대기 중 오류(results/…/error)를 듣는다.
+  let resultWatch=null;
+  function unwatchResult(){if(resultWatch){resultWatch.forEach(r=>r.off());resultWatch=null}}
+  function watchResult(id,token){
+    unwatchResult();
+    if(!fb.ready||!fb.db)return;
+    const syncedRef=fb.db.ref('synced/'+id),errRef=fb.db.ref('results/'+id+'/error');
+    resultWatch=[syncedRef,errRef];
+    syncedRef.on('value',snap=>{
+      const v=snap.val();if(!v||token!==saveToken)return;
+      state.sheetDone=true;outboxDel(id);
+      setStatus('저장 완료');els.guide.textContent=v.message||'저장 완료';setSaveInfo('ok',v.message||'저장 완료');
+    },()=>{});
+    errRef.on('value',snap=>{
+      const v=snap.val();if(!v||token!==saveToken||state.sheetDone)return;
+      setStatus('저장 실패','#ff4d66');els.guide.textContent='저장 실패 · '+v;setSaveInfo('fail',String(v));
+    },()=>{});
+  }
+  // 바로 저장이 성공했을 때: 대기 목록에서 지우고 시트 반영 결과를 남긴다.
+  function markSynced(id,res){
+    outboxDel(id);
+    if(!fb.ready||!fb.db)return;
+    const upd={};upd['results/'+id]=null;
+    upd['synced/'+id]={label:String(res.label||''),message:String(res.message||'저장 완료'),total:Number(res.total)||0,at:firebase.database.ServerValue.TIMESTAMP};
+    fb.db.ref().update(upd).catch(()=>{});
+  }
+  // 끝난 경기를 다시 열었을 때(마지막 발 취소): 대기 중인 결과를 거둬들인다. 다시 끝나면 새로 저장된다.
+  function withdrawResult(id){
+    if(!id)return;
+    outboxDel(id);unwatchResult();state.sheetDone=false;
+    if(!fb.ready||!fb.db)return;
+    const upd={};upd['results/'+id]=null;upd['synced/'+id]=null;
+    fb.db.ref().update(upd).catch(()=>{});
+  }
+
   function saveMatch(){
     const cfg=state.matchCfg||{};
     const payload={
       matchId:state.matchId,lane:Number(els.firingLane.value),evalType:cfg.evalType,mode:cfg.mode||'individual',
-      studentId:cfg.studentId||'',cls:cfg.cls||'',teamName:cfg.teamName||'',teamKey:cfg.teamKey||'',
+      studentId:cfg.studentId||'',cls:cfg.cls||'',teamName:cfg.teamName||'',teamKey:cfg.teamKey||'',label:cfg.label||'',
       members:(cfg.members||[]).map(m=>({id:m.id,shots:m.shots})),
       shots:state.shots.map(s=>{const p=shotUV(s);return[s.score,s.xMm||0,s.yMm||0,p.u,p.v,shotKind(s)]})
     };
@@ -526,20 +587,38 @@
       setStatus('영점 조준 완료');els.guide.textContent='영점 조준 · 기록은 저장하지 않았습니다.';setSaveInfo('skip','영점 조준 · 저장 안 함');return;
     }
     if(!isServerConfigured()){setStatus('저장 실패','#ff4d66');setSaveInfo('fail','config.js에 Apps Script 주소가 없어요');return}
-    const token=++saveToken;
+    const token=++saveToken,id=payload.matchId,label=cfg.label||'기록';
+    let fbSaved=false;state.sheetDone=false;
     setStatus('저장 중','#ffc940');els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';setSaveInfo('saving','저장 중…');
+    // ① Firebase에 먼저 (보관함에도)
+    outboxPut(id,payload);
+    watchResult(id,token);
+    if(fb.ready&&fb.db){
+      fb.db.ref('results/'+id).set(Object.assign({},payload,{createdAt:firebase.database.ServerValue.TIMESTAMP})).then(()=>{
+        fbSaved=true;outboxDel(id);
+        if(token!==saveToken||state.sheetDone)return;
+        if(!(state.saveInfo&&state.saveInfo.status==='fail')){setStatus('저장 완료');setSaveInfo('ok',`${label} 저장 완료 · 시트 반영 중…`)}
+      }).catch(err=>{console.warn('Firebase 저장 실패(보관함에 남겨 두었다가 다시 올림):',err)});
+    }
+    // ② Apps Script로 바로 시트 저장 시도
     const attempt=n=>{
       jsonp('saveLaserMatch',{payload:JSON.stringify(payload)},60000).then(res=>{
         if(token!==saveToken)return;   // 그사이 경기가 다시 열렸으면 이 결과는 무시(다시 완료되면 새로 저장됨)
         if(!res||!res.ok)throw new Error((res&&res.error)||'저장 실패');
+        state.sheetDone=true;markSynced(id,res);
         setStatus('저장 완료');els.guide.textContent=res.message||'저장 완료';toast('✅ '+(res.message||'저장 완료'));setSaveInfo('ok',res.message||'저장 완료');
       }).catch(err=>{
-        if(token!==saveToken)return;
+        if(token!==saveToken||state.sheetDone)return;
         const msg=(err&&err.message)||String(err);
-        // 서버가 명확히 거절한 경우(예: 차시가 다 참)는 다시 시도해도 같으므로 바로 실패 처리
-        const definite=/모두 기록|학생명단|발을 모두|팀원|학급|경기ID|저장하지 않는/.test(msg);
-        if(!definite&&n<3){setSaveInfo('saving',`저장 재시도 중… (${n+1}/3)`);setTimeout(()=>attempt(n+1),2000*n);return}
-        setStatus('저장 실패','#ff4d66');els.guide.textContent='저장 실패 · '+msg;toast('⚠️ 저장 실패: '+msg);setSaveInfo('fail',msg);
+        if(SAVE_DEFINITE.test(msg)){
+          // 서버가 명확히 거절(예: 차시가 다 참): 대기 목록에서도 빼서 1분 동기화가 같은 오류를 되풀이하지 않게 한다.
+          withdrawResult(id);
+          setStatus('저장 실패','#ff4d66');els.guide.textContent='저장 실패 · '+msg;toast('⚠️ 저장 실패: '+msg);setSaveInfo('fail',msg);return;
+        }
+        if(n<3){if(!fbSaved)setSaveInfo('saving',`저장 재시도 중… (${n+1}/3)`);setTimeout(()=>attempt(n+1),2000*n);return}
+        // 바로 저장은 실패했지만 결과는 Firebase(또는 이 태블릿 보관함)에 있다 → 1분 안에 자동으로 시트에 들어간다.
+        if(fbSaved){setStatus('저장 완료');setSaveInfo('ok',`${label} 저장 완료 · 시트에는 1분 안에 자동 반영돼요`)}
+        else{setStatus('저장 대기','#ffc940');setSaveInfo('saving','인터넷 연결을 기다리는 중… (기록은 이 태블릿에 보관됨)')}
       });
     };
     attempt(1);
@@ -637,11 +716,11 @@
       fb.db=firebase.database();
       fb.db.ref('.info/serverTimeOffset').on('value',s=>{fb.offset=Number(s.val())||0});
       fb.db.ref('.info/connected').on('value',s=>{
-        if(s.val()===true){if(fb.ready){armPresence();syncAfterReconnect()}}
+        if(s.val()===true){if(fb.ready){armPresence();syncAfterReconnect();flushOutbox()}}
         else els.liveStatus.textContent='📡 실시간 연결 끊김 · 재연결 중…';
       });
       els.liveStatus.textContent='📡 실시간 연결 중…';
-      firebase.auth().signInAnonymously().then(()=>{fb.ready=true;attachLane()}).catch(err=>{els.liveStatus.textContent='📡 실시간 로그인 실패: '+((err&&err.message)||err)});
+      firebase.auth().signInAnonymously().then(()=>{fb.ready=true;attachLane();flushOutbox()}).catch(err=>{els.liveStatus.textContent='📡 실시간 로그인 실패: '+((err&&err.message)||err)});
     }catch(err){els.liveStatus.textContent='📡 실시간 준비 오류: '+((err&&err.message)||err)}
   }
   // 연결(또는 재연결)될 때: 연결이 끊긴 사이에 관전 화면에서 이 사로를 '정리'했으면(cleared) 남아 있던 경기를 지운다.
@@ -1141,11 +1220,11 @@
     else state.pendingLaser={x:px,y:py,frames:1,maxSignal:strongest.delta,maxContrast:localContrast,maxColorBoost:clusterColorBoost,maxBright:strongest.bright,maxRedRise:strongest.redRise};
   }
 
-  function undo(){if(!state.shots.length)return;const reopened=!state.running;state.shots.pop();state.running=true;if(reopened){saveToken++;state.saveInfo=null}
+  function undo(){if(!state.shots.length)return;const reopened=!state.running;state.shots.pop();state.running=true;if(reopened){saveToken++;state.saveInfo=null;withdrawResult(state.matchId)}
     // 이미 끝난 경기를 다시 연 경우: 오래된 기준 화면으로 감지하면 오인식 위험이 있어 감지기를 처음부터 다시 준비한다(약 1~2초).
     if(reopened){clearDetectorBackground();state.detectorReady=false;state.warmupFrames=0;state.warmupStart=performance.now();state.readyAt=0;state.announced=true;lockCamera(true);document.body.classList.add('match-live');setTimeout(resize,60)}
     els.manualBtn.disabled=false;els.matchBtn.textContent='경기 진행 중';els.undoBtn.disabled=!state.shots.length;els.guide.textContent='마지막 기록을 취소했습니다. 계속 사격하세요.';setStatus('경기 진행','#ff4d66');updateScore();drawOverlay();pushLive(true)}
-  function reset(){saveToken++;state.matchCfg=null;state.saveInfo=null;clearCountdown();lockCamera(false);state.running=false;state.shots=[];state.matchId=null;renderResultCard();state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=!!LANE_FIXED;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
+  function reset(){saveToken++;unwatchResult();state.matchCfg=null;state.saveInfo=null;clearCountdown();lockCamera(false);state.running=false;state.shots=[];state.matchId=null;renderResultCard();state.spotLatched=false;state.missingFrames=0;clearDetectorBackground();state.detectorReady=false;els.player.disabled=false;els.firingLane.disabled=!!LANE_FIXED;els.maxShots.disabled=false;els.eventName.disabled=false;els.detectKind.disabled=false;els.manualBtn.disabled=true;els.undoBtn.disabled=true;els.matchBtn.textContent=state.center?'경기 시작 대기 중':'경기 시작';els.matchBtn.disabled=!(state.center&&state.radius);els.livePill.textContent=state.stream?'● CAMERA':'● OFF';els.guide.textContent=state.center?'라이브 페이지에서 경기 시작을 누르세요.':'카메라 시작 후 표적을 자동 보정하세요.';setStatus(state.center?'경기 시작 대기 중':'준비');document.body.classList.remove('match-live');setTimeout(resize,60);updateScore();drawOverlay()}
   function loadLeaderboard(){
     els.leaderDialog.showModal();els.leaderList.className='empty';els.leaderList.textContent='기록을 불러오는 중입니다.';
     if(!isServerConfigured()){els.leaderList.textContent='index.html에 Apps Script /exec 주소를 먼저 넣어 주세요.';return}
