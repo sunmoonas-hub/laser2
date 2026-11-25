@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="theme-color" content="#07111f">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LASER MATCH · 리그 컨트롤 타워</title>
+<style>
+  :root{--bg:#07111f;--panel:#101d30;--panel2:#0b1626;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--dim:#5b6f86;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--red2:#ff7a8c;--gold:#ffc940}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;font-size:15px}
+  .wrap{max-width:1280px;margin:0 auto;padding:14px 16px 40px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  h1{font-size:1.25rem;margin:0}
+  h2{font-size:1rem;margin:0 0 10px;color:var(--cyan)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;border:1px solid #ffffff28;border-radius:999px;padding:6px 12px;color:var(--muted)}
+  .pill.ok{color:var(--lime);border-color:#b7ff3c66}.pill.bad{color:var(--red2);border-color:#ff4d6666}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:14px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  label.f{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
+  select,input{min-height:42px;border-radius:9px;border:1px solid var(--line);background:#091426;color:var(--text);font-size:.95rem;padding:0 10px}
+  input[type=number]{width:84px}
+  button{min-height:44px;border-radius:10px;border:1px solid #34506f;background:#142941;color:var(--text);font-weight:800;font-size:.95rem;padding:0 14px;cursor:pointer}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.go{background:var(--cyan);border-color:var(--cyan);color:#07111f}
+  button.warn{background:var(--gold);border-color:var(--gold);color:#07111f}
+  button.danger{border-color:var(--red);color:var(--red2);background:transparent}
+  button.sm{min-height:34px;font-size:.8rem;padding:0 10px}
+  .muted{color:var(--muted)}.dim{color:var(--dim)}.small{font-size:.82rem}
+  .msg{margin-top:8px;font-size:.85rem;color:var(--gold);min-height:1.2em}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:center}
+  th{color:var(--muted);font-size:.8rem;font-weight:700}
+  .phase{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel2);border:2px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:12px}
+  .phase b{font-size:1.3rem}
+  .phase .clock{font-size:2.4rem;font-weight:900;font-variant-numeric:tabular-nums;color:var(--gold)}
+  .phase.shooting{border-color:var(--red)}.phase.practice{border-color:var(--cyan)}.phase.done{border-color:var(--lime)}
+  .rule{font-size:.85rem;color:var(--muted);margin-bottom:10px}
+  .lanes{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+  .lane{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px}
+  .lane.off{opacity:.45}
+  .lane .top{display:flex;justify-content:space-between;align-items:center}
+  .lane .no{font-weight:900;color:var(--cyan)}
+  .lane .cls{font-size:1.15rem;font-weight:900}
+  .lane .sc{font-size:1.6rem;font-weight:900;font-variant-numeric:tabular-nums}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;background:var(--dim)}
+  .dot.on{background:var(--lime)}.dot.bad{background:var(--red)}
+  .tag{font-size:.75rem;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted)}
+  .tag.done{color:var(--lime);border-color:#b7ff3c66}
+  details summary{cursor:pointer;color:var(--cyan);font-weight:800}
+</style>
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎯 리그 컨트롤 타워 <span class="dim small" id="rootTag"></span></h1>
+    <div class="row"><span class="pill" id="connPill">연결 중…</span></div>
+  </header>
+
+  <div class="phase" id="phaseBox">
+    <div><div class="small muted" id="curGame">경기를 아직 정하지 않았어요</div><b id="phaseText">대기</b></div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+
+  <div class="grid">
+    <!-- 왼쪽: 경기 선택 · 사로 배정 · 설정 -->
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <section class="panel">
+        <h2>① 경기 선택</h2>
+        <div class="row">
+          <label class="f">학년<select id="selGrade"><option value="2">2학년</option><option value="1">1학년</option></select></label>
+          <label class="f">라운드<select id="selRound"><option value="1">1라운드</option><option value="2">2라운드</option><option value="3">3라운드</option><option value="4">4라운드</option></select></label>
+          <label class="f" id="heatWrap">조<select id="selHeat"><option value="A">A조</option><option value="B">B조</option></select></label>
+        </div>
+        <div class="rule" id="ruleText" style="margin-top:10px"></div>
+      </section>
+
+      <section class="panel">
+        <h2>② 사로 배정</h2>
+        <div class="row" style="margin-bottom:8px">
+          <button id="drawBtn">🎲 1라운드 무작위 추첨 (A·B조)</button>
+        </div>
+        <table><thead><tr><th>사로</th><th>학급</th></tr></thead><tbody id="assignBody"></tbody></table>
+        <div class="row" style="margin-top:10px">
+          <button id="saveAssignBtn">배정 저장</button>
+          <button class="go" id="applyBtn">이 경기로 준비 ▶</button>
+        </div>
+        <div class="msg" id="assignMsg"></div>
+      </section>
+
+      <section class="panel">
+        <details>
+          <summary>⚙ 대회 설정</summary>
+          <div class="small muted" style="margin:8px 0">팀 발수 = 1인 발수 × 팀 인원으로 자동 계산합니다. 바꾼 설정은 [이 경기로 준비]를 다시 눌러야 경기에 반영돼요.</div>
+          <div class="row" style="margin-bottom:10px">
+            <label class="f">팀 인원<input type="number" id="setTeam" min="1" max="40"></label>
+            <label class="f">시간 보너스(점/초)<input type="number" id="setBonus" step="0.05" min="0"></label>
+            <label class="f">채점<select id="setScoring"><option value="dec">소수점</option><option value="int">정수</option></select></label>
+            <label class="f">1학년 학급 수<input type="number" id="setC1" min="1" max="20"></label>
+            <label class="f">2학년 학급 수<input type="number" id="setC2" min="1" max="20"></label>
+          </div>
+          <table><thead><tr><th>라운드</th><th>1인 발수</th><th>팀 발수</th><th>제한(초)</th><th>연습(초)</th><th>진출 학급</th></tr></thead><tbody id="setBody"></tbody></table>
+          <div class="row" style="margin-top:10px"><button id="saveSetBtn">설정 저장</button><button class="danger" id="resetSetBtn">기본값으로</button></div>
+          <div class="msg" id="setMsg"></div>
+        </details>
+      </section>
+    </div>
+
+    <!-- 오른쪽: 진행 · 사로 상태 -->
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <section class="panel">
+        <h2>③ 진행</h2>
+        <div class="row">
+          <button id="practiceBtn">연습 시작</button>
+          <button class="go" id="startBtn">준비 시작 (3-2-1)</button>
+          <button class="warn" id="revealBtn">결과 발표</button>
+          <button class="danger" id="stopBtn">긴급 중지</button>
+        </div>
+        <div class="row" style="margin-top:8px"><button class="sm danger" id="offBtn">리그 모드 끄기 (태블릿을 수업용으로)</button></div>
+        <div class="msg" id="runMsg"></div>
+      </section>
+
+      <section class="panel">
+        <h2>④ 사로 상태</h2>
+        <div class="lanes" id="laneCards"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const CFG=window.LASER_CONFIG||{}, ROOT=String(CFG.LEAGUE_ROOT||'league_test'), FB=CFG.FIREBASE;
+  const LANES=[1,2,3,4,5,6,7];
+  // 카운트다운(3-2-1)을 보여 줄 여유. 명령이 태블릿에 닿는 데 와이파이에 따라 0.1~0.5초쯤 걸려서, 시작 시각을 '지금+4초'로 정해 보내면 모든 태블릿이 같은 순간에 시작한다.
+  const START_LEAD_MS=4000;
+  const DEF={teamSize:15,bonus:0.2,scoring:'dec',classes:{1:12,2:10},
+    rounds:{1:{per:3,limit:300,practice:120,advance:7},2:{per:2,limit:240,practice:120,advance:5},3:{per:2,limit:240,practice:0,advance:3},4:{per:2,limit:240,practice:0,advance:0}}};
+  const PHASE={idle:'대기 (준비됨)',practice:'연습 중',standby:'연습 종료 · 본사격 대기',shooting:'사격 중',done:'사격 종료',reveal:'결과 발표 중',stopped:'중지됨'};
+  const $=id=>document.getElementById(id);
+  const S={db:null,offset:0,set:clone(DEF),st:null,heats:{},live:{}};
+  function clone(o){return JSON.parse(JSON.stringify(o))}
+  // Firebase는 {1:..,2:..,3:..}처럼 숫자 키가 촘촘한 객체를 배열([null,..])로 돌려준다. 빈칸(null)을 빼고 객체로 되돌린다.
+  function norm(o){const r={};Object.keys(o||{}).forEach(k=>{if(o[k]!=null)r[k]=o[k]});return r}
+  function now(){return Date.now()+S.offset}
+  function ref(p){return S.db.ref(ROOT+'/'+p)}
+  const TS=()=>firebase.database.ServerValue.TIMESTAMP;
+  const esc=v=>String(v==null?'':v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  function sel(){return{g:Number($('selGrade').value),r:Number($('selRound').value),h:$('selRound').value==='1'?$('selHeat').value:'A'}}
+  function rule(r){const x=S.set.rounds[r]||DEF.rounds[r];return{per:x.per,shots:x.per*S.set.teamSize,limit:x.limit,practice:x.practice,advance:x.advance}}
+  function clsName(g,c){return c?`${g}-${c}반`:''}
+  function heatKey(g,r,h){return `heats/${g}/${r}/${h}`}
+
+  /* ===== ① 경기 선택 ===== */
+  function renderSel(){
+    const {g,r}=sel(),x=rule(r);
+    $('heatWrap').hidden=r!==1;$('drawBtn').hidden=r!==1;
+    $('ruleText').innerHTML=`<b>${r}라운드 규칙</b> · 1인 ${x.per}발 × ${S.set.teamSize}명 = <b>${x.shots}발</b> · 제한 <b>${x.limit}초</b> · 연습 ${x.practice?x.practice+'초':'없음'} · `+(x.advance?`상위 <b>${x.advance}개 학급</b> 진출`:'<b>순위 결정전</b>')+` · 채점 ${S.set.scoring==='int'?'정수':'소수점'} · 보너스 ${S.set.bonus}점/초`;
+    renderAssign();
+  }
+  ['selGrade','selRound','selHeat'].forEach(id=>$(id).onchange=renderSel);
+
+  /* ===== ② 사로 배정 ===== */
+  function curAssign(){const {g,r,h}=sel();return norm(S.heats[g]&&S.heats[g][r]&&S.heats[g][r][h])}
+  function renderAssign(){
+    const {g}=sel(),n=S.set.classes[g]||0,a=curAssign();
+    $('assignBody').innerHTML=LANES.map(l=>`<tr><td><b>${l}사로</b></td><td><select data-lane="${l}"><option value="">— 비움 —</option>${Array.from({length:n},(_,i)=>`<option value="${i+1}"${Number(a[l])===i+1?' selected':''}>${g}학년 ${i+1}반</option>`).join('')}</select></td></tr>`).join('');
+  }
+  function readAssign(){
+    const out={},seen={};let dup='';
+    document.querySelectorAll('#assignBody select').forEach(s=>{if(!s.value)return;const c=Number(s.value);if(seen[c])dup=c;seen[c]=1;out[s.dataset.lane]=c});
+    return{out,dup};
+  }
+  $('saveAssignBtn').onclick=()=>{
+    const {g,r,h}=sel(),{out,dup}=readAssign();
+    if(dup){$('assignMsg').textContent=`⚠ ${g}학년 ${dup}반이 두 사로에 들어가 있어요.`;return}
+    ref(heatKey(g,r,h)).set(Object.keys(out).length?out:null).then(()=>$('assignMsg').textContent='✔ 배정을 저장했어요.').catch(e=>$('assignMsg').textContent='저장 실패: '+e.message);
+  };
+  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+  $('drawBtn').onclick=()=>{
+    const {g}=sel(),n=S.set.classes[g]||0;
+    const had=S.heats[g]&&S.heats[g][1];
+    if(had&&!confirm(`${g}학년 1라운드 배정이 이미 있어요. 다시 추첨할까요?`))return;
+    // 반을 섞어 앞쪽 절반(홀수면 한 반 더)을 A조로. 각 조 안에서 사로도 7개 중에서 무작위로 고른다.
+    const cls=shuffle(Array.from({length:n},(_,i)=>i+1)),nA=Math.ceil(n/2),mk=list=>{const ln=shuffle(LANES.slice()).slice(0,list.length),o={};list.forEach((c,i)=>o[ln[i]]=c);return o};
+    if(nA>7||n-nA>7){$('assignMsg').textContent='⚠ 한 조가 7개 학급을 넘어요. 학급 수를 확인하세요.';return}
+    ref(`heats/${g}/1`).set({A:mk(cls.slice(0,nA)),B:mk(cls.slice(nA))})
+      .then(()=>$('assignMsg').textContent=`✔ ${g}학년 1라운드 추첨 완료 (A조 ${nA}개, B조 ${n-nA}개 학급)`)
+      .catch(e=>$('assignMsg').textContent='추첨 실패: '+e.message);
+  };
+
+  /* ===== 진행 ===== */
+  function canSetup(){const p=S.st&&S.st.phase;return !p||['idle','standby','done','reveal','stopped'].includes(p)}
+  $('applyBtn').onclick=()=>{
+    if(!canSetup()){$('assignMsg').textContent='⚠ 경기가 진행 중이에요. 끝난 뒤에 바꿀 수 있어요.';return}
+    const {g,r,h}=sel(),{out,dup}=readAssign();
+    if(dup){$('assignMsg').textContent=`⚠ ${g}학년 ${dup}반이 두 사로에 들어가 있어요.`;return}
+    if(!Object.keys(out).length){$('assignMsg').textContent='⚠ 배정된 사로가 없어요.';return}
+    const x=rule(r);
+    ref(heatKey(g,r,h)).set(out).then(()=>ref('state').set({grade:g,round:r,heat:h,phase:'idle',lanes:out,rule:x,scoring:S.set.scoring,bonus:S.set.bonus,teamSize:S.set.teamSize,runId:null,kind:null,startAt:null,endAt:null,at:TS()}))
+      .then(()=>$('assignMsg').textContent=`✔ ${g}학년 ${r}라운드${r===1?' '+h+'조':''}로 준비했어요. 태블릿에 학급이 표시됩니다.`)
+      .catch(e=>$('assignMsg').textContent='실패: '+e.message);
+  };
+  function begin(kind){
+    const st=S.st;if(!st||!st.lanes)return;
+    const secs=kind==='practice'?st.rule.practice:st.rule.limit,startAt=now()+START_LEAD_MS,runId=(kind==='practice'?'P':'M')+'-'+st.grade+'-'+st.round+'-'+st.heat+'-'+Date.now().toString(36);
+    ref('state').update({phase:kind==='practice'?'practice':'shooting',kind,runId,startAt,endAt:startAt+secs*1000,at:TS()}).catch(e=>$('runMsg').textContent='실패: '+e.message);
+  }
+  $('practiceBtn').onclick=()=>begin('practice');
+  $('startBtn').onclick=()=>{if(confirm('모든 태블릿에서 3-2-1 후 본사격을 시작할까요?'))begin('match')};
+  $('stopBtn').onclick=()=>{if(confirm('지금 진행을 모두 멈출까요? (태블릿 사격이 중지됩니다)'))ref('state').update({phase:'stopped',at:TS()})};
+  $('revealBtn').onclick=()=>ref('state').update({phase:'reveal',revealAt:TS()});
+  // 리그 상태를 지우면 태블릿의 리그 표시가 사라지고 수업용으로 돌아간다(배정·설정·기록은 그대로 남음).
+  $('offBtn').onclick=()=>{if(S.st&&['practice','shooting'].includes(S.st.phase)){$('runMsg').textContent='⚠ 사격 중에는 끌 수 없어요. 먼저 [긴급 중지]를 누르세요.';return}
+    if(confirm('리그 모드를 끌까요? 태블릿 화면의 리그 정보가 사라집니다.'))ref('state').remove().then(()=>$('runMsg').textContent='✔ 리그 모드를 껐어요.')};
+  // 시간이 다 됐거나 배정된 사로가 모두 끝나면 다음 단계로. 컨트롤 타워가 두 대 열려 있어도 한 번만 바뀌도록 트랜잭션으로 쓴다.
+  function advance(from,to,runId){ref('state').transaction(s=>s&&s.phase===from&&s.runId===runId?Object.assign(s,{phase:to,at:Date.now()}):undefined)}
+  function allDone(st){const ls=Object.keys(st.lanes||{});return ls.length&&ls.every(l=>{const v=S.live[l];return v&&v.runId===st.runId&&v.done})}
+
+  function fmt(ms){const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
+  function tick(){
+    const st=S.st,box=$('phaseBox');
+    if(!st||!st.grade){$('phaseText').textContent='대기';$('clock').textContent='--:--';box.className='phase';setButtons();return}
+    $('curGame').textContent=`${st.grade}학년 ${st.round}라운드${st.round===1?' '+st.heat+'조':''} · 1인 ${st.rule.per}발 · ${st.rule.shots}발 · 제한 ${st.rule.limit}초`;
+    let txt=PHASE[st.phase]||st.phase,clock='--:--';const t=now();
+    if((st.phase==='practice'||st.phase==='shooting')&&st.startAt){
+      if(t<st.startAt){txt+=' · 시작 '+Math.ceil((st.startAt-t)/1000)+'초 전';clock=fmt(st.endAt-st.startAt)}
+      else{clock=fmt(st.endAt-t);if(t>=st.endAt)advance(st.phase,st.phase==='practice'?'standby':'done',st.runId)}
+      if(st.phase==='shooting'&&t>=st.startAt&&allDone(st))advance('shooting','done',st.runId);
+    }
+    $('phaseText').textContent=txt;$('clock').textContent=clock;
+    box.className='phase '+(st.phase==='shooting'?'shooting':st.phase==='practice'?'practice':st.phase==='done'||st.phase==='reveal'?'done':'');
+    setButtons();
+  }
+  function setButtons(){
+    const st=S.st,p=st&&st.phase,ready=!!(st&&st.lanes);
+    $('practiceBtn').disabled=!ready||!['idle','standby','stopped'].includes(p)||!(st.rule&&st.rule.practice);
+    $('startBtn').disabled=!ready||!['idle','standby','stopped'].includes(p);
+    $('stopBtn').disabled=!ready||!['practice','shooting'].includes(p);
+    // 1라운드 A조는 B조까지 끝난 뒤 두 조를 합쳐 발표한다.
+    const heatA=st&&st.round===1&&st.heat==='A';
+    $('revealBtn').disabled=!ready||p!=='done'||heatA;
+    $('revealBtn').textContent=heatA?'결과 발표 (B조 후 합산)':'결과 발표';
+  }
+
+  /* ===== ④ 사로 상태 ===== */
+  function renderLanes(){
+    const st=S.st||{},lanes=st.lanes||{};
+    $('laneCards').innerHTML=LANES.map(l=>{
+      const c=lanes[l],v=S.live[l]||{},mine=v.runId&&v.runId===st.runId,online=v.online===true;
+      const shots=mine&&Array.isArray(v.shots)?v.shots:[],n=shots.length;
+      const sc=shots.reduce((a,s)=>a+(st.scoring==='int'?(Number(s.si)||0):(Number(s.sd)||0)),0);
+      const per=st.rule?st.rule.per:1,shooter=Math.min(st.teamSize||15,Math.floor(n/per)+1);
+      return `<div class="lane${c?'':' off'}"><div class="top"><span class="no">${l}사로</span><span title="태블릿 연결"><span class="dot ${online?'on':'bad'}"></span> <span class="small muted">${online?(v.calibrated?'보정됨':'보정 필요'):'태블릿 꺼짐'}</span></span></div>
+        <div class="cls">${c?esc(clsName(st.grade,c)):'—'}</div>
+        ${c?`<div class="sc">${st.scoring==='int'?sc:sc.toFixed(1)}<span class="small muted"> 점</span></div>
+        <div class="small muted">${n}/${st.rule?st.rule.shots:'-'}발 · 사수 ${n?shooter:'-'}/${st.teamSize||15}</div>
+        <div>${mine&&v.done?`<span class="tag done">완료 ${(Number(v.finishMs)/1000||0).toFixed(1)}초</span>`:`<span class="tag">${mine?'사격 중':'대기'}</span>`}</div>
+        <button class="sm danger" data-zero="${l}" ${st.phase==='shooting'?'':'disabled'}>0점 추가 (완전히 빗나감)</button>`:''}
+      </div>`}).join('');
+  }
+  $('laneCards').onclick=e=>{
+    const b=e.target.closest('[data-zero]');if(!b)return;const l=b.dataset.zero,st=S.st;
+    if(!st||st.phase!=='shooting')return;
+    if(!confirm(`${l}사로(${clsName(st.grade,st.lanes[l])})에 0점 1발을 추가할까요?`))return;
+    ref(`cmds/${l}/adds`).push({runId:st.runId,at:TS()}).then(()=>$('runMsg').textContent=`✔ ${l}사로 0점 추가 요청을 보냈어요.`).catch(e=>$('runMsg').textContent='실패: '+e.message);
+  };
+
+  /* ===== 설정 ===== */
+  function renderSet(){
+    const s=S.set;$('setTeam').value=s.teamSize;$('setBonus').value=s.bonus;$('setScoring').value=s.scoring;$('setC1').value=s.classes[1];$('setC2').value=s.classes[2];
+    $('setBody').innerHTML=[1,2,3,4].map(r=>{const x=s.rounds[r];return `<tr><td><b>${r}R</b></td><td><input type="number" min="1" max="10" data-r="${r}" data-k="per" value="${x.per}"></td><td class="muted">${x.per*s.teamSize}</td><td><input type="number" min="10" step="10" data-r="${r}" data-k="limit" value="${x.limit}"></td><td><input type="number" min="0" step="10" data-r="${r}" data-k="practice" value="${x.practice}"></td><td><input type="number" min="0" max="7" data-r="${r}" data-k="advance" value="${x.advance}"></td></tr>`}).join('');
+  }
+  $('saveSetBtn').onclick=()=>{
+    const s=clone(S.set),num=(v,d)=>{const n=Number(v);return isFinite(n)?n:d};
+    s.teamSize=Math.max(1,Math.round(num($('setTeam').value,15)));s.bonus=Math.max(0,num($('setBonus').value,0.2));s.scoring=$('setScoring').value==='int'?'int':'dec';
+    s.classes={1:Math.round(num($('setC1').value,12)),2:Math.round(num($('setC2').value,10))};
+    document.querySelectorAll('#setBody input').forEach(i=>{s.rounds[i.dataset.r][i.dataset.k]=Math.max(0,Math.round(num(i.value,0)))});
+    ref('settings').set(s).then(()=>$('setMsg').textContent='✔ 설정을 저장했어요.').catch(e=>$('setMsg').textContent='저장 실패: '+e.message);
+  };
+  $('resetSetBtn').onclick=()=>{if(confirm('설정을 기본값으로 되돌릴까요?'))ref('settings').set(DEF).then(()=>$('setMsg').textContent='✔ 기본값으로 되돌렸어요.')};
+
+  /* ===== 시작 ===== */
+  function init(){
+    $('rootTag').textContent='· '+ROOT+(ROOT==='league'?' (실제 대회)':' (시험)');
+    renderSet();renderSel();renderLanes();
+    if(!FB||!window.firebase){$('connPill').textContent='config.js 또는 인터넷 확인';$('connPill').className='pill bad';return}
+    firebase.initializeApp(FB);S.db=firebase.database();
+    S.db.ref('.info/serverTimeOffset').on('value',s=>{S.offset=Number(s.val())||0});
+    S.db.ref('.info/connected').on('value',s=>{const on=s.val()===true;$('connPill').textContent=on?'실시간 연결됨':'연결 끊김 · 재연결 중';$('connPill').className='pill '+(on?'ok':'bad')});
+    firebase.auth().signInAnonymously().then(()=>{
+      ref('settings').on('value',s=>{const v=s.val();S.set=v?Object.assign(clone(DEF),v,{rounds:Object.assign(clone(DEF.rounds),v.rounds||{}),classes:Object.assign({},DEF.classes,v.classes||{})}):clone(DEF);renderSet();renderSel()});
+      ref('heats').on('value',s=>{S.heats=s.val()||{};renderAssign()});
+      ref('state').on('value',s=>{S.st=s.val();if(S.st)S.st.lanes=norm(S.st.lanes);renderLanes();tick()});
+      ref('live').on('value',s=>{S.live=s.val()||{};renderLanes()});
+      setInterval(tick,250);
+    }).catch(e=>{$('connPill').textContent='로그인 실패: '+e.message;$('connPill').className='pill bad'});
+  }
+  init();
+})();
+</script>
+</body>
+</html>

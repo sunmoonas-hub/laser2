@@ -8,6 +8,10 @@ window.LASER_CONFIG = {
   // ★ 기존 감일고 레이저 사격 시스템(Apps Script) 웹앱의 /exec 주소
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxFR3r_0IBj335qmebcyng187aj7yuYYtDn79pZyIDkld8X5c3xWFo6rQrIp7_dHu57/exec',
 
+  // 교내 리그전(학급 릴레이)이 쓰는 Firebase 경로. 수업용 경로(lanes/cmds/results)와 섞이지 않게 따로 둔다.
+  // 시험하는 동안은 'league_test', 실제 대회 날에는 'league'로 바꾼다(control.html·board.html·index.html이 함께 읽음).
+  LEAGUE_ROOT: 'league_test',
+
   // 실시간 통신(Firebase) 설정
   FIREBASE: {
     apiKey: "AIzaSyBe8XGq4Vz-e0HrvRrxV8uyyiE10ozBEvc",

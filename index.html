@@ -46,6 +46,13 @@
     @media (prefers-reduced-motion:reduce){.result-card{animation:none}}
     .countdown b{font-size:clamp(6rem,38vw,11rem);font-weight:900;line-height:1;color:#fff;text-shadow:0 0 40px #29e7d9aa}
     .countdown b.go{font-size:clamp(3rem,15vw,6rem);color:var(--lime);text-shadow:0 0 30px #b7ff3c99}
+    /* 교내 리그전 정보(학급·남은 시간·사수 번호). 과녁을 가리지 않게 화면 위쪽 가운데에 작게 */
+    .lg-hud{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;background:#07111fe0;border:2px solid var(--cyan);border-radius:14px;padding:6px 14px;text-align:center;min-width:220px;box-shadow:0 8px 24px #000a}
+    .lg-hud .t1{font-size:.8rem;font-weight:800;color:var(--muted)}
+    .lg-hud .clk{font-size:2.2rem;font-weight:900;line-height:1.05;font-variant-numeric:tabular-nums;color:var(--gold)}
+    .lg-hud .t2{font-size:.85rem;font-weight:800}
+    .lg-hud.practice{border-color:var(--lime)}.lg-hud.done{border-color:var(--lime)}.lg-hud.warn{border-color:var(--red)}
+    body.lg-on #shotGrid{display:none}
     body.match-live .mini-brand{display:none}
     body.match-live .guide{display:none}
     body.match-live #calibrationInfo{display:none}
@@ -102,6 +109,7 @@
     <div class="pill" id="liveStatus" style="position:absolute;left:9px;bottom:34px;font-size:.66rem;opacity:.9">📡 관전 연결 안 됨</div>
     <div class="flash" id="flash"><div class="score-pop" id="scorePop">10</div></div>
     <div class="countdown" id="countdown"><b id="countdownText">3</b></div>
+    <div class="lg-hud" id="lgHud" hidden><div class="t1" id="lgT1"></div><div class="clk" id="lgClk"></div><div class="t2" id="lgT2"></div></div>
     <!-- 사격 종료 결과 카드: 과녁·탄착군은 가리지 않도록 카메라 화면 아래쪽에 -->
     <div class="result-card" id="resultCard" role="status" aria-live="polite" hidden>
       <div class="rc-head"><span class="rc-who" id="rcWho"></span><span class="rc-label" id="rcLabel"></span></div>
@@ -442,6 +450,7 @@
   }
 
   function finishMatch(){if(!state.running||state.shots.length<state.maxShots)return;   // 완료 예약 사이에 취소됐으면 완료하지 않음
+    if(state.matchCfg&&state.matchCfg.mode==='league'){lgFinish(false);return}   // 리그전은 수업용 시트에 저장하지 않고 리그 기록으로만 남긴다
     clearCountdown();showEndBanner();lockCamera(false);state.running=false;els.livePill.textContent='● COMPLETE';els.guide.textContent='경기 완료 · 기록을 저장하고 있습니다.';els.manualBtn.disabled=true;setStatus('저장 중','#ffc940');document.body.classList.remove('match-live');setTimeout(resize,60);pushLive(true);saveMatch()}
   // "사격 종료"를 카운트다운처럼 크게 1.6초 보여 준다(다음 경기 시작·초기화 때는 clearCountdown이 지움).
   function showEndBanner(){
@@ -720,7 +729,7 @@
         else els.liveStatus.textContent='📡 실시간 연결 끊김 · 재연결 중…';
       });
       els.liveStatus.textContent='📡 실시간 연결 중…';
-      firebase.auth().signInAnonymously().then(()=>{fb.ready=true;attachLane();flushOutbox()}).catch(err=>{els.liveStatus.textContent='📡 실시간 로그인 실패: '+((err&&err.message)||err)});
+      firebase.auth().signInAnonymously().then(()=>{fb.ready=true;attachLane();flushOutbox();lgInit()}).catch(err=>{els.liveStatus.textContent='📡 실시간 로그인 실패: '+((err&&err.message)||err)});
     }catch(err){els.liveStatus.textContent='📡 실시간 준비 오류: '+((err&&err.message)||err)}
   }
   // 연결(또는 재연결)될 때: 연결이 끊긴 사이에 관전 화면에서 이 사로를 '정리'했으면(cleared) 남아 있던 경기를 지운다.
@@ -829,6 +838,104 @@
     toast(`📡 ${cmd.lane}사로 연결됨 - 경기를 시작했어요.`);
   }
 
+  /* ===== 교내 리그전(학급 릴레이) 모드 =====
+     컨트롤 타워(control.html)가 {LEAGUE_ROOT}/state 에 쓰는 진행 상태를 듣고, 이 사로(?lane=N)가 배정된 경기만 진행한다.
+     시작 시각(startAt, 서버 시각)에 맞춰 모든 태블릿이 같은 순간에 3-2-1을 끝내고, 제한 시간(endAt)이 되면 스스로 멈춘다.
+     결과는 수업용 시트에 저장하지 않고 {LEAGUE_ROOT}/live/{사로}(실시간)와 runs/{경기ID}/{사로}(확정)에만 남긴다. */
+  const LG_ROOT=String(LASER_CONFIG.LEAGUE_ROOT||'league_test');
+  const lg={st:null,run:null,pend:null,ref:null,seenAdds:null};
+  const lgNow=()=>Date.now()+fb.offset;
+  // Firebase는 숫자 키가 촘촘한 객체를 배열([null,..])로 돌려준다. 빈칸을 빼고 객체로 되돌린다.
+  function lgNorm(o){const r={};Object.keys(o||{}).forEach(k=>{if(o[k]!=null)r[k]=o[k]});return r}
+  function lgFmt(ms){const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
+  function lgInit(){
+    if(!fb.ready||!LANE_FIXED||lg.ref)return;   // 리그는 사로가 고정된 태블릿(?lane=N)에서만 동작
+    lg.ref=fb.db.ref(LG_ROOT+'/live/'+LANE_FIXED);
+    fb.db.ref('.info/connected').on('value',s=>{if(s.val()===true){lg.ref.onDisconnect().update({online:false});lgPush()}});
+    fb.db.ref(LG_ROOT+'/state').on('value',s=>lgOnState(s.val()));
+    // 컨트롤 타워의 [0점 추가]: 화면 밖으로 완전히 빗나가 인식되지 않은 발을 0점으로 채운다. 접속 전에 쌓인 요청은 과거 것이라 무시.
+    const addsRef=fb.db.ref(LG_ROOT+'/cmds/'+LANE_FIXED+'/adds');
+    addsRef.once('value').then(s=>{
+      lg.seenAdds=new Set(Object.keys(s.val()||{}));
+      addsRef.on('child_added',c=>{if(lg.seenAdds.has(c.key))return;lg.seenAdds.add(c.key);const v=c.val()||{};
+        if(lg.run&&!lg.run.done&&lg.run.kind==='match'&&v.runId===lg.run.runId&&state.running){recordShot(null,null,0);toast('📡 컨트롤 타워에서 0점 1발을 추가했어요.')}});
+    });
+    setInterval(lgTick,200);setInterval(lgPush,5000);   // 5초마다 상태를 다시 올려 컨트롤 타워의 '태블릿 연결' 표시를 유지
+  }
+  function lgOnState(st){
+    // 대회가 끝난 뒤 남은 리그 상태가 수업 시간 태블릿에 뜨지 않도록, 6시간 넘게 아무 변화가 없던 상태는 없는 것으로 본다.
+    if(st&&st.at&&lgNow()-Number(st.at)>6*3600e3)st=null;
+    if(st)st.lanes=lgNorm(st.lanes);
+    lg.st=st;
+    const r=lg.run,mine=st&&st.lanes[LANE_FIXED];
+    // 진행 중이던 리그 경기가 중지됐거나 컨트롤 타워가 다른 경기로 넘어갔으면 멈춘다(기록은 남기지 않음).
+    if(r&&!r.done&&state.running&&state.matchCfg&&state.matchCfg.mode==='league'&&(!st||st.runId!==r.runId||st.phase==='stopped'))lgAbort(st&&st.phase==='stopped'?'컨트롤 타워에서 중지했어요.':'경기가 바뀌어 멈췄어요.');
+    if(st&&mine&&(st.phase==='practice'||st.phase==='shooting')&&st.runId&&(!lg.run||lg.run.runId!==st.runId)&&lg.pend!==st.runId&&lgNow()<st.endAt)lgBegin(st.runId);
+    lgRender();lgPush();
+  }
+  function lgBegin(runId){
+    const st=lg.st;if(!st||st.runId!==runId)return;
+    const cls=st.lanes[LANE_FIXED];if(!cls)return;
+    // 카운트다운이 3-2-1로 보이도록 시작 3초 전까지 기다렸다가 시작한다(컨트롤 타워는 약 4초 뒤 시작 시각을 보냄).
+    const wait=st.startAt-lgNow()-3000;
+    if(wait>50){lg.pend=runId;setTimeout(()=>{if(lg.pend===runId){lg.pend=null;lgBegin(runId)}},wait);return}
+    lg.pend=null;
+    const practice=st.kind==='practice',rl=st.rule||{};
+    lg.run={runId,kind:practice?'practice':'match',cls,startAt:st.startAt,endAt:st.endAt,per:rl.per||1,shots:rl.shots||45,team:st.teamSize||15,done:false,finishMs:null,timeUp:false,final:null};
+    if(!(state.center&&state.radius)){lg.run.failed=true;lgRender();lgPush();toast('📡 리그 경기가 시작됐지만 아직 표적 보정 전이에요 - 보정해 주세요.');return}
+    if(state.running)reset();   // 수업용 경기가 남아 있으면 지우고 리그 경기를 시작
+    state.matchCfg={evalType:'check',mode:'league',studentId:'',cls:String(cls),teamName:'',teamKey:'',members:[],label:'',by:'league'};state.saveInfo=null;
+    els.player.value=`${st.grade}-${cls}반`;els.laserColor.value='red';els.detectKind.value='laser';
+    startMatch();
+    state.maxShots=practice?99:lg.run.shots;   // 연습은 발수 제한 없이 시간으로만 끝난다
+    // 3-2-1이 컨트롤 타워가 정한 시작 시각에 정확히 끝나도록 카운트다운 끝 시각을 다시 맞춘다(명령이 늦게 닿은 만큼 짧아짐).
+    state.countdownEnd=performance.now()+Math.max(0,st.startAt-lgNow());
+    els.firingLane.disabled=true;document.body.classList.add('lg-on');updateScore();lgRender();lgPush();
+  }
+  function lgOnShot(s){const r=lg.run;s.t=Math.max(0,lgNow()-r.startAt);r.lastT=s.t;lgPush()}
+  function lgTick(){
+    const r=lg.run;
+    if(r&&!r.done&&!r.failed&&state.running&&state.matchCfg&&state.matchCfg.mode==='league'&&lgNow()>=r.endAt){if(r.kind==='practice')lgAbort('연습 시간이 끝났어요.');else lgFinish(true)}
+    lgRender();
+  }
+  // 본사격 종료: 다 쐈으면 마지막 발 시각이 완료 시간, 제한 시간이 끝났으면 완료 시간 없음(못 쏜 발 0점, 보너스 없음).
+  function lgFinish(timeUp){
+    const r=lg.run;if(!r||r.done)return;
+    r.done=true;r.timeUp=!!timeUp;r.finishMs=timeUp?null:(r.lastT||0);r.final=lgShots();
+    clearCountdown();showEndBanner();lockCamera(false);state.running=false;els.livePill.textContent='● COMPLETE';
+    els.guide.textContent=timeUp?'제한 시간 종료':'사격 완료';setStatus('리그 경기 완료','#b7ff3c');document.body.classList.remove('match-live');setTimeout(resize,60);
+    lgRender();lgPush();
+    fb.db.ref(`${LG_ROOT}/runs/${r.runId}/${LANE_FIXED}`).set(lgPayload()).catch(err=>toast('📡 리그 기록 저장 실패: '+((err&&err.message)||err)));
+  }
+  function lgAbort(msg){const r=lg.run;if(r)r.done=true,r.aborted=true;reset();document.body.classList.remove('lg-on');lgRender();lgPush();if(msg)toast('📡 '+msg)}
+  function lgShots(){return state.shots.map(s=>({si:s.score,sd:s.sd==null?s.score:s.sd,t:s.t||0}))}
+  function lgPayload(){
+    const r=lg.run||{},live=state.matchCfg&&state.matchCfg.mode==='league';
+    return{online:true,calibrated:!!(state.center&&state.radius),runId:r.runId||null,kind:r.kind||null,cls:r.cls||null,
+      shots:r.final||(live?lgShots():[]),done:!!r.done&&!r.aborted,timeUp:!!r.timeUp,finishMs:r.finishMs==null?null:r.finishMs,
+      failed:!!r.failed,at:firebase.database.ServerValue.TIMESTAMP};
+  }
+  function lgPush(){if(lg.ref)lg.ref.set(lgPayload()).catch(()=>{})}
+  function lgRender(){
+    const h=document.getElementById('lgHud');if(!h)return;
+    const st=lg.st,cls=st&&st.lanes&&st.lanes[LANE_FIXED];
+    if(!LANE_FIXED||!st||!cls){h.hidden=true;document.body.classList.remove('lg-on');return}
+    h.hidden=false;
+    const r=lg.run&&lg.run.runId===st.runId?lg.run:null,t=lgNow(),rl=st.rule||{};
+    const shots=r&&r.final?r.final:(state.matchCfg&&state.matchCfg.mode==='league'?lgShots():[]);
+    const n=shots.length,per=rl.per||1,team=st.teamSize||15,dec=st.scoring!=='int';
+    const sum=shots.reduce((a,s)=>a+(dec?(Number(s.sd)||0):(Number(s.si)||0)),0);
+    let cls2='',clk='',t2='';
+    const title=`${st.grade}학년 ${cls}반 · ${st.round}라운드${st.round===1?' '+st.heat+'조':''}`;
+    if(r&&r.failed){cls2='warn';clk='보정 필요';t2='표적 보정 후 컨트롤 타워에 알려 주세요'}
+    else if(r&&!r.done&&state.running){
+      cls2=r.kind==='practice'?'practice':'';clk=lgFmt(r.endAt-Math.max(t,r.startAt));
+      t2=r.kind==='practice'?`연습 · ${n}발`:`사수 ${Math.min(team,Math.floor(n/per)+1)}/${team} · ${n}/${rl.shots}발 · ${dec?sum.toFixed(1):sum}점`;
+    }else if(r&&r.done&&!r.aborted){cls2='done';clk=r.timeUp?'시간 종료':(r.finishMs/1000).toFixed(1)+'초';t2=`${n}/${rl.shots}발 · ${dec?sum.toFixed(1):sum}점`}
+    else{clk=state.center&&state.radius?'대기':'보정 필요';cls2=state.center&&state.radius?'':'warn';t2=state.center&&state.radius?'컨트롤 타워 신호를 기다리는 중':'카메라 시작 → 표적 자동 보정을 해 주세요'}
+    h.className='lg-hud '+cls2;document.getElementById('lgT1').textContent=title;document.getElementById('lgClk').textContent=clk;document.getElementById('lgT2').textContent=t2;
+  }
+
   function recordShot(x,y,manualScore=null,kind){
     if(!state.running||state.shots.length>=state.maxShots)return;
     const dx=x==null?0:x-state.center.x,dy=y==null?0:y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nr=manualScore==null?Math.hypot(ex/state.radiusX,ey/state.radiusY):0;
@@ -838,7 +945,10 @@
     const xMm=ex/state.radiusX*80,yMm=ey/state.radiusY*80;
     let videoX=null,videoY=null;if(x!=null&&y!=null){const g=videoGeometry();videoX=((x-g.offX)/g.scale)/g.vw;videoY=((y-g.offY)/g.scale)/g.vh}
     const k=manualScore!=null?'manual':(kind||'laser');
-    state.shots.push({score,screenX:x,screenY:y,videoX,videoY,xMm:+xMm.toFixed(1),yMm:+yMm.toFixed(1),normalizedRadius:+nr.toFixed(4),manual:manualScore!=null,kind:k,time:new Date().toLocaleTimeString('ko-KR',{hour12:false})});
+    // 소수점 점수(최고 10.9): 정수 점수와 같은 경계선 여유(.15)를 써서, 소수점 점수를 내림하면 항상 정수 점수와 같게 맞춘다.
+    const sd=manualScore==null?(nr>1.015?0:Math.min(10.9,Math.max(1,Math.floor((11.15-ringPos)*10)/10))):Number(manualScore);
+    state.shots.push({score,sd,screenX:x,screenY:y,videoX,videoY,xMm:+xMm.toFixed(1),yMm:+yMm.toFixed(1),normalizedRadius:+nr.toFixed(4),manual:manualScore!=null,kind:k,time:new Date().toLocaleTimeString('ko-KR',{hour12:false})});
+    if(lg.run&&!lg.run.done&&state.matchCfg&&state.matchCfg.mode==='league')lgOnShot(state.shots[state.shots.length-1]);
     state.lastHit=performance.now();showScore(score);updateScore();drawOverlay();els.undoBtn.disabled=false;pushLive(true);
     if(state.shots.length>=state.maxShots)setTimeout(finishMatch,650)
   }
