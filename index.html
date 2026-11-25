@@ -53,6 +53,21 @@
     .lg-hud .t2{font-size:.85rem;font-weight:800}
     .lg-hud.practice{border-color:var(--lime)}.lg-hud.done{border-color:var(--lime)}.lg-hud.warn{border-color:var(--red)}
     body.lg-on #shotGrid{display:none}
+    /* 리그 사격 중에는 오른쪽 버튼 영역 전체를 큰 시계 판으로 바꾼다. 6m 뒤 사대에서도 남은 시간이 보이게
+       시계 글자를 판 크기(cqw/cqh)에 맞춰 최대한 키운다. 카메라 화면(과녁)은 가리지 않는다. */
+    .lg-big{display:none;flex-direction:column;justify-content:center;align-items:center;gap:1.5vh;text-align:center;background:#07111f;border:3px solid var(--red);border-radius:16px;padding:2vh 1vw;min-height:60vh;container-type:size}
+    .lg-big.practice{border-color:var(--lime)}.lg-big.done{border-color:var(--lime)}.lg-big.warn{border-color:var(--gold)}
+    .lg-big .b-title{font-size:clamp(1rem,7cqw,2.4rem);font-weight:900;color:var(--muted);line-height:1.2}
+    .lg-big .b-label{font-size:clamp(1rem,8cqw,2.6rem);font-weight:900;color:var(--cyan)}
+    .lg-big .b-clock{font-size:min(50cqw,45cqh);font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:var(--gold)}
+    .lg-big .b-clock.long{font-size:min(30cqw,30cqh)}   /* "245.3초"처럼 글자가 긴 완료 시간 */
+    .lg-big .b-clock.urgent{color:var(--red)}
+    .lg-big .b-sub{font-size:clamp(1.1rem,10cqw,3.2rem);font-weight:900;line-height:1.25}
+    .lg-big .b-sub2{font-size:clamp(.9rem,6cqw,2rem);font-weight:800;color:var(--muted)}
+    body.lg-big .lg-big{display:flex}
+    body.lg-big #sidePanel>:not(#lgBig){display:none!important}
+    body.lg-big .lg-hud{display:none}
+    @media(orientation:landscape) and (max-height:700px){.lg-big{height:100%;min-height:0}}
     body.match-live .mini-brand{display:none}
     body.match-live .guide{display:none}
     body.match-live #calibrationInfo{display:none}
@@ -120,6 +135,7 @@
   </section>
 
   <div class="side-panel" id="sidePanel">
+  <div class="lg-big" id="lgBig"><div class="b-title" id="lgBTitle"></div><div class="b-label" id="lgBLabel"></div><div class="b-clock" id="lgBClock"></div><div class="b-sub" id="lgBSub"></div><div class="b-sub2" id="lgBSub2"></div></div>
 
   <section class="panel setup">
     <div class="mini-brand">
@@ -919,7 +935,7 @@
   function lgRender(){
     const h=document.getElementById('lgHud');if(!h)return;
     const st=lg.st,cls=st&&st.lanes&&st.lanes[LANE_FIXED];
-    if(!LANE_FIXED||!st||!cls){h.hidden=true;document.body.classList.remove('lg-on');return}
+    if(!LANE_FIXED||!st||!cls){h.hidden=true;document.body.classList.remove('lg-on','lg-big');return}
     h.hidden=false;
     const r=lg.run&&lg.run.runId===st.runId?lg.run:null,t=lgNow(),rl=st.rule||{};
     const shots=r&&r.final?r.final:(state.matchCfg&&state.matchCfg.mode==='league'?lgShots():[]);
@@ -934,6 +950,20 @@
     }else if(r&&r.done&&!r.aborted){cls2='done';clk=r.timeUp?'시간 종료':(r.finishMs/1000).toFixed(1)+'초';t2=`${n}/${rl.shots}발 · ${dec?sum.toFixed(1):sum}점`}
     else{clk=state.center&&state.radius?'대기':'보정 필요';cls2=state.center&&state.radius?'':'warn';t2=state.center&&state.radius?'컨트롤 타워 신호를 기다리는 중':'카메라 시작 → 표적 자동 보정을 해 주세요'}
     h.className='lg-hud '+cls2;document.getElementById('lgT1').textContent=title;document.getElementById('lgClk').textContent=clk;document.getElementById('lgT2').textContent=t2;
+    // 큰 시계 판: 연습·본사격 중과 끝난 직후에만 오른쪽 버튼 영역을 덮는다(대기 중에는 카메라·보정 버튼을 써야 하므로 작은 표시만).
+    const big=!!(r&&!r.failed&&!r.aborted&&(state.running||r.done));
+    document.body.classList.toggle('lg-big',big);
+    if(!big)return;
+    const b=document.getElementById('lgBig'),live=!r.done,pre=live&&t<r.startAt,left=r.endAt-Math.max(t,r.startAt);
+    b.className='lg-big '+(r.kind==='practice'?'practice':r.done?'done':'');
+    document.getElementById('lgBTitle').textContent=title;
+    document.getElementById('lgBLabel').textContent=r.kind==='practice'?'연습':(r.done?(r.timeUp?'시간 종료':'사격 완료'):(pre?'준비':'본사격'));
+    const ck=document.getElementById('lgBClock');
+    ck.textContent=r.done?(r.timeUp?'0:00':(r.finishMs/1000).toFixed(1)+'초'):lgFmt(left);
+    ck.classList.toggle('urgent',live&&!pre&&left<=10000);   // 마지막 10초는 빨간색
+    ck.classList.toggle('long',ck.textContent.length>5);
+    document.getElementById('lgBSub').textContent=r.kind==='practice'?`${n}발`:(r.done?`${dec?sum.toFixed(1):sum}점`:`사수 ${Math.min(team,Math.floor(n/per)+1)} / ${team}`);
+    document.getElementById('lgBSub2').textContent=r.kind==='practice'?'점수에 들어가지 않아요':`${n} / ${rl.shots}발`+(r.done?'':` · ${dec?sum.toFixed(1):sum}점`);
   }
 
   function recordShot(x,y,manualScore=null,kind){
