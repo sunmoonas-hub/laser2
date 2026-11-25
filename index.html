@@ -57,17 +57,25 @@
        시계 글자를 판 크기(cqw/cqh)에 맞춰 최대한 키운다. 카메라 화면(과녁)은 가리지 않는다. */
     .lg-big{display:none;flex-direction:column;justify-content:center;align-items:center;gap:1.5vh;text-align:center;background:#07111f;border:3px solid var(--red);border-radius:16px;padding:2vh 1vw;min-height:60vh;container-type:size}
     .lg-big.practice{border-color:var(--lime)}.lg-big.done{border-color:var(--lime)}.lg-big.warn{border-color:var(--gold)}
-    .lg-big .b-title{font-size:clamp(1rem,7cqw,2.4rem);font-weight:900;color:var(--muted);line-height:1.2}
-    .lg-big .b-label{font-size:clamp(1rem,8cqw,2.6rem);font-weight:900;color:var(--cyan)}
-    .lg-big .b-clock{font-size:min(50cqw,45cqh);font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:var(--gold)}
-    .lg-big .b-clock.long{font-size:min(30cqw,30cqh)}   /* "245.3초"처럼 글자가 긴 완료 시간 */
+    /* 글자 크기는 판의 폭(cqw)과 높이(cqh) 중 작은 쪽에 맞춘다 - 가로로 긴 판(세로 태블릿)에서 위아래가 잘리지 않게 */
+    .lg-big .b-title{font-size:clamp(1rem,min(7cqw,6cqh),2.4rem);font-weight:900;color:var(--muted);line-height:1.2}
+    .lg-big .b-label{font-size:clamp(1rem,min(8cqw,7cqh),2.6rem);font-weight:900;color:var(--cyan);line-height:1.2}
+    .lg-big .b-clock{font-size:min(50cqw,38cqh);font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:var(--gold)}
+    .lg-big .b-clock.long{font-size:min(30cqw,26cqh)}   /* "245.3초"처럼 글자가 긴 완료 시간 */
     .lg-big .b-clock.urgent{color:var(--red)}
-    .lg-big .b-sub{font-size:clamp(1.1rem,10cqw,3.2rem);font-weight:900;line-height:1.25}
-    .lg-big .b-sub2{font-size:clamp(.9rem,6cqw,2rem);font-weight:800;color:var(--muted)}
+    .lg-big .b-sub{font-size:clamp(1.1rem,min(10cqw,9cqh),3.2rem);font-weight:900;line-height:1.2}
+    .lg-big .b-sub2{font-size:clamp(.9rem,min(6cqw,5.5cqh),2rem);font-weight:800;color:var(--muted);line-height:1.2}
     body.lg-big .lg-big{display:flex}
     body.lg-big #sidePanel>:not(#lgBig){display:none!important}
     body.lg-big .lg-hud{display:none}
-    @media(orientation:landscape) and (max-height:700px){.lg-big{height:100%;min-height:0}}
+    /* 화면 높이가 700px을 넘는 태블릿(예: 1280x800)은 평소 위아래로 쌓는 배치라, 큰 판이 카메라 위로 올라가 과녁이 화면 밖으로 밀렸다.
+       리그 사격 중에는 화면 크기와 상관없이 '카메라 | 큰 판'(세로로 세운 태블릿은 '카메라 / 큰 판')으로 고정한다. */
+    html:has(body.lg-big),body.lg-big{height:100%;overflow:hidden}
+    body.lg-big .app{display:grid;width:100%;max-width:none;height:100svh;min-height:0;margin:0;overflow:hidden;gap:8px;padding:4px 8px 8px;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side"}
+    body.lg-big .camera{grid-area:camera;height:100%;min-height:0}
+    body.lg-big .side-panel{grid-area:side;display:block;height:100%;min-height:0;overflow:hidden;padding:0}
+    body.lg-big .lg-big{height:100%;min-height:0}
+    @media(orientation:portrait){body.lg-big .app{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.5fr) minmax(0,1fr);grid-template-areas:"camera" "side"}}
     body.match-live .mini-brand{display:none}
     body.match-live .guide{display:none}
     body.match-live #calibrationInfo{display:none}
@@ -952,7 +960,8 @@
     h.className='lg-hud '+cls2;document.getElementById('lgT1').textContent=title;document.getElementById('lgClk').textContent=clk;document.getElementById('lgT2').textContent=t2;
     // 큰 시계 판: 연습·본사격 중과 끝난 직후에만 오른쪽 버튼 영역을 덮는다(대기 중에는 카메라·보정 버튼을 써야 하므로 작은 표시만).
     const big=!!(r&&!r.failed&&!r.aborted&&(state.running||r.done));
-    document.body.classList.toggle('lg-big',big);
+    // 배치가 바뀌면 카메라 화면 크기도 바뀌므로, 과녁 표시 위치를 다시 맞춘다(resize가 영상 기준 좌표로 복원).
+    if(document.body.classList.contains('lg-big')!==big){document.body.classList.toggle('lg-big',big);setTimeout(resize,60)}
     if(!big)return;
     const b=document.getElementById('lgBig'),live=!r.done,pre=live&&t<r.startAt,left=r.endAt-Math.max(t,r.startAt);
     b.className='lg-big '+(r.kind==='practice'?'practice':r.done?'done':'');
