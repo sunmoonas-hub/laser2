@@ -53,29 +53,25 @@
     .lg-hud .t2{font-size:.85rem;font-weight:800}
     .lg-hud.practice{border-color:var(--lime)}.lg-hud.done{border-color:var(--lime)}.lg-hud.warn{border-color:var(--red)}
     body.lg-on #shotGrid{display:none}
-    /* 리그 사격 중에는 오른쪽 버튼 영역 전체를 큰 시계 판으로 바꾼다. 6m 뒤 사대에서도 남은 시간이 보이게
-       시계 글자를 판 크기(cqw/cqh)에 맞춰 최대한 키운다. 카메라 화면(과녁)은 가리지 않는다. */
-    .lg-big{display:none;flex-direction:column;justify-content:center;align-items:center;gap:1.5vh;text-align:center;background:#07111f;border:3px solid var(--red);border-radius:16px;padding:2vh 1vw;min-height:60vh;container-type:size}
+    /* 리그 사격 중에는 오른쪽 버튼 영역 전체를 큰 시계 판으로 바꾼다. 6m 뒤 사대에서도 남은 시간이 보이게 시계 글자를 판 크기에 맞춰 최대한 키운다.
+       글자 크기는 lgFitBig()이 판의 실제 폭·높이를 재서 정한다. 컨테이너 단위(container-type, cqw)와 :has()를 쓰면
+       삼성 인터넷(태블릿)에서 페이지 전체 배치가 0x0으로 무너져 까만 화면이 됐다(진단 기록으로 확인). */
+    .lg-big{display:none;flex-direction:column;justify-content:center;align-items:center;gap:6px;text-align:center;background:#07111f;border:3px solid var(--red);border-radius:16px;padding:8px;overflow:hidden}
     .lg-big.practice{border-color:var(--lime)}.lg-big.done{border-color:var(--lime)}.lg-big.warn{border-color:var(--gold)}
-    /* 글자 크기는 판의 폭(cqw)과 높이(cqh) 중 작은 쪽에 맞춘다 - 가로로 긴 판(세로 태블릿)에서 위아래가 잘리지 않게 */
-    .lg-big .b-title{font-size:clamp(1rem,min(7cqw,6cqh),2.4rem);font-weight:900;color:var(--muted);line-height:1.2}
-    .lg-big .b-label{font-size:clamp(1rem,min(8cqw,7cqh),2.6rem);font-weight:900;color:var(--cyan);line-height:1.2}
-    .lg-big .b-clock{font-size:min(50cqw,38cqh);font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:var(--gold)}
-    .lg-big .b-clock.long{font-size:min(30cqw,26cqh)}   /* "245.3초"처럼 글자가 긴 완료 시간 */
+    .lg-big>div{line-height:1.15;font-weight:900;white-space:nowrap}
+    .lg-big .b-title{color:var(--muted)}.lg-big .b-label{color:var(--cyan)}.lg-big .b-sub2{color:var(--muted);font-weight:800}
+    .lg-big .b-clock{line-height:1;font-variant-numeric:tabular-nums;color:var(--gold)}
     .lg-big .b-clock.urgent{color:var(--red)}
-    .lg-big .b-sub{font-size:clamp(1.1rem,min(10cqw,9cqh),3.2rem);font-weight:900;line-height:1.2}
-    .lg-big .b-sub2{font-size:clamp(.9rem,min(6cqw,5.5cqh),2rem);font-weight:800;color:var(--muted);line-height:1.2}
     body.lg-big .lg-big{display:flex}
     body.lg-big #sidePanel>:not(#lgBig){display:none!important}
     body.lg-big .lg-hud{display:none}
-    /* 화면 높이가 700px을 넘는 태블릿(예: 1280x800)은 평소 위아래로 쌓는 배치라, 큰 판이 카메라 위로 올라가 과녁이 화면 밖으로 밀렸다.
-       리그 사격 중에는 화면 크기와 상관없이 '카메라 | 큰 판'(세로로 세운 태블릿은 '카메라 / 큰 판')으로 고정한다. */
-    /* 스크롤해 둔 상태(버튼을 누르려고 아래로 내린 상태)에서 시작해도 화면이 빈 곳을 보여 주지 않도록, 스크롤과 상관없이 화면에 고정한다. */
-    html:has(body.lg-big),body.lg-big{height:100%;overflow:hidden}
-    body.lg-big .app{position:fixed;inset:0;z-index:4;display:grid;width:auto;max-width:none;height:auto;min-height:0;margin:0;overflow:hidden;gap:8px;padding:4px 8px 8px;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side"}
+    /* 리그 사격 중에는 화면 크기·스크롤과 상관없이 "카메라 | 큰 판"(세로 태블릿은 "카메라 / 큰 판")으로 화면에 고정한다.
+       (높이 700px 넘는 태블릿은 평소 위아래로 쌓는 배치라 큰 판이 카메라를 밀어냈고, 스크롤된 상태에선 빈 곳이 보였다) */
+    body.lg-big{overflow:hidden}
+    body.lg-big .app{position:fixed;top:0;left:0;width:100%;height:100%;z-index:4;display:grid;max-width:none;min-height:0;margin:0;overflow:hidden;gap:8px;padding:4px 8px 8px;box-sizing:border-box;grid-template-columns:minmax(0,1.65fr) minmax(280px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side"}
     body.lg-big .camera{grid-area:camera;height:100%;min-height:0}
     body.lg-big .side-panel{grid-area:side;display:block;height:100%;min-height:0;overflow:hidden;padding:0}
-    body.lg-big .lg-big{height:100%;min-height:0}
+    body.lg-big .lg-big{height:100%;min-height:0;box-sizing:border-box}
     @media(orientation:portrait){body.lg-big .app{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.5fr) minmax(0,1fr);grid-template-areas:"camera" "side"}}
     body.match-live .mini-brand{display:none}
     body.match-live .guide{display:none}
@@ -949,7 +945,7 @@
       const W=innerWidth,H=innerHeight;
       fb.db.ref(LG_ROOT+'/diag/'+LANE_FIXED).set({at:firebase.database.ServerValue.TIMESTAMP,ua:navigator.userAgent,W,H,dpr:devicePixelRatio,vv:window.visualViewport?{w:Math.round(visualViewport.width),h:Math.round(visualViewport.height),s:visualViewport.scale}:null,
         scrollY:Math.round(scrollY),body:document.body.className,fs:!!document.fullscreenElement,has:CSS.supports('selector(:has(a))'),cq:CSS.supports('width:1cqw'),
-        app:rc(q('.app')),camera:rc(q('.camera')),side:rc(q('#sidePanel')),big:rc(q('#lgBig')),clock:rc(q('#lgBClock')),video:rc(q('video')),
+        html:rc(document.documentElement),bodyR:rc(document.body),app:rc(q('.app')),camera:rc(q('.camera')),side:rc(q('#sidePanel')),big:rc(q('#lgBig')),clock:rc(q('#lgBClock')),video:rc(q('video')),
         atLeft:who(W*.3,H*.5),atRight:who(W*.85,H*.5),atCenter:who(W*.5,H*.5)}).catch(()=>{});
     }catch(e){}
   }
@@ -986,6 +982,16 @@
     ck.classList.toggle('long',ck.textContent.length>5);
     document.getElementById('lgBSub').textContent=r.kind==='practice'?`${n}발`:(r.done?`${dec?sum.toFixed(1):sum}점`:`사수 ${Math.min(team,Math.floor(n/per)+1)} / ${team}`);
     document.getElementById('lgBSub2').textContent=r.kind==='practice'?'점수에 들어가지 않아요':`${n} / ${rl.shots}발`+(r.done?'':` · ${dec?sum.toFixed(1):sum}점`);
+    lgFitBig();
+  }
+  // 큰 판의 실제 폭·높이를 재서 글자 크기를 정한다(시계는 폭의 92%·높이의 38%까지). 숫자 한 글자 폭 ≈ 0.6em, 한글 섞인 줄은 ≈ 0.85em로 본다.
+  function lgFitBig(){
+    const b=document.getElementById('lgBig'),W=b.clientWidth-20,H=b.clientHeight-20;if(W<=0||H<=0)return;
+    const set=(id,px)=>{const e=document.getElementById(id),v=Math.round(px)+'px';if(e.style.fontSize!==v)e.style.fontSize=v};
+    const ck=document.getElementById('lgBClock');
+    set('lgBClock',Math.min(W*.92/(Math.max(4,ck.textContent.length)*.6),H*.38));
+    const line=(id,hr)=>{const e=document.getElementById(id),n=Math.max(1,e.textContent.length);set(id,Math.max(12,Math.min(H*hr,W*.95/(n*.85))))};
+    line('lgBTitle',.07);line('lgBLabel',.08);line('lgBSub',.11);line('lgBSub2',.065);
   }
 
   function recordShot(x,y,manualScore=null,kind){
