@@ -54,25 +54,26 @@
     .lg-hud.practice{border-color:var(--lime)}.lg-hud.done{border-color:var(--lime)}.lg-hud.warn{border-color:var(--red)}
     body.lg-on #shotGrid{display:none}
     /* 리그 사격 중에는 오른쪽 버튼 영역 전체를 큰 시계 판으로 바꾼다. 6m 뒤 사대에서도 남은 시간이 보이게 시계 글자를 판 크기에 맞춰 최대한 키운다.
-       글자 크기는 lgFitBig()이 판의 실제 폭·높이를 재서 정한다. 컨테이너 단위(container-type, cqw)와 :has()를 쓰면
-       삼성 인터넷(태블릿)에서 페이지 전체 배치가 0x0으로 무너져 까만 화면이 됐다(진단 기록으로 확인). */
-    .lg-big{display:none;flex-direction:column;justify-content:center;align-items:center;gap:6px;text-align:center;background:#07111f;border:3px solid var(--red);border-radius:16px;padding:8px;overflow:hidden}
-    .lg-big.practice{border-color:var(--lime)}.lg-big.done{border-color:var(--lime)}.lg-big.warn{border-color:var(--gold)}
-    .lg-big>div{line-height:1.15;font-weight:900;white-space:nowrap}
-    .lg-big .b-title{color:var(--muted)}.lg-big .b-label{color:var(--cyan)}.lg-big .b-sub2{color:var(--muted);font-weight:800}
-    .lg-big .b-clock{line-height:1;font-variant-numeric:tabular-nums;color:var(--gold)}
-    .lg-big .b-clock.urgent{color:var(--red)}
-    body.lg-big .lg-big{display:flex}
-    body.lg-big #sidePanel>:not(#lgBig){display:none!important}
-    body.lg-big .lg-hud{display:none}
+       글자 크기는 lgFitBig()이 판의 실제 폭·높이를 재서 정한다.
+       ※ 클래스 이름을 'lg-big'으로 했더니 삼성 인터넷(태블릿)의 광고 차단 기능이 body를 display:none으로 숨겨 화면 전체가 까맣게 됐다
+         (진단 기록: body display=none, 모든 요소 0x0). 광고 이름처럼 보이는 클래스(…-big, ad-…, banner 등)는 쓰지 않는다. */
+    .lmboard{display:none;flex-direction:column;justify-content:center;align-items:center;gap:6px;text-align:center;background:#07111f;border:3px solid var(--red);border-radius:16px;padding:8px;overflow:hidden}
+    .lmboard.practice{border-color:var(--lime)}.lmboard.done{border-color:var(--lime)}.lmboard.warn{border-color:var(--gold)}
+    .lmboard>div{line-height:1.15;font-weight:900;white-space:nowrap}
+    .lmboard .b-title{color:var(--muted)}.lmboard .b-label{color:var(--cyan)}.lmboard .b-sub2{color:var(--muted);font-weight:800}
+    .lmboard .b-clock{line-height:1;font-variant-numeric:tabular-nums;color:var(--gold)}
+    .lmboard .b-clock.urgent{color:var(--red)}
+    body.lmboard .lmboard{display:flex}
+    body.lmboard #sidePanel>:not(#lgBig){display:none!important}
+    body.lmboard .lg-hud{display:none}
     /* 리그 사격 중에는 화면 크기·스크롤과 상관없이 "카메라 | 큰 판"(세로 태블릿은 "카메라 / 큰 판")으로 화면에 고정한다.
        (높이 700px 넘는 태블릿은 평소 위아래로 쌓는 배치라 큰 판이 카메라를 밀어냈고, 스크롤된 상태에선 빈 곳이 보였다) */
-    body.lg-big{overflow:hidden}
-    body.lg-big .app{position:fixed;top:0;left:0;width:100%;height:100%;z-index:4;display:grid;max-width:none;min-height:0;margin:0;overflow:hidden;gap:8px;padding:4px 8px 8px;box-sizing:border-box;grid-template-columns:minmax(0,1.65fr) minmax(280px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side"}
-    body.lg-big .camera{grid-area:camera;height:100%;min-height:0}
-    body.lg-big .side-panel{grid-area:side;display:block;height:100%;min-height:0;overflow:hidden;padding:0}
-    body.lg-big .lg-big{height:100%;min-height:0;box-sizing:border-box}
-    @media(orientation:portrait){body.lg-big .app{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.5fr) minmax(0,1fr);grid-template-areas:"camera" "side"}}
+    body.lmboard{overflow:hidden}
+    body.lmboard .app{position:fixed;top:0;left:0;width:100%;height:100%;z-index:4;display:grid;max-width:none;min-height:0;margin:0;overflow:hidden;gap:8px;padding:4px 8px 8px;box-sizing:border-box;grid-template-columns:minmax(0,1.65fr) minmax(280px,.85fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"camera side"}
+    body.lmboard .camera{grid-area:camera;height:100%;min-height:0}
+    body.lmboard .side-panel{grid-area:side;display:block;height:100%;min-height:0;overflow:hidden;padding:0}
+    body.lmboard .lmboard{height:100%;min-height:0;box-sizing:border-box}
+    @media(orientation:portrait){body.lmboard .app{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.5fr) minmax(0,1fr);grid-template-areas:"camera" "side"}}
     body.match-live .mini-brand{display:none}
     body.match-live .guide{display:none}
     body.match-live #calibrationInfo{display:none}
@@ -140,7 +141,7 @@
   </section>
 
   <div class="side-panel" id="sidePanel">
-  <div class="lg-big" id="lgBig"><div class="b-title" id="lgBTitle"></div><div class="b-label" id="lgBLabel"></div><div class="b-clock" id="lgBClock"></div><div class="b-sub" id="lgBSub"></div><div class="b-sub2" id="lgBSub2"></div></div>
+  <div class="lmboard" id="lgBig"><div class="b-title" id="lgBTitle"></div><div class="b-label" id="lgBLabel"></div><div class="b-clock" id="lgBClock"></div><div class="b-sub" id="lgBSub"></div><div class="b-sub2" id="lgBSub2"></div></div>
 
   <section class="panel setup">
     <div class="mini-brand">
@@ -952,7 +953,7 @@
   function lgRender(){
     const h=document.getElementById('lgHud');if(!h)return;
     const st=lg.st,cls=st&&st.lanes&&st.lanes[LANE_FIXED];
-    if(!LANE_FIXED||!st||!cls){h.hidden=true;document.body.classList.remove('lg-on','lg-big');return}
+    if(!LANE_FIXED||!st||!cls){h.hidden=true;document.body.classList.remove('lg-on','lmboard');return}
     h.hidden=false;
     const r=lg.run&&lg.run.runId===st.runId?lg.run:null,t=lgNow(),rl=st.rule||{};
     const shots=r&&r.final?r.final:(state.matchCfg&&state.matchCfg.mode==='league'?lgShots():[]);
@@ -970,10 +971,12 @@
     // 큰 시계 판: 연습·본사격 중과 끝난 직후에만 오른쪽 버튼 영역을 덮는다(대기 중에는 카메라·보정 버튼을 써야 하므로 작은 표시만).
     const big=!!(r&&!r.failed&&!r.aborted&&(state.running||r.done));
     // 배치가 바뀌면 카메라 화면 크기도 바뀌므로, 과녁 표시 위치를 다시 맞춘다(resize가 영상 기준 좌표로 복원).
-    if(document.body.classList.contains('lg-big')!==big){document.body.classList.toggle('lg-big',big);if(big)window.scrollTo(0,0);setTimeout(resize,60);if(big)setTimeout(lgDiag,1500)}
+    if(document.body.classList.contains('lmboard')!==big){document.body.classList.toggle('lmboard',big);if(big)window.scrollTo(0,0);setTimeout(resize,60);if(big)setTimeout(lgDiag,1500)}
+    // 안전장치: 브라우저의 광고 차단 등이 리그 화면 중 body를 숨기면(display:none) 강제로 다시 보이게 한다.
+    if(big&&getComputedStyle(document.body).display==='none')document.body.style.setProperty('display','block','important');
     if(!big)return;
     const b=document.getElementById('lgBig'),live=!r.done,pre=live&&t<r.startAt,left=r.endAt-Math.max(t,r.startAt);
-    b.className='lg-big '+(r.kind==='practice'?'practice':r.done?'done':'');
+    b.className='lmboard '+(r.kind==='practice'?'practice':r.done?'done':'');
     document.getElementById('lgBTitle').textContent=title;
     document.getElementById('lgBLabel').textContent=r.kind==='practice'?'연습':(r.done?(r.timeUp?'시간 종료':'사격 완료'):(pre?'준비':'본사격'));
     const ck=document.getElementById('lgBClock');
