@@ -941,6 +941,18 @@
       failed:!!r.failed,at:firebase.database.ServerValue.TIMESTAMP};
   }
   function lgPush(){if(lg.ref)lg.ref.set(lgPayload()).catch(()=>{})}
+  // [임시 진단] 일부 태블릿에서 큰 시계 판으로 바뀐 뒤 화면이 까맣게 보인다는 보고가 있어, 그 순간의 화면 배치를 {LEAGUE_ROOT}/diag/{사로}에 남긴다.
+  function lgDiag(){
+    try{
+      const q=s=>document.querySelector(s),rc=el=>{if(!el)return null;const b=el.getBoundingClientRect(),cs=getComputedStyle(el);return{x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),h:Math.round(b.height),d:cs.display,p:cs.position,v:cs.visibility,o:cs.opacity}};
+      const who=(x,y)=>{const e=document.elementFromPoint(x,y);if(!e)return null;const out=[];let c=e;for(let i=0;c&&i<4;i++,c=c.parentElement)out.push(c.tagName.toLowerCase()+(c.id?'#'+c.id:'')+(c.className&&typeof c.className==='string'?'.'+c.className.trim().split(/\s+/).join('.'):''));return out.join(' < ')};
+      const W=innerWidth,H=innerHeight;
+      fb.db.ref(LG_ROOT+'/diag/'+LANE_FIXED).set({at:firebase.database.ServerValue.TIMESTAMP,ua:navigator.userAgent,W,H,dpr:devicePixelRatio,vv:window.visualViewport?{w:Math.round(visualViewport.width),h:Math.round(visualViewport.height),s:visualViewport.scale}:null,
+        scrollY:Math.round(scrollY),body:document.body.className,fs:!!document.fullscreenElement,has:CSS.supports('selector(:has(a))'),cq:CSS.supports('width:1cqw'),
+        app:rc(q('.app')),camera:rc(q('.camera')),side:rc(q('#sidePanel')),big:rc(q('#lgBig')),clock:rc(q('#lgBClock')),video:rc(q('video')),
+        atLeft:who(W*.3,H*.5),atRight:who(W*.85,H*.5),atCenter:who(W*.5,H*.5)}).catch(()=>{});
+    }catch(e){}
+  }
   function lgRender(){
     const h=document.getElementById('lgHud');if(!h)return;
     const st=lg.st,cls=st&&st.lanes&&st.lanes[LANE_FIXED];
@@ -962,7 +974,7 @@
     // 큰 시계 판: 연습·본사격 중과 끝난 직후에만 오른쪽 버튼 영역을 덮는다(대기 중에는 카메라·보정 버튼을 써야 하므로 작은 표시만).
     const big=!!(r&&!r.failed&&!r.aborted&&(state.running||r.done));
     // 배치가 바뀌면 카메라 화면 크기도 바뀌므로, 과녁 표시 위치를 다시 맞춘다(resize가 영상 기준 좌표로 복원).
-    if(document.body.classList.contains('lg-big')!==big){document.body.classList.toggle('lg-big',big);if(big)window.scrollTo(0,0);setTimeout(resize,60)}
+    if(document.body.classList.contains('lg-big')!==big){document.body.classList.toggle('lg-big',big);if(big)window.scrollTo(0,0);setTimeout(resize,60);if(big)setTimeout(lgDiag,1500)}
     if(!big)return;
     const b=document.getElementById('lgBig'),live=!r.done,pre=live&&t<r.startAt,left=r.endAt-Math.max(t,r.startAt);
     b.className='lg-big '+(r.kind==='practice'?'practice':r.done?'done':'');
