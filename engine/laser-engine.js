@@ -5,12 +5,14 @@
  *   PC 재생 시험(tools/replay.js, Node)에서 똑같이 돌아간다.
  * - 입력: 카메라 원본(I420)에서 표적 주변만 잘라 낸 장면. Y(밝기, w×h)와 U·V(색차, w/2×h/2).
  *   좌표는 모두 "잘라 낸 영역(ROI) 기준 픽셀"이다. 화면 배치와 무관하다.
- * - 출력: 발 사건 {ts, x, y, nr, si, sd, frames, size, len} (ts = 카메라가 붙인 장면 시각, ms)
+ * - 출력: 발 사건 {ts, x, y, cx, cy, nr, si, sd, frames, size, len} (ts = 카메라가 붙인 장면 시각, ms. x,y = 탄착점(시작점), cx,cy = 빛 덩어리 전체 중심(비교용))
  *
  * 녹화 분석(docs/태블릿_구조분석.md 3-2)에서 확인한 사실을 그대로 규칙으로 쓴다.
  *  · 레이저는 약 5ms만 켜져 대부분 장면 1장(가끔 2장)에만 찍힌다 → 1~2장짜리 '갑자기 켜진 빛'만 발로 본다.
  *  · 빨강은 V(색차)가 크게 오른다(실제 발 21~110). 쏘지 않은 장면은 2~3. 중심은 하얗게 포화돼 V가 약할 수 있어 Y도 함께 본다.
- *  · 총이 튀면 세로로 긴 줄(최대 60px)로 찍힌다 → 탄착점은 '가장 센 픽셀'이 아니라 빛 덩어리 전체의 중심(밝기 가중).
+ *  · 총이 튀면 세로로 긴 줄(최대 60px)로 찍힌다. 줄의 아래쪽 끝에 둥글고 두꺼운 점이 있고, 그 점이 맨 처음 찍힌 자리다
+ *    (2장에 걸친 발은 모두 첫 장면이 아래, 다음 장면이 위였다. 088·100·141은 첫 장면에 점만, 다음 장면에 위로 뻗은 줄).
+ *    → 탄착점 = 처음 켜진 장면의 빛 덩어리 중 '시작점 쪽 끝 8줄'의 중심(밝기 가중). 짧은 점은 덩어리 전체 중심과 같다.
  *  · 빠른 연사는 0.42초 간격까지 나온다 → 발과 발 사이 잠금은 아주 짧게.
  *  · 녹화 시작 직후 색 변화 없이 밝기만 오르는 장면(카메라 재조정)이 있었다 → V가 안 오른 빛, 넓은 범위의 변화는 발이 아니다.
  */
@@ -38,7 +40,12 @@
     bgFastRate: 0.3,    // 화면 전체가 바뀌었을 때 빠르게 따라가기
     noiseRate: 0.05,
     warmupFrames: 4,    // 처음 이만큼은 배경만 잡는다
-    missLimit: 1.8      // 바깥 원 반지름의 1.8배 밖은 무시(지금 앱과 같음)
+    missLimit: 1.8,     // 바깥 원 반지름의 1.8배 밖은 무시(지금 앱과 같음)
+    // 탄착점: 줄의 어느 끝을 시작점으로 볼지. 'bottom'(장면 아래쪽 = y가 큰 쪽) | 'top' | 'center'(덩어리 전체 중심).
+    // 녹화(사로 6, 126발)에서 총은 항상 위로 튀었다 → 'bottom'. 장면이 위아래 뒤집혀 들어오는 설치라면 'top'.
+    // 긴 줄(20px 이상) 36발에서 중심 대비 평균 1.3점, 최대 5.8점 차이. 짧은 점 90발은 평균 0.03점 차이.
+    startEnd: 'bottom',
+    startRows: 8        // 시작점 쪽 끝에서 이만큼의 줄(px)만 탄착점 계산에 쓴다(둥근 점 지름 약 5~8px)
   };
 
   // target: {cx, cy, rx, ry, angle} - ROI 좌표의 과녁(바깥 원 = 1점 원 테두리)
@@ -48,7 +55,7 @@
     const bgY = new Float32Array(n), bgV = new Float32Array(nh), nzV = new Float32Array(nh).fill(2);
     const prevV = new Uint8Array(nh);
     const inScan = new Uint8Array(n), inScanH = new Uint8Array(nh);
-    const mark = new Uint8Array(n), stack = new Int32Array(n);
+    const mark = new Uint8Array(n), stack = new Int32Array(n), accP = new Int32Array(n), accW = new Float32Array(n);
     let tgt = null, frames = 0, pending = null, lastShotTs = -1e9, scanCount = 0;
     const st = { frames: 0, globalSkips: 0, rejectedLong: 0, rejectedSmall: 0, shots: 0 };
 
@@ -92,7 +99,7 @@
           const inBlob = (dY >= o.blobY && dV >= o.blobV) || dY >= o.blobSatY || p === p0;
           if (!inBlob) continue;
           const wt = Math.max(1, dY) + Math.max(0, dV) * 2;
-          cnt++; sw += wt; sx += x * wt; sy += y * wt; if (dV > maxDV) maxDV = dV;
+          accP[cnt] = p; accW[cnt] = wt; cnt++; sw += wt; sx += x * wt; sy += y * wt; if (dV > maxDV) maxDV = dV;
           if (y < minY) minY = y; if (y > maxY) maxY = y; if (x < minX) minX = x; if (x > maxX) maxX = x;
           for (let oy = -o.growR; oy <= o.growR; oy++) for (let ox = -o.growR; ox <= o.growR; ox++) {
             const nx = x + ox, ny = y + oy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
@@ -100,7 +107,15 @@
           }
         }
         if (cnt < o.minBlob) { st.rejectedSmall++; continue; }
-        blobs.push({ x: sx / sw, y: sy / sw, e: sw, size: cnt, len: Math.max(maxY - minY, maxX - minX) + 1, maxDV });
+        // 시작점: 줄의 시작 쪽 끝 startRows줄만 모아 중심을 낸다
+        let tx = sx / sw, ty = sy / sw;
+        if (o.startEnd !== 'center') {
+          const lo = o.startEnd === 'top' ? minY : maxY - o.startRows + 1, hi = o.startEnd === 'top' ? minY + o.startRows - 1 : maxY;
+          let w2 = 0, x2 = 0, y2 = 0;
+          for (let j = 0; j < cnt; j++) { const p = accP[j], y = (p / w) | 0; if (y < lo || y > hi) continue; w2 += accW[j]; x2 += (p % w) * accW[j]; y2 += y * accW[j]; }
+          if (w2 > 0) { tx = x2 / w2; ty = y2 / w2; }
+        }
+        blobs.push({ x: tx, y: ty, cx: sx / sw, cy: sy / sw, e: sw, size: cnt, len: Math.max(maxY - minY, maxX - minX) + 1, maxDV });
       }
       return blobs;
     }
@@ -135,20 +150,20 @@
       const b = blobs.length ? blobs.reduce((a, c) => c.e > a.e ? c : a) : null;
       if (b) {
         if (pending && Math.hypot(b.x - pending.x, b.y - pending.y) <= o.mergeDist) {
-          // 이어진 장면에 또 보임: 같은 발(2장에 걸침)로 합친다. 탄착점 = 두 장면 빛 전체의 중심
+          // 이어진 장면에 또 보임: 같은 발(2장에 걸침)로 합친다. 탄착점은 첫 장면의 시작점 그대로(다음 장면은 총이 튄 뒤의 자취)
           const E = pending.e + b.e;
-          pending.x = (pending.x * pending.e + b.x * b.e) / E; pending.y = (pending.y * pending.e + b.y * b.e) / E;
+          pending.cx = (pending.cx * pending.e + b.cx * b.e) / E; pending.cy = (pending.cy * pending.e + b.cy * b.e) / E;
           pending.e = E; pending.frames++; pending.size += b.size; pending.len = Math.max(pending.len, b.len); pending.maxDV = Math.max(pending.maxDV, b.maxDV);
           if (pending.frames > o.maxLitFrames) { st.rejectedLong++; pending.dead = true; }
         } else if (!pending) {
-          if (ts - lastShotTs > o.lockoutMs) pending = { ts, x: b.x, y: b.y, e: b.e, frames: 1, size: b.size, len: b.len, maxDV: b.maxDV };
+          if (ts - lastShotTs > o.lockoutMs) pending = { ts, x: b.x, y: b.y, cx: b.cx, cy: b.cy, e: b.e, frames: 1, size: b.size, len: b.len, maxDV: b.maxDV };
         }
       } else if (pending) {
         // 빛이 사라졌다 → 1~3장만 켜졌던 빛이면 발로 확정
         if (!pending.dead) {
           const s = scoreAt(pending.x, pending.y);
           if (s.nr <= o.missLimit) {
-            events.push({ ts: pending.ts, x: pending.x, y: pending.y, nr: s.nr, si: s.si, sd: s.sd, frames: pending.frames, size: pending.size, len: pending.len, maxDV: pending.maxDV });
+            events.push({ ts: pending.ts, x: pending.x, y: pending.y, cx: pending.cx, cy: pending.cy, nr: s.nr, si: s.si, sd: s.sd, frames: pending.frames, size: pending.size, len: pending.len, maxDV: pending.maxDV });
             st.shots++; lastShotTs = pending.ts;
           }
         }

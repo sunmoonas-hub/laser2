@@ -7,7 +7,7 @@
  * 사용: node tools/replay.js <clips.json> <meta.json 또는 JSON 문자열> [확인용PNG경로]
  *   - clips.json : Firebase {LEAGUE_ROOT}/camlab/rec/{세션}/clips 를 내려받은 파일
  *   - meta       : 같은 세션의 meta(roi: 과녁 중심 cx,cy·반지름 r·잘라 낸 영역 x,y,w,h)
- *   - PNG        : 발마다 레이저 장면을 잘라 탄착점(초록 +)과 '가장 센 빨강 픽셀'(빨강 ×, 지금 앱 방식)을 표시한 모음 이미지
+ *   - PNG        : 발마다 레이저 장면을 잘라 탄착점(초록 +, 줄의 시작점)과 '가장 센 빨강 픽셀'(빨강 ×, 지금 앱 방식)을 표시한 모음 이미지
  */
 'use strict';
 const fs = require('fs'), path = require('path'), zlib = require('zlib');
