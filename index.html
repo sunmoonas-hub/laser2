@@ -910,6 +910,7 @@
     els.player.value=`${st.grade}-${cls}반`;els.laserColor.value='red';els.detectKind.value='laser';
     startMatch();
     state.maxShots=practice?99:lg.run.shots;   // 연습은 발수 제한 없이 시간으로만 끝난다
+    state.perf={n:0,sum:0,max:0,skipped:0,frames:0};   // 이번 경기의 장면 분석 통계(lgPerf)를 새로 잰다
     // 3-2-1이 컨트롤 타워가 정한 시작 시각에 정확히 끝나도록 카운트다운 끝 시각을 다시 맞춘다(명령이 늦게 닿은 만큼 짧아짐).
     state.countdownEnd=performance.now()+Math.max(0,st.startAt-lgNow());
     els.firingLane.disabled=true;document.body.classList.add('lg-on');updateScore();lgRender();lgPush();
@@ -935,65 +936,66 @@
     const r=lg.run||{},live=state.matchCfg&&state.matchCfg.mode==='league';
     return{online:true,calibrated:!!(state.center&&state.radius),runId:r.runId||null,kind:r.kind||null,cls:r.cls||null,
       shots:r.final||(live?lgShots():[]),done:!!r.done&&!r.aborted,timeUp:!!r.timeUp,finishMs:r.finishMs==null?null:r.finishMs,
-      failed:!!r.failed,at:firebase.database.ServerValue.TIMESTAMP};
+      failed:!!r.failed,perf:lgPerf(),at:firebase.database.ServerValue.TIMESTAMP};
   }
+  // 카메라 장면 분석 상태: 건너뛴 장면 비율(skip%)이 높으면 레이저를 놓칠 수 있다(빛이 보통 한 장면에만 찍힘).
+  function lgPerf(){const pf=state.perf;if(!pf||!pf.frames)return null;return{frames:pf.frames,skipPct:Math.round(pf.skipped/pf.frames*1000)/10,avgMs:pf.n?Math.round(pf.sum/pf.n*10)/10:0,maxMs:Math.round(pf.max)}}
   function lgPush(){if(lg.ref)lg.ref.set(lgPayload()).catch(()=>{})}
-  // [임시 진단] 일부 태블릿에서 큰 시계 판으로 바뀐 뒤 화면이 까맣게 보인다는 보고가 있어, 그 순간의 화면 배치를 {LEAGUE_ROOT}/diag/{사로}에 남긴다.
-  function lgDiag(){
-    try{
-      const q=s=>document.querySelector(s),rc=el=>{if(!el)return null;const b=el.getBoundingClientRect(),cs=getComputedStyle(el);return{x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),h:Math.round(b.height),d:cs.display,p:cs.position,v:cs.visibility,o:cs.opacity}};
-      const who=(x,y)=>{const e=document.elementFromPoint(x,y);if(!e)return null;const out=[];let c=e;for(let i=0;c&&i<4;i++,c=c.parentElement)out.push(c.tagName.toLowerCase()+(c.id?'#'+c.id:'')+(c.className&&typeof c.className==='string'?'.'+c.className.trim().split(/\s+/).join('.'):''));return out.join(' < ')};
-      const W=innerWidth,H=innerHeight;
-      fb.db.ref(LG_ROOT+'/diag/'+LANE_FIXED).set({at:firebase.database.ServerValue.TIMESTAMP,ua:navigator.userAgent,W,H,dpr:devicePixelRatio,vv:window.visualViewport?{w:Math.round(visualViewport.width),h:Math.round(visualViewport.height),s:visualViewport.scale}:null,
-        scrollY:Math.round(scrollY),body:document.body.className,fs:!!document.fullscreenElement,has:CSS.supports('selector(:has(a))'),cq:CSS.supports('width:1cqw'),
-        html:rc(document.documentElement),bodyR:rc(document.body),app:rc(q('.app')),camera:rc(q('.camera')),side:rc(q('#sidePanel')),big:rc(q('#lgBig')),clock:rc(q('#lgBClock')),video:rc(q('video')),
-        atLeft:who(W*.3,H*.5),atRight:who(W*.85,H*.5),atCenter:who(W*.5,H*.5)}).catch(()=>{});
-    }catch(e){}
-  }
+  // 화면 갱신은 값이 바뀐 곳만 한다. 레이저 빛은 보통 카메라 한 장면에만 찍히는데, 0.2초마다 글자를 다시 쓰고
+  // 판 크기를 재면(강제 레이아웃) 성능이 빠듯한 태블릿에서 그 장면 분석을 건너뛰어 발을 놓쳤다(같은 과녁을 찍은 6·7사로 기록 비교).
+  const lgTxtCache={};
+  function lgTxt(id,v){if(lgTxtCache[id]===v)return false;lgTxtCache[id]=v;document.getElementById(id).textContent=v;return true}
+  function lgCls(el,v){if(el.className!==v)el.className=v}
   function lgRender(){
     const h=document.getElementById('lgHud');if(!h)return;
     const st=lg.st,cls=st&&st.lanes&&st.lanes[LANE_FIXED];
-    if(!LANE_FIXED||!st||!cls){h.hidden=true;document.body.classList.remove('lg-on','lmboard');return}
-    h.hidden=false;
+    if(!LANE_FIXED||!st||!cls){if(!h.hidden)h.hidden=true;document.body.classList.remove('lg-on','lmboard');return}
     const r=lg.run&&lg.run.runId===st.runId?lg.run:null,t=lgNow(),rl=st.rule||{};
-    const shots=r&&r.final?r.final:(state.matchCfg&&state.matchCfg.mode==='league'?lgShots():[]);
+    const shots=r&&r.final?r.final:(state.matchCfg&&state.matchCfg.mode==='league'?state.shots:[]);
     const n=shots.length,per=rl.per||1,team=st.teamSize||15,dec=st.scoring!=='int';
-    const sum=shots.reduce((a,s)=>a+(dec?(Number(s.sd)||0):(Number(s.si)||0)),0);
-    let cls2='',clk='',t2='';
+    let sum=0;for(const s of shots)sum+=dec?(Number(s.sd==null?s.score:s.sd)||0):(Number(s.si!=null?s.si:s.score)||0);
+    const sumTxt=dec?sum.toFixed(1):String(sum);
     const title=`${st.grade}학년 ${cls}반 · ${st.round}라운드${st.round===1?' '+st.heat+'조':''}`;
-    if(r&&r.failed){cls2='warn';clk='보정 필요';t2='표적 보정 후 컨트롤 타워에 알려 주세요'}
-    else if(r&&!r.done&&state.running){
-      cls2=r.kind==='practice'?'practice':'';clk=lgFmt(r.endAt-Math.max(t,r.startAt));
-      t2=r.kind==='practice'?`연습 · ${n}발`:`사수 ${Math.min(team,Math.floor(n/per)+1)}/${team} · ${n}/${rl.shots}발 · ${dec?sum.toFixed(1):sum}점`;
-    }else if(r&&r.done&&!r.aborted){cls2='done';clk=r.timeUp?'시간 종료':(r.finishMs/1000).toFixed(1)+'초';t2=`${n}/${rl.shots}발 · ${dec?sum.toFixed(1):sum}점`}
-    else{clk=state.center&&state.radius?'대기':'보정 필요';cls2=state.center&&state.radius?'':'warn';t2=state.center&&state.radius?'컨트롤 타워 신호를 기다리는 중':'카메라 시작 → 표적 자동 보정을 해 주세요'}
-    h.className='lg-hud '+cls2;document.getElementById('lgT1').textContent=title;document.getElementById('lgClk').textContent=clk;document.getElementById('lgT2').textContent=t2;
     // 큰 시계 판: 연습·본사격 중과 끝난 직후에만 오른쪽 버튼 영역을 덮는다(대기 중에는 카메라·보정 버튼을 써야 하므로 작은 표시만).
     const big=!!(r&&!r.failed&&!r.aborted&&(state.running||r.done));
-    // 배치가 바뀌면 카메라 화면 크기도 바뀌므로, 과녁 표시 위치를 다시 맞춘다(resize가 영상 기준 좌표로 복원).
-    if(document.body.classList.contains('lmboard')!==big){document.body.classList.toggle('lmboard',big);if(big)window.scrollTo(0,0);setTimeout(resize,60);if(big)setTimeout(lgDiag,1500)}
-    // 안전장치: 브라우저의 광고 차단 등이 리그 화면 중 body를 숨기면(display:none) 강제로 다시 보이게 한다.
-    if(big&&getComputedStyle(document.body).display==='none')document.body.style.setProperty('display','block','important');
-    if(!big)return;
-    const b=document.getElementById('lgBig'),live=!r.done,pre=live&&t<r.startAt,left=r.endAt-Math.max(t,r.startAt);
-    b.className='lmboard '+(r.kind==='practice'?'practice':r.done?'done':'');
-    document.getElementById('lgBTitle').textContent=title;
-    document.getElementById('lgBLabel').textContent=r.kind==='practice'?'연습':(r.done?(r.timeUp?'시간 종료':'사격 완료'):(pre?'준비':'본사격'));
+    if(document.body.classList.contains('lmboard')!==big){
+      document.body.classList.toggle('lmboard',big);if(big)window.scrollTo(0,0);
+      // 배치가 바뀌면 카메라 화면 크기도 바뀌므로, 과녁 표시 위치를 다시 맞춘다(resize가 영상 기준 좌표로 복원).
+      setTimeout(resize,60);
+      // 안전장치: 브라우저의 광고 차단 등이 리그 화면 중 body를 숨기면(display:none) 다시 보이게 한다(전환할 때 한 번만 검사).
+      if(big)setTimeout(()=>{if(getComputedStyle(document.body).display==='none')document.body.style.setProperty('display','block','important')},300);
+      lg.fitKey='';
+    }
+    if(!big){
+      // 작은 표시(대기·보정 필요)
+      let cls2='',clk,t2;
+      if(r&&r.failed){cls2='warn';clk='보정 필요';t2='표적 보정 후 컨트롤 타워에 알려 주세요'}
+      else if(r&&r.done&&!r.aborted){cls2='done';clk=r.timeUp?'시간 종료':(r.finishMs/1000).toFixed(1)+'초';t2=`${n}/${rl.shots}발 · ${sumTxt}점`}
+      else{const ok=!!(state.center&&state.radius);clk=ok?'대기':'보정 필요';cls2=ok?'':'warn';t2=ok?'컨트롤 타워 신호를 기다리는 중':'카메라 시작 → 표적 자동 보정을 해 주세요'}
+      if(h.hidden)h.hidden=false;lgCls(h,'lg-hud '+cls2);lgTxt('lgT1',title);lgTxt('lgClk',clk);lgTxt('lgT2',t2);
+      return;
+    }
+    const live=!r.done,pre=live&&t<r.startAt,left=r.endAt-Math.max(t,r.startAt);
+    lgCls(document.getElementById('lgBig'),'lmboard '+(r.kind==='practice'?'practice':r.done?'done':''));
+    let changed=lgTxt('lgBTitle',title);
+    changed=lgTxt('lgBLabel',r.kind==='practice'?'연습':(r.done?(r.timeUp?'시간 종료':'사격 완료'):(pre?'준비':'본사격')))||changed;
     const ck=document.getElementById('lgBClock');
-    ck.textContent=r.done?(r.timeUp?'0:00':(r.finishMs/1000).toFixed(1)+'초'):lgFmt(left);
-    ck.classList.toggle('urgent',live&&!pre&&left<=10000);   // 마지막 10초는 빨간색
-    ck.classList.toggle('long',ck.textContent.length>5);
-    document.getElementById('lgBSub').textContent=r.kind==='practice'?`${n}발`:(r.done?`${dec?sum.toFixed(1):sum}점`:`사수 ${Math.min(team,Math.floor(n/per)+1)} / ${team}`);
-    document.getElementById('lgBSub2').textContent=r.kind==='practice'?'점수에 들어가지 않아요':`${n} / ${rl.shots}발`+(r.done?'':` · ${dec?sum.toFixed(1):sum}점`);
-    lgFitBig();
+    changed=lgTxt('lgBClock',r.done?(r.timeUp?'0:00':(r.finishMs/1000).toFixed(1)+'초'):lgFmt(left))||changed;
+    const urgent=live&&!pre&&left<=10000;if(ck.classList.contains('urgent')!==urgent)ck.classList.toggle('urgent',urgent);   // 마지막 10초는 빨간색
+    changed=lgTxt('lgBSub',r.kind==='practice'?`${n}발`:(r.done?`${sumTxt}점`:`사수 ${Math.min(team,Math.floor(n/per)+1)} / ${team}`))||changed;
+    changed=lgTxt('lgBSub2',r.kind==='practice'?'점수에 들어가지 않아요':`${n} / ${rl.shots}발`+(r.done?'':` · ${sumTxt}점`))||changed;
+    if(changed)lgFitBig();
   }
   // 큰 판의 실제 폭·높이를 재서 글자 크기를 정한다(시계는 폭의 92%·높이의 38%까지). 숫자 한 글자 폭 ≈ 0.6em, 한글 섞인 줄은 ≈ 0.85em로 본다.
+  // 판 크기와 글자 수가 그대로면 다시 계산하지 않는다(매초 바뀌는 시계 숫자는 글자 수가 같아 대부분 건너뜀).
   function lgFitBig(){
-    const b=document.getElementById('lgBig'),W=b.clientWidth-20,H=b.clientHeight-20;if(W<=0||H<=0)return;
+    const b=document.getElementById('lgBig'),ids=['lgBClock','lgBTitle','lgBLabel','lgBSub','lgBSub2'];
+    const lens=ids.map(id=>(lgTxtCache[id]||'').length).join(','),W0=b.clientWidth,H0=b.clientHeight,key=W0+'x'+H0+':'+lens;
+    if(key===lg.fitKey)return;lg.fitKey=key;
+    const W=W0-20,H=H0-20;if(W<=0||H<=0){lg.fitKey='';return}
     const set=(id,px)=>{const e=document.getElementById(id),v=Math.round(px)+'px';if(e.style.fontSize!==v)e.style.fontSize=v};
-    const ck=document.getElementById('lgBClock');
-    set('lgBClock',Math.min(W*.92/(Math.max(4,ck.textContent.length)*.6),H*.38));
-    const line=(id,hr)=>{const e=document.getElementById(id),n=Math.max(1,e.textContent.length);set(id,Math.max(12,Math.min(H*hr,W*.95/(n*.85))))};
+    set('lgBClock',Math.min(W*.92/(Math.max(4,(lgTxtCache.lgBClock||'').length)*.6),H*.38));
+    const line=(id,hr)=>{const n=Math.max(1,(lgTxtCache[id]||'').length);set(id,Math.max(12,Math.min(H*hr,W*.95/(n*.85))))};
     line('lgBTitle',.07);line('lgBLabel',.08);line('lgBSub',.11);line('lgBSub2',.065);
   }
 
@@ -1010,7 +1012,9 @@
     const sd=manualScore==null?(nr>1.015?0:Math.min(10.9,Math.max(1,Math.floor((11.15-ringPos)*10)/10))):Number(manualScore);
     state.shots.push({score,sd,screenX:x,screenY:y,videoX,videoY,xMm:+xMm.toFixed(1),yMm:+yMm.toFixed(1),normalizedRadius:+nr.toFixed(4),manual:manualScore!=null,kind:k,time:new Date().toLocaleTimeString('ko-KR',{hour12:false})});
     if(lg.run&&!lg.run.done&&state.matchCfg&&state.matchCfg.mode==='league')lgOnShot(state.shots[state.shots.length-1]);
-    state.lastHit=performance.now();showScore(score);updateScore();drawOverlay();els.undoBtn.disabled=false;pushLive(true);
+    // 리그전 소수점 채점이면 맞을 때 크게 뜨는 점수도 소수점으로(예: 9.4). 수업용은 그대로 정수.
+    const lgDec=state.matchCfg&&state.matchCfg.mode==='league'&&lg.st&&lg.st.scoring!=='int';
+    state.lastHit=performance.now();showScore(lgDec?(sd?sd.toFixed(1):0):score);updateScore();drawOverlay();els.undoBtn.disabled=false;pushLive(true);
     if(state.shots.length>=state.maxShots)setTimeout(finishMatch,650)
   }
 
