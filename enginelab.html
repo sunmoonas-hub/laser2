@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LASER MATCH · 새 인식 시험</title>
+<style>
+  /* 재설계 2단계 시험 페이지(수업·리그 화면과 무관).
+     새 장면 수집(장면 줄 + 일꾼 스레드 + 표적 주변만 복사)과 새 인식 엔진을 실제 태블릿에서 돌려,
+     빠진 장면 0·처리 시간·발 인식을 확인한다. 발 앞뒤 장면은 Firebase에 올려 PC에서 다시 확인한다. */
+  :root{--bg:#07111f;--panel:#101d30;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Malgun Gothic",sans-serif;font-size:15px}
+  .wrap{max-width:1100px;margin:0 auto;padding:10px 12px}
+  h1{font-size:1.15rem;margin:0 8px 0 0}
+  .muted{color:var(--muted)}
+  button{min-height:46px;border-radius:12px;border:0;background:var(--cyan);color:#07111f;font-weight:900;font-size:.95rem;padding:0 14px}
+  button.alt{background:#142941;color:var(--text);border:1px solid #34506f}
+  button.stop{background:var(--red);color:#fff}
+  button.on{background:var(--gold);color:#07111f}
+  button:disabled{opacity:.4}
+  label{display:inline-flex;gap:6px;align-items:center}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+  .main{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px}
+  @media (max-width:700px){.main{grid-template-columns:1fr}}
+  .stagebox{position:relative;width:100%;aspect-ratio:4/3;background:#000;border-radius:12px;overflow:hidden}
+  .stagebox video,.stagebox canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .score{font-size:3.4rem;font-weight:900;line-height:1;color:var(--lime)}
+  .score small{font-size:1.1rem;color:var(--muted);font-weight:700;margin-left:8px}
+  .stat{font-family:ui-monospace,monospace;font-size:.82rem;line-height:1.5}
+  .bad{color:var(--red);font-weight:900}.good{color:var(--lime);font-weight:900}
+  table{width:100%;border-collapse:collapse;font-size:.82rem}
+  th,td{padding:3px 5px;border-bottom:1px solid var(--line);text-align:right}
+  th{color:var(--muted);font-weight:700}
+  .list{max-height:240px;overflow:auto;margin-top:6px}
+  #log{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:.75rem;color:var(--muted);max-height:120px;overflow:auto}
+</style>
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="row"><h1>🎯 새 인식 시험</h1><span class="muted">다른 탭(수업·리그 화면)은 닫고 쓰세요.</span></div>
+  <div class="row">
+    <button id="camBtn">① 카메라 켜기</button>
+    <button id="runBtn" disabled>② 인식 시작</button>
+    <button id="busyBtn" class="alt" disabled>메인 일부러 바쁘게</button>
+    <button id="clrBtn" class="alt">기록 지우기</button>
+    <label><input type="checkbox" id="compChk" checked> 노출 보정 최저(30장/초)</label>
+    <label><input type="checkbox" id="saveChk" checked> 발 앞뒤 장면 올리기</label>
+  </div>
+  <div class="main">
+    <div>
+      <div class="stagebox"><video id="v" playsinline muted></video><canvas id="ov"></canvas></div>
+      <div class="muted" id="hint" style="margin-top:4px">카메라를 켠 뒤 화면에서 과녁 가운데 → 가장 바깥 원 테두리를 차례로 눌러 주세요.</div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="muted">마지막 발</div>
+        <div class="score" id="last">-<small></small></div>
+        <div class="muted" id="lastInfo" style="margin-top:4px">&nbsp;</div>
+      </div>
+      <div class="panel" style="margin-top:8px">
+        <div class="stat" id="stat">인식 전</div>
+      </div>
+      <div class="panel" style="margin-top:8px">
+        <div class="row" style="margin:0"><b>발 기록</b><span class="muted" id="sum"></span></div>
+        <div class="list"><table><thead><tr><th>#</th><th>소수점</th><th>정수</th><th>줄 길이</th><th>장면</th><th>중심이면</th></tr></thead><tbody id="shots"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:8px"><div id="log"></div></div>
+</div>
+<script>
+(function(){
+  'use strict';
+  const CFG=window.LASER_CONFIG||{},ROOT=String(CFG.LEAGUE_ROOT||'league_test');
+  const $=id=>document.getElementById(id);
+  const lane=new URLSearchParams(location.search).get('lane')||'';
+  const S={stream:null,track:null,db:null,dbTried:false,roi:null,target:null,taps:[],worker:null,capTrack:null,running:false,shots:[],clips:0,busy:null,uploads:Promise.resolve(),sess:'',lastStat:null};
+  const r1=v=>Math.round(v*10)/10,r2=v=>Math.round(v*100)/100;
+  function log(s){$('log').textContent+=new Date().toLocaleTimeString('ko-KR',{hour12:false})+' '+s+'\n';$('log').scrollTop=1e9}
+  // Firebase는 올리기를 켰을 때만 연결한다. 연결이 안 돼도(학교 유선망 차단 등) 인식 시험은 그대로 된다.
+  async function fbReady(){
+    if(S.db||S.dbTried)return S.db;S.dbTried=true;
+    try{if(!firebase.apps.length)firebase.initializeApp(CFG.FIREBASE);await firebase.auth().signInAnonymously();S.db=firebase.database()}
+    catch(e){log('Firebase 연결 실패(기록은 이 화면에만 남음): '+e.message)}
+    return S.db;
+  }
+  const put=(path,val)=>{if(!S.db||!$('saveChk').checked)return;S.uploads=S.uploads.then(()=>S.db.ref(`${ROOT}/enginelab/${S.sess}/${path}`).set(val)).catch(e=>log('올리기 실패: '+e.message))};
+
+  /* ---------- 카메라 ---------- */
+  // 녹화(camlab)와 같은 조건: 640x480 · 30장/초 요청 → 노출 보정 최저.
+  // 0단계 측정: 자동 노출이면 노출 41.7ms라 24장/초밖에 안 나오고, 보정 −2면 29.8장/초(밝기 159→69).
+  // 노출 시간을 직접 짧게 하면 안 된다(레이저가 5ms만 켜져 장면 사이 빈틈에 떨어짐).
+  async function applyComp(){
+    if(!S.track)return;const caps=S.track.getCapabilities?S.track.getCapabilities():{};
+    const c=caps.exposureCompensation,val=$('compChk').checked&&c&&Number.isFinite(c.min)?c.min:0;
+    try{await S.track.applyConstraints({frameRate:{ideal:30},advanced:[{exposureMode:'continuous',exposureCompensation:val}]})}catch(e){log('노출 보정 실패: '+e.message)}
+    const s=S.track.getSettings();log(`카메라 ${s.width}x${s.height} · ${s.frameRate||'?'}fps 요청 · 노출 보정 ${s.exposureCompensation} · 노출 ${s.exposureTime??'-'}`);
+  }
+  $('camBtn').onclick=async()=>{
+    try{
+      if(S.running)stopRun();
+      if(S.stream)S.stream.getTracks().forEach(t=>t.stop());
+      S.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}}});
+      const v=$('v');v.srcObject=S.stream;await v.play();S.track=S.stream.getVideoTracks()[0];
+      await applyComp();sizeOverlay();$('runBtn').disabled=!S.roi;
+      if(typeof MediaStreamTrackProcessor!=='function'){log('⚠ 이 브라우저는 장면 줄 세우기(MediaStreamTrackProcessor)를 지원하지 않아 시험할 수 없어요');$('runBtn').disabled=true}
+    }catch(e){log('카메라 실패: '+e.message)}
+  };
+  $('compChk').onchange=applyComp;
+
+  /* ---------- 과녁 지정(두 번 누르기) ---------- */
+  function sizeOverlay(){const c=$('ov'),b=c.getBoundingClientRect();if(!b.width||!b.height)return;c.width=b.width;c.height=b.height;draw()}
+  function geom(){const v=$('v'),c=$('ov'),vw=v.videoWidth,vh=v.videoHeight,sc=Math.min(c.width/vw,c.height/vh);return{vw,vh,sc,ox:(c.width-vw*sc)/2,oy:(c.height-vh*sc)/2}}
+  $('ov').addEventListener('pointerdown',e=>{
+    if(!$('v').videoWidth)return;const b=$('ov').getBoundingClientRect(),g=geom();
+    const vx=(e.clientX-b.left-g.ox)/g.sc,vy=(e.clientY-b.top-g.oy)/g.sc;
+    S.taps.push({x:vx,y:vy});if(S.taps.length>2)S.taps=[S.taps[2]];
+    if(S.taps.length===2){
+      const [c0,c1]=S.taps,r=Math.hypot(c1.x-c0.x,c1.y-c0.y),half=Math.ceil(r*1.9);   // 엔진 채점 범위(바깥 원의 1.8배) + 여유
+      const even=n=>n&~1,x=even(Math.max(0,Math.round(c0.x-half))),y=even(Math.max(0,Math.round(c0.y-half)));
+      const w=even(Math.min(g.vw-x,half*2)),h=even(Math.min(g.vh-y,half*2));
+      S.roi={x,y,w,h,cx:c0.x,cy:c0.y,r};S.target={cx:c0.x-x,cy:c0.y-y,rx:r,ry:r,angle:0};
+      $('hint').textContent=`과녁 반지름 ${Math.round(r)}px · 읽는 범위 ${w}x${h}. 다시 정하려면 두 번 더 누르세요(인식 중이면 다시 시작됩니다).`;
+      $('runBtn').disabled=!S.track||typeof MediaStreamTrackProcessor!=='function';
+      if(S.running){stopRun();startRun()}
+    }else $('hint').textContent='이제 가장 바깥 원의 테두리를 눌러 주세요.';
+    draw();
+  });
+  addEventListener('resize',sizeOverlay);
+
+  /* ---------- 화면: 과녁과 탄착 표시 ---------- */
+  // 초록 점 = 새 탄착점(줄의 시작점), 회색 점과 선 = 빛 덩어리 전체 중심(예전 방식, 비교용)
+  function draw(){
+    const c=$('ov'),x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);if(!S.roi||!$('v').videoWidth)return;
+    const g=geom(),r=S.roi,X=vx=>g.ox+vx*g.sc,Y=vy=>g.oy+vy*g.sc;
+    x.strokeStyle='#29e7d6';x.lineWidth=2;x.beginPath();x.arc(X(r.cx),Y(r.cy),r.r*g.sc,0,Math.PI*2);x.stroke();
+    x.strokeStyle='rgba(41,231,214,.35)';x.beginPath();x.arc(X(r.cx),Y(r.cy),r.r*g.sc*.5,0,Math.PI*2);x.stroke();
+    x.strokeStyle='#ffc940';x.setLineDash([6,4]);x.strokeRect(X(r.x),Y(r.y),r.w*g.sc,r.h*g.sc);x.setLineDash([]);
+    S.shots.forEach((s,i)=>{
+      const last=i===S.shots.length-1,sx=X(s.vx),sy=Y(s.vy),cx=X(s.vcx),cy=Y(s.vcy);
+      if(Math.hypot(sx-cx,sy-cy)>2){x.strokeStyle='rgba(200,210,220,.7)';x.lineWidth=1;x.beginPath();x.moveTo(sx,sy);x.lineTo(cx,cy);x.stroke();x.fillStyle='rgba(200,210,220,.8)';x.beginPath();x.arc(cx,cy,2.5,0,Math.PI*2);x.fill()}
+      x.fillStyle=last?'#b7ff3c':'rgba(183,255,60,.55)';x.beginPath();x.arc(sx,sy,last?6:4,0,Math.PI*2);x.fill();
+      if(last){x.strokeStyle='#07111f';x.lineWidth=2;x.stroke()}
+    });
+  }
+
+  /* ---------- 인식 시작/멈춤 ---------- */
+  // 장면 줄은 메인에서 만들어 일꾼으로 넘긴다(일꾼 안에서 장면 줄 만들기는 이 태블릿이 지원하지 않음 - 0단계 측정).
+  async function startRun(){
+    if(!S.track||!S.roi)return;
+    if($('saveChk').checked)await fbReady();
+    S.sess=(lane?'lane'+lane+'-':'')+Date.now().toString(36);S.clips=0;
+    put('meta',JSON.parse(JSON.stringify({at:new Date().toISOString(),ua:navigator.userAgent,lane,roi:S.roi,target:S.target,settings:S.track.getSettings()})));
+    const capTrack=S.capTrack=S.track.clone(),rd=new MediaStreamTrackProcessor({track:capTrack}).readable;
+    const w=S.worker=new Worker('engine/capture-worker.js');
+    w.onmessage=onWorker;w.onerror=e=>log('일꾼 오류: '+(e.message||e));
+    w.postMessage({cmd:'start',readable:rd,roi:{x:S.roi.x,y:S.roi.y,w:S.roi.w,h:S.roi.h},target:S.target,opts:{},clip:{on:$('saveChk').checked&&!!S.db,thrV:14,thrY:45}},[rd]);
+    S.running=true;$('runBtn').textContent='② 인식 멈춤';$('runBtn').className='stop';$('busyBtn').disabled=false;
+    log(`인식 시작 (세션 ${S.sess})`);
+  }
+  function stopRun(){
+    if(S.worker){S.worker.postMessage({cmd:'stop'});const w=S.worker;setTimeout(()=>w.terminate(),1500)}
+    try{S.capTrack&&S.capTrack.stop()}catch(_){}
+    S.worker=null;S.capTrack=null;S.running=false;$('runBtn').textContent='② 인식 시작';$('runBtn').className='';
+    if(S.lastStat)put('end',{n:S.lastStat.n,lost:S.lastStat.lost,shots:S.shots.length,clips:S.clips});
+    setBusy(false);$('busyBtn').disabled=true;
+  }
+  $('runBtn').onclick=()=>S.running?stopRun():startRun();
+  $('saveChk').onchange=async()=>{if($('saveChk').checked)await fbReady();S.worker&&S.worker.postMessage({cmd:'clip',on:$('saveChk').checked&&!!S.db})};
+
+  function b64(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s)}
+  function onWorker(e){
+    const d=e.data;
+    if(d.err){log('일꾼: '+d.err+(d.fmt?' (형식 '+d.fmt+')':''));return}
+    if(d.shot){
+      const s=d.shot,ro=S.roi,i=S.shots.length+1;
+      const cen=S.target?centroidScore(s):null;
+      const rec={i,ts:s.ts,frameNo:s.frameNo,sd:s.sd,si:s.si,nr:r2(s.nr),len:s.len,frames:s.frames,size:s.size,maxDV:s.maxDV,vx:s.x+ro.x,vy:s.y+ro.y,vcx:s.cx+ro.x,vcy:s.cy+ro.y,cenSd:cen};
+      S.shots.push(rec);put('shots/'+String(i).padStart(3,'0'),rec);render();draw();return;
+    }
+    if(d.clip){
+      const c=d.clip,idx=++S.clips;
+      put('clips/'+String(idx).padStart(3,'0'),{trigTs:c.trigTs,dv:c.dv,dy:c.dy,w:S.roi.w,h:S.roi.h,events:c.events.map(s=>({ts:s.ts,x:r2(s.x),y:r2(s.y),cx:r2(s.cx),cy:r2(s.cy),sd:s.sd,len:s.len,frames:s.frames})),frames:c.frames.map(f=>({ts:f.ts,dv:f.dv,dy:f.dy,y:b64(f.Y),v:b64(f.V)}))});
+      return;
+    }
+    if(d.stat){S.lastStat=d.stat;showStat(d.stat);return}
+    if(d.ended)log(`인식 끝: 장면 ${d.n}장 · 빠진 장면 ${d.lost}장`);
+  }
+  // 비교용: 같은 발을 예전 방식(빛 덩어리 전체 중심)으로 채점하면 몇 점이었는지
+  function centroidScore(s){
+    const t=S.target,nr=Math.hypot((s.cx-t.cx)/t.rx,(s.cy-t.cy)/t.ry),rp=nr*10;
+    return nr>1.015?0:Math.min(10.9,Math.max(1,Math.floor((11.15-rp)*10)/10));
+  }
+  function showStat(s){
+    const lostCls=s.lost?'bad':'good',fpsCls=s.fps>=28?'good':'bad';
+    $('stat').innerHTML=`장면 <b>${s.n}</b>장 · 속도 <span class="${fpsCls}">${s.fps}장/초</span> · 빠진 장면 <span class="${lostCls}">${s.lost}</span>장<br>`+
+      `표적 주변 복사 평균 ${r2(s.copyAvg)}ms (최대 ${r1(s.copyMax)}) · 엔진 평균 ${r2(s.engAvg)}ms (최대 ${r1(s.engMax)})<br>`+
+      `버린 빛: 너무 작음 ${s.eng.rejectedSmall} · 오래 켜짐 ${s.eng.rejectedLong} · 화면 전체 변화 ${s.eng.globalSkips}`+(S.busy?'<br><span class="bad">메인을 일부러 바쁘게 하는 중</span>':'')+
+      (S.clips?`<br>올린 장면 묶음 ${S.clips}개`:'');
+  }
+  function render(){
+    const a=S.shots,l=a[a.length-1];
+    $('last').innerHTML=l?`${l.sd.toFixed(1)}<small>정수 ${l.si}</small>`:'-<small></small>';
+    $('lastInfo').textContent=l?`#${l.i} · 줄 길이 ${l.len}px · 장면 ${l.frames}장`+(l.cenSd!=null&&Math.abs(l.cenSd-l.sd)>=0.05?` · 중심 기준이면 ${l.cenSd.toFixed(1)}`:''):' ';
+    const tot=a.reduce((p,s)=>p+s.sd,0),toti=a.reduce((p,s)=>p+s.si,0);
+    $('sum').textContent=a.length?` ${a.length}발 · 합계 ${r1(tot)} (정수 ${toti})`:'';
+    $('shots').innerHTML=a.slice().reverse().map(s=>`<tr><td>${s.i}</td><td>${s.sd.toFixed(1)}</td><td>${s.si}</td><td>${s.len}</td><td>${s.frames}</td><td>${s.cenSd!=null?s.cenSd.toFixed(1):'-'}</td></tr>`).join('');
+  }
+  $('clrBtn').onclick=()=>{S.shots=[];render();draw()};
+
+  /* ---------- 바쁜 메인 흉내 ---------- */
+  // 지금 앱은 한 발 직후 화면 갱신·저장·통신으로 메인이 바빠지면 장면을 건너뛰었다.
+  // 새 방식은 장면이 줄에서 기다리므로, 메인을 0.3초마다 0.15초씩 일부러 막아도 '빠진 장면'이 0이어야 한다.
+  function setBusy(on){
+    if(S.busy){clearInterval(S.busy);S.busy=null}
+    if(on)S.busy=setInterval(()=>{const t=performance.now();while(performance.now()-t<150){}},300);
+    $('busyBtn').className=on?'on':'alt';$('busyBtn').textContent=on?'바쁘게 하는 중 (끄기)':'메인 일부러 바쁘게';
+  }
+  $('busyBtn').onclick=()=>setBusy(!S.busy);
+})();
+</script>
+</body>
+</html>
