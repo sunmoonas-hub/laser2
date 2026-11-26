@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LASER MATCH · 카메라 실험실</title>
+<style>
+  /* 재설계 0단계 후속 시험 페이지(수업·리그 화면과 무관).
+     A. 노출 시험: 카메라 노출을 줄이는 여러 방법을 차례로 적용해 실제 장면 속도·밝기를 잰다.
+     B. 장면 녹화: 레이저가 맞는 순간 앞뒤 장면(표적 주변 원본)을 녹화해 Firebase에 올린다 → PC에서 인식 엔진 반복 시험용. */
+  :root{--bg:#07111f;--panel:#101d30;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Malgun Gothic",sans-serif;font-size:15px}
+  .wrap{max-width:1000px;margin:0 auto;padding:14px}
+  h1{font-size:1.25rem;margin:0 0 6px}
+  .muted{color:var(--muted)}
+  button{min-height:50px;border-radius:12px;border:0;background:var(--cyan);color:#07111f;font-weight:900;font-size:1rem;padding:0 18px}
+  button.alt{background:#142941;color:var(--text);border:1px solid #34506f}
+  button.stop{background:var(--red);color:#fff}
+  button:disabled{opacity:.4}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+  .stagebox{position:relative;width:100%;max-width:640px;aspect-ratio:4/3;background:#000;border-radius:12px;overflow:hidden}
+  .stagebox video,.stagebox canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px}
+  table{width:100%;border-collapse:collapse;font-size:.88rem}
+  th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--muted);font-weight:700}
+  .ok{color:var(--lime);font-weight:800}.no{color:var(--red);font-weight:800}
+  .big{font-size:1.6rem;font-weight:900}
+  #log{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:.78rem;color:var(--muted);max-height:180px;overflow:auto}
+</style>
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧪 카메라 실험실</h1>
+  <div class="muted">태블릿을 평소 자리에 두고 쓰세요. 다른 탭(리그 화면 등)은 닫아 주세요.</div>
+  <div class="row">
+    <button id="camBtn">① 카메라 켜기</button>
+    <button id="expBtn" class="alt" disabled>A. 노출 시험 (약 1분)</button>
+    <button id="recBtn" class="alt" disabled>B. 장면 녹화 시작</button>
+    <span id="stage" class="muted"></span>
+  </div>
+  <div class="stagebox"><video id="v" playsinline muted></video><canvas id="ov"></canvas></div>
+  <div class="muted" id="hint" style="margin-top:6px"></div>
+
+  <div class="panel" id="expPanel" hidden>
+    <b>A. 노출 시험 결과</b>
+    <table><thead><tr><th>방법</th><th>적용</th><th>장면 속도</th><th>노출(보고)</th><th>밝기(가운데)</th></tr></thead><tbody id="expBody"></tbody></table>
+  </div>
+
+  <div class="panel" id="recPanel" hidden>
+    <b>B. 장면 녹화</b>
+    <div class="row"><span>저장한 장면 묶음</span><span class="big" id="clipN">0</span><span class="muted" id="recStat"></span></div>
+    <div class="muted">레이저를 평소처럼 쏘세요. 맞을 때마다 앞뒤 장면이 자동으로 저장됩니다(목표 30발 이상). 가끔 쏘지 않은 장면도 비교용으로 저장됩니다.</div>
+  </div>
+
+  <div class="panel"><div class="muted" style="margin-bottom:6px">진행 기록</div><div id="log"></div></div>
+</div>
+<script>
+(function(){
+  'use strict';
+  const CFG=window.LASER_CONFIG||{},ROOT=String(CFG.LEAGUE_ROOT||'league_test');
+  const $=id=>document.getElementById(id);
+  const lane=new URLSearchParams(location.search).get('lane')||'';
+  const sess=(lane?'lane'+lane+'-':'')+Date.now().toString(36);
+  const S={stream:null,track:null,db:null,roi:null,taps:[],worker:null,recording:false,clips:0,uploads:Promise.resolve()};
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const r1=v=>Math.round(v*10)/10;
+  function log(s){$('log').textContent+=new Date().toLocaleTimeString('ko-KR',{hour12:false})+' '+s+'\n';$('log').scrollTop=1e9}
+  function stage(s){$('stage').textContent=s}
+
+  async function fbReady(){
+    if(S.db)return S.db;
+    if(!firebase.apps.length)firebase.initializeApp(CFG.FIREBASE);
+    await firebase.auth().signInAnonymously();S.db=firebase.database();return S.db;
+  }
+
+  /* ---------- 카메라 ---------- */
+  $('camBtn').onclick=async()=>{
+    try{
+      if(S.stream)S.stream.getTracks().forEach(t=>t.stop());
+      S.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}}});
+      const v=$('v');v.srcObject=S.stream;await v.play();S.track=S.stream.getVideoTracks()[0];
+      const s=S.track.getSettings();log(`카메라 ${s.width}x${s.height} · 노출 ${s.exposureTime} · ${s.exposureMode}`);
+      $('expBtn').disabled=false;$('recBtn').disabled=false;
+      $('hint').textContent='녹화하려면 먼저 화면에서 과녁 가운데를 한 번, 가장 바깥 원 테두리를 한 번 눌러 주세요.';
+      sizeOverlay();
+    }catch(e){log('카메라 실패: '+e.message);stage('카메라를 켤 수 없어요: '+e.message)}
+  };
+
+  /* ---------- 과녁 위치 지정(녹화 범위) ---------- */
+  // 화면을 두 번 누르면(가운데 → 바깥 원 테두리) 영상 좌표로 과녁 중심·반지름을 정하고, 그 주변만 녹화한다.
+  function sizeOverlay(){const c=$('ov'),b=c.getBoundingClientRect();c.width=b.width;c.height=b.height;drawOverlay()}
+  function geom(){const v=$('v'),c=$('ov'),vw=v.videoWidth,vh=v.videoHeight,sc=Math.min(c.width/vw,c.height/vh);return{vw,vh,sc,ox:(c.width-vw*sc)/2,oy:(c.height-vh*sc)/2}}
+  function drawOverlay(){
+    const c=$('ov'),x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);if(!S.roi||!$('v').videoWidth)return;const g=geom(),r=S.roi;
+    x.strokeStyle='#29e7d6';x.lineWidth=2;x.beginPath();x.arc(g.ox+r.cx*g.sc,g.oy+r.cy*g.sc,r.r*g.sc,0,Math.PI*2);x.stroke();
+    x.strokeStyle='#ffc940';x.setLineDash([6,4]);x.strokeRect(g.ox+r.x*g.sc,g.oy+r.y*g.sc,r.w*g.sc,r.h*g.sc);x.setLineDash([]);
+  }
+  $('ov').addEventListener('pointerdown',e=>{
+    if(!$('v').videoWidth||S.recording)return;const b=$('ov').getBoundingClientRect(),g=geom();
+    const vx=(e.clientX-b.left-g.ox)/g.sc,vy=(e.clientY-b.top-g.oy)/g.sc;
+    S.taps.push({x:vx,y:vy});if(S.taps.length>2)S.taps=[S.taps[2]];
+    if(S.taps.length===2){
+      const [c0,c1]=S.taps,r=Math.hypot(c1.x-c0.x,c1.y-c0.y),half=Math.ceil(r*1.9);   // 바깥 원 반지름의 1.9배까지(지금 앱의 0점 경계 1.8배 + 여유)
+      const even=n=>n&~1;let x=even(Math.max(0,Math.round(c0.x-half))),y=even(Math.max(0,Math.round(c0.y-half)));
+      let w=even(Math.min(g.vw-x,half*2)),h=even(Math.min(g.vh-y,half*2));
+      S.roi={x,y,w,h,cx:c0.x,cy:c0.y,r};$('hint').textContent=`녹화 범위 ${w}x${h} (과녁 반지름 ${Math.round(r)}px). 다시 정하려면 두 번 더 누르세요.`;
+    }else $('hint').textContent='이제 가장 바깥 원의 테두리를 눌러 주세요.';
+    drawOverlay();
+  });
+  addEventListener('resize',sizeOverlay);
+
+  /* ---------- A. 노출 시험 ---------- */
+  // 장면 줄 세우기로 장면을 직접 받아, 카메라가 붙인 시각으로 실제 장면 속도를 잰다(화면 표시와 무관한 진짜 속도).
+  async function measure(ms){
+    const tc=S.track.clone(),proc=new MediaStreamTrackProcessor({track:tc}),rd=proc.readable.getReader();
+    const ts=[],lum=[];const end=performance.now()+ms;
+    while(performance.now()<end){
+      const {value:f,done}=await rd.read();if(done||!f)break;ts.push(f.timestamp/1000);
+      if(ts.length%6===0){try{const w=64,h=64,x=((f.codedWidth-w)/2)&~1,y=((f.codedHeight-h)/2)&~1;const buf=new Uint8Array(f.allocationSize({rect:{x,y,width:w,height:h}}));const lay=await f.copyTo(buf,{rect:{x,y,width:w,height:h}});let s=0;for(let r=0;r<h;r++)for(let c=0;c<w;c++)s+=buf[lay[0].offset+r*lay[0].stride+c];lum.push(s/(w*h))}catch(_){}}
+      f.close();
+    }
+    try{rd.cancel()}catch(_){}try{tc.stop()}catch(_){}
+    const d=[];for(let i=1;i<ts.length;i++)d.push(ts[i]-ts[i-1]);
+    return{fps:d.length?r1(1000/(d.reduce((a,b)=>a+b,0)/d.length)):0,lum:lum.length?r1(lum.reduce((a,b)=>a+b,0)/lum.length):null};
+  }
+  async function tryOne(name,fn){
+    let applied='-',err='';
+    try{await fn();applied='적용됨'}catch(e){applied='거부';err=e.message}
+    await sleep(1500);   // 카메라가 새 설정에 자리 잡을 시간
+    const m=await measure(3500),s=S.track.getSettings();
+    const row={name,applied,err,fps:m.fps,lum:m.lum,exp:s.exposureTime,mode:s.exposureMode,comp:s.exposureCompensation,iso:s.iso,fr:s.frameRate};
+    log(name+' → '+JSON.stringify(row));
+    $('expBody').insertAdjacentHTML('beforeend',`<tr><td>${name}</td><td class="${applied==='적용됨'?'ok':'no'}">${applied}${err?' ('+err+')':''}</td><td class="${m.fps>=28?'ok':''}">${m.fps}장/초</td><td>${s.exposureTime??'-'} (${s.exposureMode||'-'})</td><td>${m.lum??'-'}</td></tr>`);
+    return row;
+  }
+  async function resetAuto(){try{await S.track.applyConstraints({frameRate:{ideal:30},advanced:[{exposureMode:'continuous',exposureCompensation:0}]})}catch(_){}}
+  $('expBtn').onclick=async()=>{
+    if(typeof MediaStreamTrackProcessor!=='function'){log('이 브라우저는 장면 줄 세우기를 지원하지 않아 시험할 수 없어요');return}
+    $('expBtn').disabled=$('recBtn').disabled=true;$('expPanel').hidden=false;$('expBody').innerHTML='';
+    const caps=S.track.getCapabilities?S.track.getCapabilities():{};const cmin=caps.exposureCompensation?caps.exposureCompensation.min:-2;
+    const rows=[];const T=(n,f)=>tryOne(n,f).then(r=>rows.push(r));
+    stage('A. 노출 시험 중… (약 1분, 화면을 건드리지 마세요)');
+    await resetAuto();await T('① 기본(자동 노출)',async()=>{});
+    await T('② 노출 보정 최저('+cmin+')',()=>S.track.applyConstraints({advanced:[{exposureCompensation:cmin}]}));
+    await resetAuto();await T('③ 장면 속도 최소 30 요구',()=>S.track.applyConstraints({frameRate:{min:30,ideal:30}}));
+    await T('④ ③ + 노출 보정 최저',()=>S.track.applyConstraints({frameRate:{min:30,ideal:30},advanced:[{exposureCompensation:cmin}]}));
+    await resetAuto();await T('⑤ 수동 노출 10ms (기본 제약)',()=>S.track.applyConstraints({exposureMode:'manual',exposureTime:100}));
+    await resetAuto();await T('⑥ 수동 노출 10ms + ISO 800 (advanced)',()=>S.track.applyConstraints({advanced:[{exposureMode:'manual',exposureTime:100,iso:800}]}));
+    await resetAuto();await T('⑦ 수동 노출 20ms + ISO 400 (advanced)',()=>S.track.applyConstraints({advanced:[{exposureMode:'manual',exposureTime:200,iso:400}]}));
+    await resetAuto();await T('⑧ ISO만 800 고정',()=>S.track.applyConstraints({advanced:[{iso:800}]}));
+    await resetAuto();
+    stage('A. 노출 시험 완료 - 결과 저장 중');
+    try{const db=await fbReady();await db.ref(`${ROOT}/camlab/exposure/${sess}`).set({at:new Date().toISOString(),ua:navigator.userAgent,lane,caps:JSON.parse(JSON.stringify(caps)),rows});stage('✔ A. 노출 시험 결과 저장 완료')}
+    catch(e){stage('A. 결과 저장 실패(화면을 사진으로 찍어 주세요): '+e.message)}
+    $('expBtn').disabled=$('recBtn').disabled=false;
+  };
+
+  /* ---------- B. 장면 녹화 (일꾼 스레드) ---------- */
+  // 메인에서 장면 줄을 만들어 일꾼 스레드로 넘기고, 일꾼은 표적 주변(녹화 범위)만 원본(I420)으로 복사한다.
+  // 레이저가 켜지는 순간(빨강 성분 V 또는 밝기 Y가 직전 장면보다 확 오름)을 잡아 그 앞 6장 + 뒤 6장을 한 묶음으로 보낸다.
+  const WORKER_SRC=`
+    let stopped=false;
+    self.onmessage=async e=>{
+      const m=e.data;if(m.cmd==='stop'){stopped=true;return}
+      if(m.cmd!=='start')return;
+      const {x,y,w,h}=m.roi,rect={x,y,width:w,height:h},hw=w>>1,hh=h>>1;
+      const reader=m.readable.getReader(),RING=6,AFTER=6;
+      let ring=[],prevY=null,prevV=null,clip=null,after=0,lastTrig=-1e9,lastBg=-1e9,n=0,lost=0,lastTs=null,gapMed=0,maxDV=0,maxDY=0,statAt=0;
+      const gaps=[];
+      while(!stopped){
+        const {value:f,done}=await reader.read();if(done||!f)break;
+        const ts=f.timestamp/1000;n++;
+        if(n===1)lastBg=ts;   // 비교용 '조용한 장면'은 녹화 시작 15초 뒤부터(시작하자마자 저장하면 발 직전 장면 6장이 비어 버림)
+        if(lastTs!=null){const g=ts-lastTs;gaps.push(g);if(gaps.length>60)gaps.shift();gapMed=gaps.slice().sort((a,b)=>a-b)[gaps.length>>1];if(gapMed&&g>gapMed*1.5)lost+=Math.round(g/gapMed)-1}
+        lastTs=ts;
+        let Y,U,V;
+        try{
+          const buf=new Uint8Array(f.allocationSize({rect}));const lay=await f.copyTo(buf,{rect});
+          Y=new Uint8Array(w*h);U=new Uint8Array(hw*hh);V=new Uint8Array(hw*hh);
+          for(let r=0;r<h;r++)Y.set(buf.subarray(lay[0].offset+r*lay[0].stride,lay[0].offset+r*lay[0].stride+w),r*w);
+          for(let r=0;r<hh;r++){U.set(buf.subarray(lay[1].offset+r*lay[1].stride,lay[1].offset+r*lay[1].stride+hw),r*hw);V.set(buf.subarray(lay[2].offset+r*lay[2].stride,lay[2].offset+r*lay[2].stride+hw),r*hw)}
+        }catch(err){postMessage({err:String(err&&err.message||err),fmt:f.format});f.close();break}
+        f.close();
+        // 켜짐 신호: 직전 장면 대비 V(빨강 쪽 색차)·Y(밝기)가 가장 크게 오른 값
+        let dv=0,dy=0;
+        if(prevV){for(let i=0;i<V.length;i++){const d=V[i]-prevV[i];if(d>dv)dv=d}for(let i=0;i<Y.length;i+=2){const d=Y[i]-prevY[i];if(d>dy)dy=d}}
+        prevY=Y;prevV=V;if(dv>maxDV)maxDV=dv;if(dy>maxDY)maxDY=dy;
+        const fr={ts,dv,dy,Y,U,V};
+        if(clip){clip.frames.push(fr);if(--after<=0){send(clip);clip=null}}
+        else{
+          ring.push(fr);if(ring.length>RING)ring.shift();
+          const trig=dv>=m.thrV||dy>=m.thrY;
+          if(trig&&ts-lastTrig>400){clip={kind:'shot',trigTs:ts,dv,dy,frames:ring.slice()};ring=[];after=AFTER;lastTrig=ts}
+          else if(ts-lastBg>15000&&ts-lastTrig>3000&&ring.length===RING){clip={kind:'quiet',trigTs:ts,dv,dy,frames:ring.slice()};ring=[];after=AFTER;lastBg=ts}
+        }
+        if(ts-statAt>1000){statAt=ts;postMessage({stat:{n,lost,fps:gapMed?Math.round(10000/gapMed)/10:0,maxDV,maxDY}});maxDV=0;maxDY=0}
+      }
+      try{reader.cancel()}catch(_){}
+      postMessage({ended:true,n,lost});
+      // 메모리를 넘기지(transfer) 않고 복사해서 보낸다 - 넘기면 '직전 장면'(prevY/prevV)이 비어 다음 장면 비교가 깨진다
+      function send(c){postMessage({clip:c})}
+    };`;
+  function b64(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s)}
+  $('recBtn').onclick=async()=>{
+    if(S.recording){S.worker&&S.worker.postMessage({cmd:'stop'});return}
+    if(!S.roi){$('hint').textContent='⚠ 먼저 화면에서 과녁 가운데 → 바깥 원 테두리를 차례로 눌러 주세요.';return}
+    if(typeof MediaStreamTrackProcessor!=='function'){log('장면 줄 세우기 미지원');return}
+    try{await fbReady()}catch(e){log('Firebase 연결 실패: '+e.message);return}
+    S.recording=true;S.clips=0;$('clipN').textContent='0';$('recPanel').hidden=false;$('expBtn').disabled=true;
+    $('recBtn').textContent='B. 장면 녹화 끝내기';$('recBtn').className='stop';stage('B. 녹화 중 - 레이저를 쏘세요');
+    const meta={at:new Date().toISOString(),ua:navigator.userAgent,lane,roi:S.roi,settings:S.track.getSettings()};
+    await S.db.ref(`${ROOT}/camlab/rec/${sess}/meta`).set(JSON.parse(JSON.stringify(meta)));
+    const recTrack=S.recTrack=S.track.clone(),rd=new MediaStreamTrackProcessor({track:recTrack}).readable;
+    const w=S.worker=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})));
+    w.onmessage=e=>{
+      const d=e.data;
+      if(d.err){log('복사 실패: '+d.err+' (형식 '+d.fmt+')');return}
+      if(d.stat){$('recStat').textContent=`장면 ${d.stat.n}장 · ${d.stat.fps}장/초 · 빠진 장면 ${d.stat.lost} · 최근 1초 최대 상승 V ${d.stat.maxDV} / Y ${d.stat.maxDY}`;return}
+      if(d.clip){
+        const c=d.clip,idx=++S.clips;$('clipN').textContent=String(idx);
+        const out={kind:c.kind,trigTs:c.trigTs,dv:c.dv,dy:c.dy,w:S.roi.w,h:S.roi.h,frames:c.frames.map(f=>({ts:f.ts,dv:f.dv,dy:f.dy,y:b64(f.Y),u:b64(f.U),v:b64(f.V)}))};
+        S.uploads=S.uploads.then(()=>S.db.ref(`${ROOT}/camlab/rec/${sess}/clips/${String(idx).padStart(3,'0')}`).set(out)).catch(err=>log('올리기 실패: '+err.message));
+        log(`묶음 ${idx} (${c.kind==='shot'?'발':'조용한 장면'}) V+${c.dv} Y+${c.dy}`);
+        return;
+      }
+      if(d.ended){
+        S.recording=false;$('recBtn').textContent='B. 장면 녹화 시작';$('recBtn').className='alt';$('expBtn').disabled=false;
+        stage('녹화를 마쳤어요. 올리기를 마무리하는 중…');
+        S.uploads.then(()=>S.db.ref(`${ROOT}/camlab/rec/${sess}/meta/end`).set({n:d.n,lost:d.lost,clips:S.clips})).then(()=>stage(`✔ 녹화 완료 - 묶음 ${S.clips}개 저장 (세션 ${sess})`));
+        w.terminate();try{S.recTrack&&S.recTrack.stop()}catch(_){}
+      }
+    };
+    // 켜짐 기준: 레이저는 직전 장면보다 V가 크게(보통 20 이상) 오른다. 조금 낮게 잡아 애매한 장면도 일단 모은다.
+    w.postMessage({cmd:'start',readable:rd,roi:{x:S.roi.x,y:S.roi.y,w:S.roi.w,h:S.roi.h},thrV:14,thrY:45},[rd]);
+  };
+})();
+</script>
+</body>
+</html>
