@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="theme-color" content="#07111f">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LASER MATCH · 리그 전광판</title>
+<style>
+  /* TV·프로젝터용 전광판. 글자 크기는 화면 폭·높이(vw/vh)에 맞춘다.
+     ※ 클래스 이름에 광고처럼 보이는 말(…-big, ad-, banner 등)을 쓰지 않는다 - 삼성 인터넷 광고 차단이 화면을 숨긴 적이 있다. */
+  :root{--bg:#07111f;--panel:#101d30;--panel2:#0b1626;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--dim:#5b6f86;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:radial-gradient(circle at 50% -20%,#17375a 0,var(--bg) 55%);color:var(--text);font-family:system-ui,-apple-system,"Malgun Gothic","Noto Sans KR",sans-serif}
+  .screen{height:100vh;display:flex;flex-direction:column;padding:1.6vh 2vw;gap:1.6vh}
+  .top{display:flex;justify-content:space-between;align-items:baseline;gap:2vw}
+  .brand{font-size:2.2vh;font-weight:900;color:var(--cyan);letter-spacing:.05em}
+  .game{font-size:4.2vh;font-weight:900}
+  .conn{font-size:1.6vh;color:var(--dim)}
+  .timer{text-align:center;line-height:1}
+  .timer .lbl{font-size:3.6vh;font-weight:900;color:var(--cyan);margin-bottom:.6vh}
+  .timer .clk{font-size:22vh;font-weight:900;font-variant-numeric:tabular-nums;color:var(--gold)}
+  .timer .clk.urgent{color:var(--red)}
+  .timer.practice .lbl{color:var(--lime)}
+  .lanes{flex:1;min-height:0;display:grid;gap:1.2vw;grid-auto-rows:1fr}
+  .card{background:var(--panel);border:.3vh solid var(--line);border-radius:1.6vh;padding:1.4vh 1vw;display:flex;flex-direction:column;justify-content:space-between;align-items:center;text-align:center;min-width:0;overflow:hidden}
+  .card .no{font-size:2.2vh;font-weight:900;color:var(--cyan)}
+  .card .cls{font-size:4.6vh;font-weight:900;white-space:nowrap}
+  .card .sc{font-size:7.5vh;font-weight:900;color:var(--lime);font-variant-numeric:tabular-nums;line-height:1}
+  .card .meta{font-size:2.2vh;font-weight:800;color:var(--muted)}
+  .card .bar{width:100%;height:1vh;background:var(--panel2);border-radius:1vh;overflow:hidden}
+  .card .bar i{display:block;height:100%;background:var(--cyan)}
+  .card .st{font-size:2.4vh;font-weight:900;border-radius:999px;padding:.4vh 1.2vw;border:.25vh solid var(--line);color:var(--muted)}
+  .card.fin{border-color:var(--lime)}.card.fin .st{color:var(--lime);border-color:var(--lime)}
+  .card.tout{border-color:var(--gold)}.card.tout .st{color:var(--gold);border-color:var(--gold)}
+  .msg{text-align:center;font-size:7vh;font-weight:900;line-height:1.3}
+  .msg small{display:block;font-size:3.2vh;color:var(--muted);font-weight:800;margin-top:1.5vh}
+  .pulse{animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.55}}
+  .center{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3vh}
+  /* 결과 발표 표 */
+  .rank{flex:1;min-height:0;display:flex;flex-direction:column;gap:.8vh}
+  .rank .head,.rank .row{display:grid;grid-template-columns:9vw minmax(0,1.4fr) 1fr 1fr 1fr 1.2fr 1.1fr;align-items:center;gap:1vw;padding:0 1.5vw}
+  .rank .head{font-size:2vh;color:var(--muted);font-weight:800}
+  .rank .row{flex:1;min-height:0;background:var(--panel);border:.25vh solid var(--line);border-radius:1.2vh;font-size:3.6vh;font-weight:900;font-variant-numeric:tabular-nums}
+  .rank .row .rk{color:var(--gold)}
+  .rank .row .fin{color:var(--lime);font-size:4.2vh}
+  .rank .row .tag{font-size:2.4vh;justify-self:start;border-radius:999px;padding:.3vh 1vw;border:.25vh solid var(--line);color:var(--muted)}
+  .rank .row.hid{color:var(--dim);border-style:dashed}
+  .rank .row.hid .rk{color:var(--dim)}
+  .rank .row.adv{border-color:var(--lime);background:#11301f}
+  .rank .row.adv .tag{color:var(--lime);border-color:var(--lime)}
+  .rank .row.new{animation:pop .7s ease-out}
+  @keyframes pop{from{transform:scale(1.06);background:#2a3d14}to{transform:none}}
+  .cut{text-align:center;font-size:2.2vh;font-weight:900;color:var(--lime);border-top:.35vh dashed var(--lime);padding-top:.4vh}
+</style>
+<script src="config.js"></script>
+<script src="league.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="screen">
+  <div class="top"><span class="brand">🎯 2026 교내 사격 리그전</span><span class="game" id="game"></span><span class="conn" id="conn">연결 중…</span></div>
+  <div id="main" class="center"><div class="msg">LASER MATCH 리그</div></div>
+</div>
+<script>
+(function(){
+  'use strict';
+  const CFG=window.LASER_CONFIG||{},ROOT=String(CFG.LEAGUE_ROOT||'league_test'),FB=CFG.FIREBASE,C=window.LeagueCalc;
+  const S={db:null,offset:0,st:null,live:{},reveal:null,revKey:'',shown:0,html:''};
+  const $=id=>document.getElementById(id);
+  const esc=v=>String(v==null?'':v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  function norm(o){const r={};Object.keys(o||{}).forEach(k=>{if(o[k]!=null)r[k]=o[k]});return r}
+  const now=()=>Date.now()+S.offset;
+  const ref=p=>S.db.ref(ROOT+'/'+p);
+  function fmt(ms){const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
+  const clsName=(g,c)=>`${g}학년 ${c}반`;
+  // 화면 내용이 바뀔 때만 다시 그린다(0.25초마다 확인).
+  function put(html){if(html!==S.html){S.html=html;$('main').innerHTML=html}}
+
+  function laneCards(st,showLive){
+    const lanes=st.lanes||{},keys=Object.keys(lanes).sort((a,b)=>a-b),dec=st.scoring!=='int',rl=st.rule||{};
+    const cols=keys.length<=4?keys.length:Math.ceil(keys.length/2);
+    return `<div class="lanes" style="grid-template-columns:repeat(${Math.max(1,cols)},minmax(0,1fr))">`+keys.map(l=>{
+      const v=S.live[l]||{},mine=showLive&&v.runId===st.runId,shots=mine?C.shotsOf(v):[],n=shots.length;
+      let sum=0;for(const s of shots)sum+=dec?(Number(s.sd!=null?s.sd:s.si)||0):(Number(s.si)||0);
+      const per=rl.per||1,team=st.teamSize||15,practice=st.kind==='practice';
+      let cls='card',stTxt=mine?'사격 중':'대기';
+      if(mine&&v.done){if(v.timeUp){cls+=' tout';stTxt='시간 종료'}else{cls+=' fin';stTxt=`완료 ${(Number(v.finishMs)/1000).toFixed(1)}초`}}
+      const pct=rl.shots?Math.min(100,n/rl.shots*100):0;
+      return `<div class="${cls}"><div class="no">${l}사로</div><div class="cls">${esc(clsName(st.grade,lanes[l]))}</div>
+        <div class="sc">${practice?n+'<span style="font-size:3vh"> 발</span>':(dec?sum.toFixed(1):sum)}</div>
+        <div class="meta">${practice?'연습':`${n} / ${rl.shots}발 · 사수 ${Math.min(team,Math.floor(n/per)+1)} / ${team}`}</div>
+        ${practice?'':`<div class="bar"><i style="width:${pct}%"></i></div>`}<div class="st">${stTxt}</div></div>`}).join('')+'</div>';
+  }
+
+  function render(){
+    const st=S.st;
+    if(!st||!st.grade){$('game').textContent='';put('<div class="center"><div class="msg">LASER MATCH 리그<small>경기 준비 중</small></div></div>');return}
+    const heat=st.round===1?' '+st.heat+'조':'';
+    $('game').textContent=`${st.grade}학년 · ${st.round}라운드${heat}`;
+    const t=now(),p=st.phase;
+    if((p==='practice'||p==='shooting')&&st.startAt){
+      const pre=t<st.startAt,left=st.endAt-Math.max(t,st.startAt),practice=p==='practice';
+      const lbl=pre?'준비':(practice?'연습':'본사격'),clk=pre?String(Math.max(1,Math.ceil((st.startAt-t)/1000))):fmt(left);
+      const urgent=!pre&&!practice&&left<=10000;
+      put(`<div class="timer${practice?' practice':''}"><div class="lbl">${lbl}</div><div class="clk${urgent?' urgent':''}">${clk}</div></div>`+laneCards(st,true));
+      return;
+    }
+    if(p==='done'){
+      const heatA=st.round===1&&st.heat==='A';
+      put(`<div class="msg pulse" style="font-size:5.5vh">${heatA?'A조 경기 종료':'결과 발표가 있겠습니다'}<small>${heatA?'B조 경기가 끝난 뒤 두 조를 합쳐 발표합니다':'잠시만 기다려 주세요'}</small></div>`+laneCards(st,true));
+      return;
+    }
+    if(p==='reveal'){renderReveal(st);return}
+    // 대기·연습 종료·중지: 배정된 학급만 보여 준다
+    const sub=p==='standby'?'연습 종료 · 곧 본사격을 시작합니다':p==='stopped'?'경기가 중지됐어요':'곧 경기를 시작합니다';
+    put(`<div class="msg" style="font-size:5vh">${sub}</div>`+laneCards(st,false));
+  }
+
+  function renderReveal(st){
+    const R=S.reveal;
+    if(!R||!R.rows){put('<div class="center"><div class="msg pulse">결과 발표가 있겠습니다</div></div>');return}
+    const rows=(Array.isArray(R.rows)?R.rows:Object.values(R.rows)).filter(Boolean).sort((a,b)=>a.rank-b.rank||0);
+    const N=rows.length,k=Math.min(N,st.revealStep||0),dec=R.scoring!=='int',F=C.fmt,F2=C.fmt2,adv=R.adv||0,allShown=k>=N;
+    // 아래 순위부터 공개: 아래쪽 k개 행이 보인다. 방금 공개된 행은 잠깐 강조.
+    if(S.shown!==k){S.shown=k;S.newIdx=N-k;S.newUntil=Date.now()+1500}
+    const justShown=Date.now()<(S.newUntil||0)?S.newIdx:-1;
+    let html=`<div class="msg" style="font-size:4.6vh">${allShown?(adv?`🎉 ${R.round+1}라운드 진출 학급`:'🏆 최종 순위'):'결과 발표'}<small style="margin-top:.5vh">${R.grade}학년 ${R.round}라운드 · 최종 점수 = 사격 점수 + 시간 보너스</small></div>`;
+    html+=`<div class="rank"><div class="head"><span>순위</span><span>학급</span><span>사격</span><span>완료 시간</span><span>보너스</span><span>최종</span><span></span></div>`;
+    rows.forEach((x,i)=>{
+      const vis=i>=N-k;
+      if(allShown&&adv&&i===adv)html+=`<div class="cut">▲ 진출 (상위 ${adv}개 학급)</div>`;
+      if(!vis){html+=`<div class="row hid"><span class="rk">${x.rank}위</span><span>?</span><span>?</span><span>?</span><span>?</span><span>?</span><span></span></div>`;return}
+      const tag=adv?(x.advanced?(allShown?'진출':''):`${x.rank}위 확정`):`최종 ${x.rank}위`;
+      html+=`<div class="row${allShown&&x.advanced?' adv':''}${i===justShown?' new':''}"><span class="rk">${x.rank}위${x.tie?'*':''}</span><span>${esc(R.grade+'-'+x.cls+'반')}</span><span>${F(x.shoot,dec)}</span><span>${x.finishSec!=null?x.finishSec.toFixed(1)+'초':(x.timeUp?'시간 초과':'-')}</span><span>+${F2(x.bonus)}</span><span class="fin">${F2(x.final)}</span><span>${tag?`<span class="tag">${tag}</span>`:''}</span></div>`;
+    });
+    put(html+'</div>');
+  }
+
+  function watchReveal(st){
+    const key=st&&st.phase==='reveal'?String(st.revealKey||''):'';
+    if(key===S.revKey)return;
+    if(S.revKey)ref('reveal/'+S.revKey).off();
+    S.revKey=key;S.reveal=null;S.shown=0;
+    if(key)ref('reveal/'+key).on('value',s=>{S.reveal=s.val();render()});
+  }
+
+  function init(){
+    if(!FB||!window.firebase){$('conn').textContent='config.js 또는 인터넷 확인';return}
+    firebase.initializeApp(FB);S.db=firebase.database();
+    S.db.ref('.info/serverTimeOffset').on('value',s=>{S.offset=Number(s.val())||0});
+    S.db.ref('.info/connected').on('value',s=>{$('conn').textContent=s.val()===true?'● 연결됨':'연결 끊김 · 재연결 중'});
+    firebase.auth().signInAnonymously().then(()=>{
+      ref('state').on('value',s=>{S.st=s.val();if(S.st)S.st.lanes=norm(S.st.lanes);watchReveal(S.st);render()});
+      ref('live').on('value',s=>{S.live=norm(s.val());render()});
+      setInterval(render,250);
+    }).catch(e=>{$('conn').textContent='로그인 실패: '+e.message});
+  }
+  init();
+})();
+</script>
+</body>
+</html>
