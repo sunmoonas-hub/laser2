@@ -224,7 +224,10 @@
   // 분석은 어차피 가로 400(보정은 640)으로 줄여서 하므로 인식 정밀도는 같다. 화면 미리보기만 약간 덜 선명해진다.
   const CAMERA_W = 640, CAMERA_H = 480;
   // 진단 기록: 레이저 후보가 생길 때마다(기록/거부 모두) 구글 시트 '진단기록' 탭에 한 줄씩 저장한다. 조정이 끝나면 false로.
-  const DIAG = false;
+  // 주소에 &diag=1을 붙인 태블릿만 켠다(평소엔 꺼짐). 이렇게 켠 경우 기록은 시트 대신 Firebase {LEAGUE_ROOT}/diaglog/{사로}에 쌓는다
+  // - 리그 시험 중 놓친 발이 어떤 이유로 탈락했는지 운영 PC에서 바로 읽어 보기 위해서.
+  const DIAG_URL = new URLSearchParams(location.search).get('diag')==='1';
+  const DIAG = DIAG_URL;
   const ctx = els.overlay.getContext('2d');
   const wctx = els.work.getContext('2d',{willReadFrequently:true});
   const state = {stream:null,videoTrack:null,running:false,calibrationMode:0,center:null,radius:0,radiusX:0,radiusY:0,targetAngle:0,targetVideo:null,shots:[],maxShots:10,matchId:null,lastHit:0,candidate:null,candidateFrames:0,spotLatched:false,missingFrames:0,sensitivity:98,raf:0,frameLoopToken:0,processing:false,background:null,backgroundR:null,backgroundG:null,backgroundB:null,prevLum:null,pendingLaser:null,haloCandidate:null,laserBlocked:false,releaseFrames:0,stableFrames:0,warmupFrames:0,detectorReady:false,autoCalibrating:false,zoom:1,zoomMin:1,zoomMax:1,zoomStep:.1,actualFps:0,detectKind:'both',objRef:null,objTracks:[],objKnown:[],objBusy:false,objBusySince:0,objMask:null,objDil:null,objTmp:null,objSeen:null,objStack:null,dbgTick:0,workSH:null,paperMultiple:null,countdownSec:3,countdownEnd:0,settleMs:700,readyAt:0,announced:false,bgRoi:null};
@@ -698,7 +701,8 @@
     diagQueue.push(Object.assign({
       t:d.toLocaleTimeString('ko-KR',{hour12:false})+'.'+String(d.getMilliseconds()).padStart(3,'0'),
       session:diagSession,lane:Number(els.firingLane.value),player:els.player.value.trim(),
-      ambient:r1(state.lastAmbient),exposure,locked:state.cameraLocked?'Y':'N',fps:r1(state.actualFps)
+      ambient:r1(state.lastAmbient),exposure,locked:state.cameraLocked?'Y':'N',fps:r1(state.actualFps),
+      rel:typeof lg!=='undefined'&&lg.run&&lg.run.startAt?lgNow()-lg.run.startAt:null   // 리그 경기 시작 후 ms(다른 사로 기록과 맞춰 보기용)
     },row,{margin:r1(row.margin),meanD:r1(row.meanD),stdD:r1(row.stdD)}));
     if(diagQueue.length>300)diagQueue.splice(0,diagQueue.length-300);
   }
@@ -718,6 +722,11 @@
       dr:r1(m.mag),dg:r1(m.dg),db:r1(m.db),thr:r1(m.thr),margin:m.mag-m.thr,onset:r1(m.onset),noise:r1(m.noise),bright:r1(m.bright)},extra||{}));
   }
   function diagFlush(){
+    if(DIAG_URL){   // &diag=1: Firebase로 한 번에 최대 50줄씩
+      if(diagBusy||!diagQueue.length||!fb.ready||!LANE_FIXED)return;diagBusy=true;const rows=diagQueue.splice(0,50);
+      fb.db.ref(LG_ROOT+'/diaglog/'+LANE_FIXED).push({at:firebase.database.ServerValue.TIMESTAMP,rows}).then(()=>{diagBusy=false},()=>{diagQueue.unshift(...rows);diagBusy=false});
+      return;
+    }
     if(diagBusy||!diagQueue.length||!isServerConfigured())return;
     diagBusy=true;const rows=diagQueue.splice(0,10);
     const cb='diagCb_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),script=document.createElement('script');
@@ -866,7 +875,25 @@
      결과는 수업용 시트에 저장하지 않고 {LEAGUE_ROOT}/live/{사로}(실시간)와 runs/{경기ID}/{사로}(확정)에만 남긴다. */
   const LG_ROOT=String(LASER_CONFIG.LEAGUE_ROOT||'league_test');
   const lg={st:null,run:null,pend:null,ref:null,seenAdds:null};
-  const lgNow=()=>Date.now()+fb.offset;
+  // 서버 시각. Firebase가 주는 보정값(fb.offset)은 대략적이라, 같은 과녁을 찍은 두 태블릿 기록이 0.39초씩 어긋났고
+  // 그만큼 3-2-1이 어긋났다. 그래서 lgSync()가 서버와 직접 시간을 주고받아 잰 보정값(lg.offset)을 쓴다(못 쟀으면 fb.offset).
+  const lgNow=()=>Date.now()+(lg.offset!=null?lg.offset:fb.offset);
+  // 인터넷 시계 맞추기와 같은 방법: 서버 시각을 기록하고(왕복 시간 RTT), '보낸 시각과 받은 시각의 가운데'에 서버가 기록했다고 본다.
+  // 5번 재서 왕복 시간이 가장 짧았던(지연이 가장 적었던) 값을 쓴다. 오차는 대략 그 왕복 시간의 절반 이내.
+  async function lgSync(){
+    if(!fb.ready||!LANE_FIXED||lg.syncing)return;lg.syncing=true;
+    const ref=fb.db.ref(LG_ROOT+'/clock/'+LANE_FIXED);let best=null;
+    try{
+      for(let i=0;i<5;i++){
+        const t0=Date.now();await ref.set(firebase.database.ServerValue.TIMESTAMP);const t1=Date.now();
+        // get()은 서버에서 실제로 기록된 값을 읽는다(once는 기기 안의 추정값을 돌려줄 수 있음)
+        const sv=Number((await ref.get()).val());if(!sv)continue;
+        const rtt=t1-t0,off=sv-(t0+t1)/2;if(!best||rtt<best.rtt)best={rtt,off};
+        await new Promise(r=>setTimeout(r,150));
+      }
+      if(best){lg.offset=Math.round(best.off);lg.syncRtt=best.rtt;lg.syncAt=Date.now()}
+    }catch(e){}finally{lg.syncing=false}
+  }
   // Firebase는 숫자 키가 촘촘한 객체를 배열([null,..])로 돌려준다. 빈칸을 빼고 객체로 되돌린다.
   function lgNorm(o){const r={};Object.keys(o||{}).forEach(k=>{if(o[k]!=null)r[k]=o[k]});return r}
   function lgFmt(ms){const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
@@ -883,6 +910,8 @@
         if(lg.run&&!lg.run.done&&lg.run.kind==='match'&&v.runId===lg.run.runId&&state.running){recordShot(null,null,0);toast('📡 컨트롤 타워에서 0점 1발을 추가했어요.')}});
     });
     setInterval(lgTick,200);setInterval(lgPush,5000);   // 5초마다 상태를 다시 올려 컨트롤 타워의 '태블릿 연결' 표시를 유지
+    // 시계 맞추기: 접속 직후 한 번, 이후 2분마다(사격 중에는 하지 않음 - 진행 중 시계가 바뀌면 남은 시간이 튐)
+    lgSync();setInterval(()=>{if(!(lg.run&&!lg.run.done&&state.running))lgSync()},120000);
   }
   function lgOnState(st){
     // 대회가 끝난 뒤 남은 리그 상태가 수업 시간 태블릿에 뜨지 않도록, 6시간 넘게 아무 변화가 없던 상태는 없는 것으로 본다.
@@ -936,7 +965,7 @@
     const r=lg.run||{},live=state.matchCfg&&state.matchCfg.mode==='league';
     return{online:true,calibrated:!!(state.center&&state.radius),runId:r.runId||null,kind:r.kind||null,cls:r.cls||null,
       shots:r.final||(live?lgShots():[]),done:!!r.done&&!r.aborted,timeUp:!!r.timeUp,finishMs:r.finishMs==null?null:r.finishMs,
-      failed:!!r.failed,perf:lgPerf(),at:firebase.database.ServerValue.TIMESTAMP};
+      failed:!!r.failed,perf:lgPerf(),sync:lg.offset!=null?{off:lg.offset,fbOff:Math.round(fb.offset),rtt:lg.syncRtt}:null,at:firebase.database.ServerValue.TIMESTAMP};
   }
   // 카메라 장면 분석 상태: 건너뛴 장면 비율(skip%)이 높으면 레이저를 놓칠 수 있다(빛이 보통 한 장면에만 찍힘).
   function lgPerf(){const pf=state.perf;if(!pf||!pf.frames)return null;return{frames:pf.frames,skipPct:Math.round(pf.skipped/pf.frames*1000)/10,avgMs:pf.n?Math.round(pf.sum/pf.n*10)/10:0,maxMs:Math.round(pf.max)}}

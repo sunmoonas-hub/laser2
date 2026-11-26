@@ -13,10 +13,27 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;overflow:hidden;background:radial-gradient(circle at 50% -20%,#17375a 0,var(--bg) 55%);color:var(--text);font-family:system-ui,-apple-system,"Malgun Gothic","Noto Sans KR",sans-serif}
   .screen{height:100vh;display:flex;flex-direction:column;padding:1.6vh 2vw;gap:1.6vh}
-  .top{display:flex;justify-content:space-between;align-items:baseline;gap:2vw}
-  .brand{font-size:2.2vh;font-weight:900;color:var(--cyan);letter-spacing:.05em}
-  .game{font-size:4.2vh;font-weight:900}
-  .conn{font-size:1.6vh;color:var(--dim)}
+  /* 왼쪽·오른쪽 칸 폭을 같게(1fr) 고정해야 가운데 경기명이 정확히 화면 가운데에 온다 */
+  .top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:2vw}
+  .brand{font-size:2.2vh;font-weight:900;color:var(--cyan);letter-spacing:.05em;justify-self:start}
+  .game{font-size:4.2vh;font-weight:900;text-align:center}
+  .conn{justify-self:end;font-size:1.6vh;font-weight:800;border:.2vh solid #ffffff28;border-radius:999px;padding:.6vh 1.2vw;color:var(--muted)}
+  .conn.ok{color:var(--lime);border-color:#b7ff3c66}.conn.bad{color:#ff7a8c;border-color:#ff4d6666}
+  /* 사격 중: 왼쪽(시계+사로 카드) | 오른쪽(실시간 순위) */
+  .body{flex:1;min-height:0;display:flex;gap:1.5vw}
+  #main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1.6vh}
+  .rankcol{width:25vw;flex:none;display:flex;flex-direction:column;background:var(--panel2);border:.3vh solid var(--line);border-radius:1.6vh;padding:1.6vh 1vw;min-height:0}
+  .rankcol[hidden]{display:none}
+  .rankcol h3{margin:0 0 1.2vh;font-size:3.2vh;font-weight:900;color:var(--cyan);text-align:center}
+  .rlist{position:relative;flex:1;min-height:0}
+  .ritem{position:absolute;left:0;right:0;height:7.4vh;display:grid;grid-template-columns:5vh minmax(0,1fr) auto;align-items:center;gap:.8vw;background:var(--panel);border:.25vh solid var(--line);border-radius:1.2vh;padding:0 1vw;transition:top .6s ease}
+  .ritem .rn{font-size:3.4vh;font-weight:900;color:var(--gold);text-align:center}
+  .ritem .rc{font-size:3.2vh;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ritem .rc small{display:block;font-size:1.7vh;color:var(--muted);font-weight:800}
+  .ritem .rs{font-size:3.8vh;font-weight:900;color:var(--lime);font-variant-numeric:tabular-nums}
+  .ritem.fin{border-color:var(--lime)}
+  .rcut{position:absolute;left:0;right:0;border-top:.35vh dashed var(--lime);color:var(--lime);font-size:1.6vh;font-weight:900;text-align:center;transition:top .6s ease}
+  .rnote{font-size:1.7vh;color:var(--muted);text-align:center;margin-top:1vh;font-weight:800}
   .timer{text-align:center;line-height:1}
   .timer .lbl{font-size:3.6vh;font-weight:900;color:var(--cyan);margin-bottom:.6vh}
   .timer .clk{font-size:22vh;font-weight:900;font-variant-numeric:tabular-nums;color:var(--gold)}
@@ -63,7 +80,10 @@
 <body>
 <div class="screen">
   <div class="top"><span class="brand">🎯 2026 교내 사격 리그전</span><span class="game" id="game"></span><span class="conn" id="conn">연결 중…</span></div>
-  <div id="main" class="center"><div class="msg">LASER MATCH 리그</div></div>
+  <div class="body">
+    <div id="main"><div class="center"><div class="msg">LASER MATCH 리그</div></div></div>
+    <div class="rankcol" id="rankCol" hidden><h3>실시간 순위</h3><div class="rlist" id="rList"></div><div class="rnote">사격 점수 기준 · 시간 보너스는 결과 발표 때 반영</div></div>
+  </div>
 </div>
 <script>
 (function(){
@@ -96,8 +116,37 @@
         ${practice?'':`<div class="bar"><i style="width:${pct}%"></i></div>`}<div class="st">${stTxt}</div></div>`}).join('')+'</div>';
   }
 
+  // 오른쪽 실시간 순위(사격 점수 기준). 사로마다 줄을 하나씩 계속 두고 위치(top)만 바꿔서, 순위가 바뀌면 줄이 미끄러지듯 움직인다.
+  const ROW_VH=8.3;   // 줄 높이 7.4vh + 간격
+  function renderRank(st,show){
+    const col=$('rankCol'),list=$('rList');
+    if(!show){if(!col.hidden){col.hidden=true;list.innerHTML=''}return}
+    col.hidden=false;
+    const lanes=st.lanes||{},dec=st.scoring!=='int',rl=st.rule||{};
+    const rows=Object.keys(lanes).map(l=>{const v=S.live[l]||{},mine=v.runId===st.runId,shots=mine?C.shotsOf(v):[];let sum=0;for(const s of shots)sum+=dec?(Number(s.sd!=null?s.sd:s.si)||0):(Number(s.si)||0);
+      return{l,cls:lanes[l],sum:Math.round(sum*10)/10,n:shots.length,done:mine&&!!v.done}});
+    rows.sort((a,b)=>b.sum-a.sum||a.n-b.n||a.l-b.l);
+    const seen={};
+    // 2·3라운드는 진출한 학급이 한꺼번에 쏘므로 '현재 진출권' 선을 보여 준다(1라운드는 두 조를 합쳐 정하므로 긋지 않음).
+    const adv=st.round>=2?Number(rl.advance)||0:0,showCut=adv>0&&adv<rows.length,CUT_GAP=2.4;
+    const topOf=i=>i*ROW_VH+(showCut&&i>=adv?CUT_GAP:0);   // 진출선 아래 줄들은 글씨가 들어갈 만큼 띄운다
+    rows.forEach((r,i)=>{
+      let el=list.querySelector(`[data-l="${r.l}"]`);
+      if(!el){el=document.createElement('div');el.className='ritem';el.dataset.l=r.l;el.style.top=topOf(i)+'vh';list.appendChild(el)}
+      const html=`<span class="rn">${i+1}</span><span class="rc">${esc(st.grade+'-'+r.cls+'반')}<small>${r.l}사로 · ${r.n}/${rl.shots||'-'}발${r.done?' · 완료':''}</small></span><span class="rs">${dec?r.sum.toFixed(1):r.sum}</span>`;
+      if(el.dataset.h!==html){el.dataset.h=html;el.innerHTML=html}
+      el.style.top=topOf(i)+'vh';el.classList.toggle('fin',r.done);seen[r.l]=1;
+    });
+    list.querySelectorAll('.ritem').forEach(el=>{if(!seen[el.dataset.l])el.remove()});
+    let cut=list.querySelector('.rcut');
+    if(showCut){if(!cut){cut=document.createElement('div');cut.className='rcut';cut.textContent='▲ 현재 진출권';list.appendChild(cut)}cut.style.top=(adv*ROW_VH-.3)+'vh'}
+    else if(cut)cut.remove();
+  }
+
   function render(){
     const st=S.st;
+    const showRank=!!(st&&st.grade&&st.kind==='match'&&(st.phase==='shooting'||st.phase==='done')&&st.startAt);
+    renderRank(st,showRank);
     if(!st||!st.grade){$('game').textContent='';put('<div class="center"><div class="msg">LASER MATCH 리그<small>경기 준비 중</small></div></div>');return}
     const heat=st.round===1?' '+st.heat+'조':'';
     $('game').textContent=`${st.grade}학년 · ${st.round}라운드${heat}`;
@@ -152,7 +201,7 @@
     if(!FB||!window.firebase){$('conn').textContent='config.js 또는 인터넷 확인';return}
     firebase.initializeApp(FB);S.db=firebase.database();
     S.db.ref('.info/serverTimeOffset').on('value',s=>{S.offset=Number(s.val())||0});
-    S.db.ref('.info/connected').on('value',s=>{$('conn').textContent=s.val()===true?'● 연결됨':'연결 끊김 · 재연결 중'});
+    S.db.ref('.info/connected').on('value',s=>{const on=s.val()===true;$('conn').textContent=on?'● 실시간 연결됨':'연결 끊김 · 재연결 중';$('conn').className='conn '+(on?'ok':'bad')});
     firebase.auth().signInAnonymously().then(()=>{
       ref('state').on('value',s=>{S.st=s.val();if(S.st)S.st.lanes=norm(S.st.lanes);watchReveal(S.st);render()});
       ref('live').on('value',s=>{S.live=norm(s.val());render()});
