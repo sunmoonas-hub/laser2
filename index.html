@@ -301,7 +301,10 @@
   function uid(){return 'M-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
   function clearDetectorBackground(){state.background=null;state.backgroundR=null;state.backgroundG=null;state.backgroundB=null;state.prevLum=null;state.pendingLaser=null;state.haloCandidate=null;state.laserBlocked=false;state.releaseFrames=0;state.stableFrames=0;state.objRef=null;state.objTracks=[];state.objKnown=[];state.objBusy=false;state.objBusySince=0;state.workSH=null;state.prevR=null;state.noiseR=null;state._frame=null;state.laserCand=null;state.absorbFrames=0}
   function blendBackground(data,lum,sw,x0,x1,y0,y1,alpha){if(!state.backgroundR)return;for(let y=y0;y<=y1;y++){const row=y*sw;for(let x=x0;x<=x1;x++){const p=row+x,i=p*4;state.background[p]=state.background[p]*(1-alpha)+lum[p]*alpha;state.backgroundR[p]=state.backgroundR[p]*(1-alpha)+data[i]*alpha;state.backgroundG[p]=state.backgroundG[p]*(1-alpha)+data[i+1]*alpha;state.backgroundB[p]=state.backgroundB[p]*(1-alpha)+data[i+2]*alpha}}}
-  function resize(){const r=els.overlay.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);els.overlay.width=Math.round(r.width*d);els.overlay.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);restoreTargetFromVideo();drawOverlay()}
+  // 카메라 화면 크기가 0x0으로 재지는 순간(화면 배치가 바뀌는 중, 주소창이 접히는 중 등)에는 아무것도 다시 계산하지 않고 잠시 뒤 다시 잰다.
+  // 그대로 계산하면 표적 위치가 (0,0)·반지름 0이 되어 다음 크기 변경 전까지 레이저를 하나도 못 잡았다
+  // (진단 기록: 인식이 멈춘 동안 감지 범위 밝기·배경값이 모두 0).
+  function resize(){const r=els.overlay.getBoundingClientRect();if(!(r.width>0&&r.height>0)){clearTimeout(state.resizeRetry);state.resizeRetry=setTimeout(resize,250);return}const d=Math.min(devicePixelRatio||1,2);els.overlay.width=Math.round(r.width*d);els.overlay.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);restoreTargetFromVideo();drawOverlay()}
 
   async function startCamera(){
     try{
@@ -401,7 +404,7 @@
 
   function saveTargetToVideo(){if(!state.center||!state.radius||!els.video.videoWidth)return;const g=videoGeometry(),vx=(state.center.x-g.offX)/g.scale,vy=(state.center.y-g.offY)/g.scale;state.targetVideo={x:vx/g.vw,y:vy/g.vh,rx:state.radiusX/g.scale/g.vw,ry:state.radiusY/g.scale/g.vw,a:state.targetAngle,pm:state.paperMultiple||null}}
 
-  function restoreTargetFromVideo(){if(!state.targetVideo||!els.video.videoWidth)return;const g=videoGeometry(),mapped=videoToScreen(state.targetVideo.x*g.vw,state.targetVideo.y*g.vh);state.center={x:mapped.x,y:mapped.y};state.radiusX=(state.targetVideo.rx||state.targetVideo.r)*g.vw*g.scale;state.radiusY=(state.targetVideo.ry||state.targetVideo.r)*g.vw*g.scale;state.radius=Math.max(state.radiusX,state.radiusY);state.targetAngle=state.targetVideo.a||0;state.paperMultiple=state.targetVideo.pm||null}
+  function restoreTargetFromVideo(){if(!state.targetVideo||!els.video.videoWidth)return;const g=videoGeometry();if(!(g.scale>0&&isFinite(g.scale)))return;const mapped=videoToScreen(state.targetVideo.x*g.vw,state.targetVideo.y*g.vh);state.center={x:mapped.x,y:mapped.y};state.radiusX=(state.targetVideo.rx||state.targetVideo.r)*g.vw*g.scale;state.radiusY=(state.targetVideo.ry||state.targetVideo.r)*g.vw*g.scale;state.radius=Math.max(state.radiusX,state.radiusY);state.targetAngle=state.targetVideo.a||0;state.paperMultiple=state.targetVideo.pm||null}
 
   function screenTargetToWork(sw,sh){
     const g=videoGeometry();
@@ -1229,7 +1232,11 @@
     // 실제로 읽히는 건 표적 주변 범위뿐이라, 밝기(lum)와 기준화면도 화면 전체가 아니라 그 범위만 계산한다.
     // (표적이 화면의 일부만 차지할 때 매 프레임 계산량을 크게 줄여, 짧게 스치는 레이저도 프레임을 안 놓치고 볼 확률을 높인다.)
     // 이 범위(t,x0,x1,y0,y1)는 아래쪽 실제 감지 로직에서도 그대로 재사용한다.
+    // 안전장치: 표적 위치가 망가져 있으면(반지름 0·숫자가 아님) 영상 기준으로 저장해 둔 표적(targetVideo)으로 다시 맞추고,
+    // 그래도 안 되면 이 장면은 건너뛴다(빈 범위를 분석하며 레이저를 못 보는 상태로 머무르지 않게).
+    if(state.targetVideo&&!(state.radiusX>0&&state.radiusY>0&&state.center&&isFinite(state.center.x)&&isFinite(state.center.y))){restoreTargetFromVideo();state.targetHealed=(state.targetHealed||0)+1}
     const t=screenTargetToWork(sw,sh),scanR=Math.max(t.rx,t.ry)*(missLimit()+.1);
+    if(!(isFinite(t.x)&&isFinite(t.y)&&scanR>1))return;
     const x0=Math.max(1,Math.floor(t.x-scanR)),x1=Math.min(sw-2,Math.ceil(t.x+scanR)),y0=Math.max(1,Math.floor(t.y-scanR)),y1=Math.min(sh-2,Math.ceil(t.y+scanR));
     state._frame={data,total,sw,x0,x1,y0,y1};state._skipNoise=false;
     // 화면 배치가 바뀌어(전체화면 전환·주소창 접힘 등) 감지 범위가 기준 화면을 잡아둔 범위 밖으로 벗어나면,
@@ -1344,7 +1351,10 @@
       const seen=pf.frames?Math.round((pf.frames-pf.skipped)/pf.frames*100):'';
       if(state.diagStatusAt)diagPush({kind:'상태',verdict:'-',reason:'10초 요약',margin:state.diagPeak,meanD,stdD,
         procMs:pf.n?r1(pf.sum/pf.n):'',procMax:r1(pf.max),skipped:pf.skipped,skipNear:pf.skipNear||0,seenPct:seen,grabMs:pf.grabN?r1(pf.grab/pf.grabN):'',
-        camRes:els.video.videoWidth+'x'+els.video.videoHeight});
+        camRes:els.video.videoWidth+'x'+els.video.videoHeight,
+        // 표적·감지 범위가 정상인지 확인용(화면 상자 크기, 화면 좌표의 표적 중심·반지름, 분석 화면의 감지 범위, 자동 복구 횟수)
+        box:(()=>{const b=els.overlay.getBoundingClientRect();return Math.round(b.width)+'x'+Math.round(b.height)})(),
+        tgt:state.center?Math.round(state.center.x)+','+Math.round(state.center.y)+' r'+r1(state.radiusX):'-',roi:x0+'-'+x1+','+y0+'-'+y1,healed:state.targetHealed||0});
       state.seenPct=seen;showDetectorInfo();
       state.perf={n:0,sum:0,max:0,skipped:0,frames:0};
       state.diagStatusAt=nowT;state.diagPeak=null;
