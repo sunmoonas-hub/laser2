@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LASER MATCH · 태블릿 능력 확인</title>
+<style>
+  /* 재설계 0단계: 이 태블릿·브라우저에서 무엇이 되는지, 실제로 얼마나 빠른지 재는 시험 페이지.
+     결과는 화면에 보여 주고 Firebase {LEAGUE_ROOT}/probe/{기기ID}에 저장한다. 수업·리그 화면과 무관. */
+  :root{--bg:#07111f;--panel:#101d30;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Malgun Gothic",sans-serif;font-size:15px}
+  .wrap{max-width:900px;margin:0 auto;padding:16px}
+  h1{font-size:1.3rem;margin:0 0 6px}
+  .muted{color:var(--muted)}
+  button{min-height:52px;border-radius:12px;border:0;background:var(--cyan);color:#07111f;font-weight:900;font-size:1.05rem;padding:0 22px}
+  button:disabled{opacity:.4}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0}
+  video{width:240px;height:180px;background:#000;border-radius:10px;object-fit:cover}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  td:first-child{color:var(--muted);width:44%}
+  .ok{color:var(--lime);font-weight:800}.no{color:var(--red);font-weight:800}.wait{color:var(--gold)}
+  #log{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:.8rem;color:var(--muted);max-height:220px;overflow:auto}
+</style>
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔬 태블릿 능력 확인</h1>
+  <div class="muted">과녁을 비추는 자리에 태블릿을 그대로 둔 채 [측정 시작]을 누르세요. 약 1분 걸립니다. 측정 중에는 화면을 건드리지 마세요.</div>
+  <div class="row"><button id="go">측정 시작</button><span id="stage" class="wait"></span></div>
+  <div class="row"><video id="v" playsinline muted></video><div class="muted" id="dev"></div></div>
+  <div class="panel"><table id="res"></table></div>
+  <div class="panel"><div class="muted" style="margin-bottom:6px">진행 기록</div><div id="log"></div></div>
+</div>
+<script>
+(function(){
+  'use strict';
+  const CFG=window.LASER_CONFIG||{},ROOT=String(CFG.LEAGUE_ROOT||'league_test');
+  const $=id=>document.getElementById(id);
+  const R={};   // 결과 모음(그대로 Firebase에 저장)
+  const lane=new URLSearchParams(location.search).get('lane')||'';
+  const devId=(lane?'lane'+lane+'-':'')+Date.now().toString(36);
+  const W=400,H=300;   // 지금 인식이 쓰는 분석 해상도(가로 400)와 같게 재야 비교가 된다
+  function log(s){$('log').textContent+=s+'\n';$('log').scrollTop=1e9}
+  function stage(s){$('stage').textContent=s}
+  const rows=[];
+  function show(label,val,good){rows.push([label,val,good]);$('res').innerHTML=rows.map(([l,v,g])=>`<tr><td>${l}</td><td class="${g===true?'ok':g===false?'no':''}">${v}</td></tr>`).join('')}
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+  const pct=(a,p)=>{if(!a.length)return 0;const s=a.slice().sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.floor(s.length*p))]};
+  const r1=v=>Math.round(v*10)/10;
+  // 장면 시각 간격 목록에서 '끊긴 장면 수'를 센다: 평소 간격(중앙값)의 1.5배를 넘으면 그 사이 장면이 빠진 것
+  function gaps(ts){if(ts.length<3)return{n:ts.length,fps:0,lost:0,med:0};const d=[];for(let i=1;i<ts.length;i++)d.push(ts[i]-ts[i-1]);const med=pct(d,.5);let lost=0;for(const x of d)if(x>med*1.5)lost+=Math.round(x/med)-1;return{n:ts.length,fps:r1(1000/avg(d)),lost,med:r1(med)}}
+
+  // 측정 중 일부러 메인 스레드를 바쁘게 만든다(한 발 직후 화면·통신이 몰리는 상황 흉내: 0.25초마다 25ms씩)
+  let busyTimer=0;
+  function busyOn(){busyTimer=setInterval(()=>{const t=performance.now();while(performance.now()-t<25){}},250)}
+  function busyOff(){clearInterval(busyTimer);busyTimer=0}
+
+  /* ---------- 일꾼 스레드(Web Worker) 코드 ---------- */
+  const WORKER_SRC=`
+    self.onmessage=async e=>{
+      const m=e.data;
+      if(m.cmd==='caps'){postMessage({caps:{mstp:typeof MediaStreamTrackProcessor==='function',offscreen:typeof OffscreenCanvas==='function',videoFrame:typeof VideoFrame==='function'}});return}
+      if(m.cmd==='run'){
+        try{
+          let reader;
+          if(m.track){reader=new MediaStreamTrackProcessor({track:m.track}).readable.getReader()}
+          else reader=m.readable.getReader();
+          const oc=new OffscreenCanvas(${W},${H}),cx=oc.getContext('2d',{willReadFrequently:true});
+          const ts=[],cost=[],copyCost=[],fmt={};const end=performance.now()+m.ms;
+          while(performance.now()<end){
+            const {value:f,done}=await reader.read();if(done||!f)break;
+            ts.push(f.timestamp/1000);fmt[f.format||'?']=1;
+            const t0=performance.now();cx.drawImage(f,0,0,${W},${H});cx.getImageData(0,0,${W},${H});cost.push(performance.now()-t0);
+            // 표적 주변만(가운데 1/3) 원본 그대로 복사하는 비용(복사 방식 후보)
+            try{const w=Math.floor(f.codedWidth/3)&~1,h=Math.floor(f.codedHeight/3)&~1,x=Math.floor(f.codedWidth/3)&~1,y=Math.floor(f.codedHeight/3)&~1;
+              const t1=performance.now();const sz=f.allocationSize({rect:{x,y,width:w,height:h}});const buf=new Uint8Array(sz);await f.copyTo(buf,{rect:{x,y,width:w,height:h}});copyCost.push(performance.now()-t1)}catch(err){fmt.copyErr=String(err&&err.message||err)}
+            f.close();
+          }
+          try{reader.cancel()}catch(_){}
+          postMessage({done:true,ts,cost,copyCost,fmt});
+        }catch(err){postMessage({error:String(err&&err.message||err)})}
+      }
+    };`;
+  function makeWorker(){return new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})))}
+  function workerCall(w,msg,transfer){return new Promise(res=>{w.onmessage=e=>res(e.data);w.onerror=e=>res({error:String(e.message||e)});w.postMessage(msg,transfer||[])})}
+
+  /* ---------- 측정 ---------- */
+  async function run(){
+    $('go').disabled=true;rows.length=0;$('log').textContent='';
+    R.at=new Date().toISOString();R.lane=lane;R.ua=navigator.userAgent;R.cores=navigator.hardwareConcurrency||null;R.mem=navigator.deviceMemory||null;
+    R.screen=`${screen.width}x${screen.height} dpr${devicePixelRatio}`;
+    $('dev').textContent=R.ua;
+    show('브라우저',/SamsungBrowser\/[\d.]+/.exec(R.ua)?.[0]||/Chrome\/[\d.]+/.exec(R.ua)?.[0]||'?');
+    show('CPU 코어 / 메모리',`${R.cores||'?'}개 / ${R.mem||'?'}GB`);
+
+    // 1. 기능 지원 여부
+    stage('1/6 기능 확인');
+    R.api={rvfc:'requestVideoFrameCallback' in HTMLVideoElement.prototype,mstpMain:typeof window.MediaStreamTrackProcessor==='function',offscreen:typeof OffscreenCanvas==='function',videoFrame:typeof VideoFrame==='function',worker:typeof Worker==='function',imageCapture:typeof window.ImageCapture==='function'};
+    try{const w=makeWorker();const c=await workerCall(w,{cmd:'caps'});R.api.mstpWorker=!!(c.caps&&c.caps.mstp);R.api.offscreenWorker=!!(c.caps&&c.caps.offscreen);w.terminate()}catch(e){R.api.mstpWorker=false;R.api.workerErr=String(e)}
+    show('장면 알림(requestVideoFrameCallback)',R.api.rvfc?'지원':'없음',R.api.rvfc);
+    show('장면 줄 세우기 - 메인',R.api.mstpMain?'지원':'없음',R.api.mstpMain);
+    show('장면 줄 세우기 - 일꾼 스레드',R.api.mstpWorker?'지원':'없음',R.api.mstpWorker);
+    show('일꾼 스레드 캔버스(OffscreenCanvas)',R.api.offscreenWorker?'지원':'없음',R.api.offscreenWorker);
+
+    // 2. 카메라 열기(지금 앱과 같은 요청) + 카메라가 할 수 있는 설정
+    stage('2/6 카메라 확인');
+    let stream;
+    try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480},frameRate:{ideal:60,min:30,max:60}}})}
+    catch(e){log('60fps 요청 실패 → 30fps로 다시: '+e.message);stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}}})}
+    const v=$('v');v.srcObject=stream;await v.play();const track=stream.getVideoTracks()[0];
+    await sleep(1500);   // 카메라 자동 노출이 자리 잡을 시간
+    const caps=track.getCapabilities?track.getCapabilities():{},set0=track.getSettings?track.getSettings():{};
+    const pick=o=>{const r={};for(const k of ['width','height','frameRate','exposureMode','exposureTime','exposureCompensation','whiteBalanceMode','colorTemperature','focusMode','focusDistance','zoom','iso'])if(o&&o[k]!==undefined)r[k]=o[k];return r};
+    R.caps=pick(caps);R.settings0=pick(set0);
+    log('caps '+JSON.stringify(R.caps));log('settings '+JSON.stringify(R.settings0));
+    show('카메라 해상도·요청 속도',`${set0.width}x${set0.height} · ${set0.frameRate||'?'}fps`);
+    const canExp=Array.isArray(caps.exposureMode)&&caps.exposureMode.includes('manual')&&caps.exposureTime;
+    show('노출 시간 직접 설정',canExp?`가능 (${caps.exposureTime.min}~${caps.exposureTime.max})`:'불가',!!canExp);
+    show('현재 자동 노출 시간',set0.exposureTime!=null?set0.exposureTime+' (단위 0.1ms → '+r1(set0.exposureTime/10)+'ms)':'알 수 없음');
+
+    // 3. 지금 방식: 장면 알림 + 화면에서 픽셀 읽기 (조용할 때 / 바쁠 때)
+    async function rvfcTest(ms,busy){
+      const c=document.createElement('canvas');c.width=W;c.height=H;const cx=c.getContext('2d',{willReadFrequently:true});
+      const pres=[],cost=[],cap=[];let last=null,skipped=0,stop=false;
+      const loop=(now,meta)=>{if(stop)return;if(last!=null&&meta.presentedFrames-last>1)skipped+=meta.presentedFrames-last-1;last=meta.presentedFrames;pres.push(now);if(meta.captureTime)cap.push(meta.captureTime);
+        const t0=performance.now();cx.drawImage(v,0,0,W,H);cx.getImageData(0,0,W,H);cost.push(performance.now()-t0);v.requestVideoFrameCallback(loop)};
+      if(busy)busyOn();v.requestVideoFrameCallback(loop);await sleep(ms);stop=true;busyOff();
+      const g=gaps(cap.length>5?cap:pres);
+      return{frames:pres.length,skipped,fps:g.fps,costAvg:r1(avg(cost)),costP95:r1(pct(cost,.95)),costMax:r1(Math.max(0,...cost))};
+    }
+    if(R.api.rvfc){
+      stage('3/6 지금 방식 측정(조용할 때)');R.rvfcQuiet=await rvfcTest(8000,false);log('rvfc quiet '+JSON.stringify(R.rvfcQuiet));
+      show('지금 방식 · 조용할 때',`장면 ${R.rvfcQuiet.frames}장(${R.rvfcQuiet.fps}fps) · 건너뜀 ${R.rvfcQuiet.skipped}장 · 읽기 평균 ${R.rvfcQuiet.costAvg}ms(상위5% ${R.rvfcQuiet.costP95})`,R.rvfcQuiet.skipped===0);
+      stage('3/6 지금 방식 측정(바쁠 때)');R.rvfcBusy=await rvfcTest(8000,true);log('rvfc busy '+JSON.stringify(R.rvfcBusy));
+      show('지금 방식 · 바쁠 때(한 발 직후 흉내)',`장면 ${R.rvfcBusy.frames}장 · 건너뜀 ${R.rvfcBusy.skipped}장`,R.rvfcBusy.skipped===0);
+    }
+
+    // 4. 새 방식: 장면 줄 세우기를 일꾼 스레드에서 (바쁠 때도 줄에서 기다리는지)
+    async function workerTest(ms,busy){
+      // 카메라 트랙을 일꾼 스레드로 넘겨 그 안에서 줄을 만드는 방법(가장 좋음)을 먼저 해 보고,
+      // 넘기기가 막혀 있으면 메인에서 줄을 만들어 그 줄만 넘기는 방법으로 다시 한다.
+      const attempt=async useTrack=>{
+        const w=makeWorker(),t=track.clone();let msg,transfer;
+        try{if(useTrack){msg={cmd:'run',track:t,ms};transfer=[t]}else{const rd=new MediaStreamTrackProcessor({track:t}).readable;msg={cmd:'run',readable:rd,ms};transfer=[rd]}}
+        catch(e){try{t.stop()}catch(_){}w.terminate();return{res:{error:String(e&&e.message||e)},how:useTrack?'트랙 넘김':'줄 넘김'}}
+        if(busy)busyOn();let res;try{res=await workerCall(w,msg,transfer)}catch(e){res={error:String(e&&e.message||e)}}busyOff();
+        try{t.stop()}catch(_){}w.terminate();
+        return{res,how:useTrack?'트랙 넘김':'줄 넘김'};
+      };
+      let out=null;
+      if(R.api.mstpWorker){out=await attempt(true);if(out.res.error)log('트랙 넘김 실패: '+out.res.error)}
+      if((!out||out.res.error)&&R.api.mstpMain)out=await attempt(false);
+      if(!out)return{error:'장면 줄 세우기 미지원'};
+      if(out.res.error)return{error:out.res.error,how:out.how};
+      const res=out.res,g=gaps(res.ts);
+      return{how:out.how,frames:g.n,fps:g.fps,lost:g.lost,gapMed:g.med,costAvg:r1(avg(res.cost)),costP95:r1(pct(res.cost,.95)),copyAvg:r1(avg(res.copyCost||[])),fmt:Object.keys(res.fmt||{}).join(',')};
+    }
+    if(R.api.mstpWorker||R.api.mstpMain){
+      stage('4/6 새 방식 측정(조용할 때)');R.wkQuiet=await workerTest(8000,false);log('worker quiet '+JSON.stringify(R.wkQuiet));
+      show('새 방식 · 조용할 때',R.wkQuiet.error?'실패: '+R.wkQuiet.error:`장면 ${R.wkQuiet.frames}장(${R.wkQuiet.fps}fps) · 빠진 장면 ${R.wkQuiet.lost}장 · 읽기 평균 ${R.wkQuiet.costAvg}ms · 표적 주변만 복사 ${R.wkQuiet.copyAvg}ms · ${R.wkQuiet.how} · 형식 ${R.wkQuiet.fmt}`,!R.wkQuiet.error&&R.wkQuiet.lost===0);
+      stage('4/6 새 방식 측정(바쁠 때)');R.wkBusy=await workerTest(8000,true);log('worker busy '+JSON.stringify(R.wkBusy));
+      show('새 방식 · 바쁠 때(한 발 직후 흉내)',R.wkBusy.error?'실패: '+R.wkBusy.error:`장면 ${R.wkBusy.frames}장 · 빠진 장면 ${R.wkBusy.lost}장`,!R.wkBusy.error&&R.wkBusy.lost===0);
+    }else show('새 방식','이 기기는 장면 줄 세우기를 지원하지 않음',false);
+
+    // 5. 짧은 노출로 고정했을 때 실제 장면 속도
+    if(canExp&&R.api.rvfc){
+      stage('5/6 짧은 노출 시험');
+      const target=Math.max(caps.exposureTime.min,Math.min(caps.exposureTime.max,100));   // 100 = 10ms(단위 0.1ms 가정)
+      try{await track.applyConstraints({advanced:[{exposureMode:'manual',exposureTime:target}]});await sleep(1200);
+        const s=track.getSettings();R.shortExp={asked:target,got:s.exposureTime,mode:s.exposureMode};
+        const t=await rvfcTest(5000,false);R.shortExp.fps=t.fps;R.shortExp.frames=t.frames;
+        show('짧은 노출(약 10ms) 고정',`요청 ${target} → 실제 ${s.exposureTime} · ${t.fps}fps`,Math.abs((s.exposureTime||0)-target)<target*0.5);
+      }catch(e){R.shortExp={error:String(e)};show('짧은 노출 고정','실패: '+e.message,false)}
+      try{await track.applyConstraints({advanced:[{exposureMode:'continuous'}]})}catch(_){}
+    }else show('짧은 노출 시험','건너뜀(노출 직접 설정 불가)');
+
+    // 6. 결과 저장
+    stage('6/6 결과 저장');
+    stream.getTracks().forEach(t=>t.stop());
+    try{
+      if(!firebase.apps.length)firebase.initializeApp(CFG.FIREBASE);
+      await firebase.auth().signInAnonymously();
+      await firebase.database().ref(`${ROOT}/probe/${devId}`).set(JSON.parse(JSON.stringify(R)));
+      show('결과 저장',`완료 (${devId})`,true);stage('✔ 측정 완료 - 이 화면을 닫아도 됩니다');
+    }catch(e){show('결과 저장','실패: '+e.message,false);stage('측정 완료(저장 실패 - 이 화면을 사진으로 찍어 주세요)')}
+    $('go').disabled=false;
+  }
+  $('go').onclick=()=>run().catch(e=>{log('오류: '+(e&&e.stack||e));stage('오류: '+(e&&e.message||e));$('go').disabled=false});
+})();
+</script>
+</body>
+</html>
