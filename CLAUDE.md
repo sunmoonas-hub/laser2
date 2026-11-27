@@ -36,6 +36,7 @@ LASER MATCH는 학교 레이저 사격 경기 채점 시스템입니다(코드 �
 
 - `findConcentricTarget`/`detectTarget`: 표적 자동 보정입니다. 표적 위치는 영상 기준 비율 좌표(`state.targetVideo`)로 저장되어, 화면 크기가 바뀌거나 전체화면이 되어도 유지됩니다(`saveTargetToVideo`/`restoreTargetFromVideo`).
 - `processFrames` → `detectLaserCore`: 숨겨진 `work` 캔버스에서 영상을 `ANALYSIS_WIDTH`로 줄이고, 색 채널별로 계속 갱신되는 배경과 비교합니다. 후보·래치 판정을 거쳐 `recordShot`으로 기록합니다. 이때 `LASER_MAX_MS`보다 오래 켜져 있는 빛은 버립니다. 물체 명중을 찾는 단계(`detectObjectPass`)도 따로 있습니다.
+- **새 인식(재설계)**: 레이저만(빨강) 감지할 때는 `neActive()`이면 위 과정 대신 `engine/capture-worker.js`(장면 줄 + 일꾼 스레드, 장면 전체 읽기) → `engine/laser-engine.js`(탄착점 = 빛 줄의 시작점)를 쓰고, 발 사건을 `videoToScreen` → `recordShot`으로 넘긴다. 경기 중 노출은 33ms·ISO 100 고정. 주소에 `&engine=old`를 붙이거나 기기가 지원하지 않으면 예전 방식. engine/ 파일을 고치면 `ENGINE_VER`(index.html·enginelab.html)를 올린다. 엔진 시험: `enginelab.html`(태블릿), `node tools/replay.js`(PC). 근거: `docs/태블릿_구조분석.md`.
 - 조정용 상수는 스크립트 맨 위에 있고, 실제로 잰 값을 근거로 주석이 달려 있습니다: `ANALYSIS_WIDTH`, `CAMERA_W/H`, `MISS_LIMIT`, `USE_FALLBACK`, `LASER_MAX_MS`, `DIAG`. `DIAG = true`로 두면 레이저 후보 진단 기록이 시트의 '진단기록' 탭으로 갑니다.
 
 ## 작성 규칙
