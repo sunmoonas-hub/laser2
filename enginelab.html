@@ -50,7 +50,7 @@
     <button id="runBtn" disabled>② 인식 시작</button>
     <button id="busyBtn" class="alt" disabled>메인 일부러 바쁘게</button>
     <button id="clrBtn" class="alt">기록 지우기</button>
-    <label>노출 <select id="expSel"><option value="fix33">고정 33ms (ISO 200)</option><option value="fix33b">고정 33ms (ISO 400, 어두운 곳)</option><option value="auto">자동</option><option value="comp">자동 + 보정 최저</option></select></label>
+    <label>노출 <select id="expSel"><option value="fix33">고정 33ms (ISO 100)</option><option value="fix33b">고정 33ms (ISO 200, 어두운 곳)</option><option value="auto">자동</option><option value="comp">자동 + 보정 최저</option></select></label>
     <label><input type="checkbox" id="saveChk" checked> 발 앞뒤 장면 올리기</label>
   </div>
   <div class="main">
@@ -83,7 +83,7 @@
   const lane=new URLSearchParams(location.search).get('lane')||'';
   const S={stream:null,track:null,db:null,dbTried:false,roi:null,target:null,taps:[],worker:null,capTrack:null,running:false,shots:[],clips:0,busy:null,uploads:Promise.resolve(),sess:'',lastStat:null};
   // 일꾼·엔진 파일 판번호: 고칠 때마다 올린다(태블릿 캐시에 남은 예전 파일을 쓰지 않도록)
-  const ENGINE_VER='20261127c';
+  const ENGINE_VER='20261127d';
   window.__lab=S;   // 진단용(개발자 도구에서 상태 확인)
   const r1=v=>Math.round(v*10)/10,r2=v=>Math.round(v*100)/100;
   function log(s){$('log').textContent+=new Date().toLocaleTimeString('ko-KR',{hour12:false})+' '+s+'\n';$('log').scrollTop=1e9}
@@ -106,7 +106,8 @@
   // → 노출을 장면 간격(33.3ms)에 맞춰 '고정'하면 빈틈이 없어진다. 노출 고정은 ISO를 함께 줘야 적용된다(0단계 측정).
   //   0단계 측정 밝기: 10ms·ISO 800 = 111 → 33ms·ISO 200이면 비슷한 밝기(약 90)로 본다.
   // 비교 시험용으로 선택은 남겨 두고, 바꿀 때마다 설정을 기록한다(settings/).
-  const EXP={fix33:{advanced:[{exposureMode:'manual',exposureTime:330,iso:200}]},fix33b:{advanced:[{exposureMode:'manual',exposureTime:330,iso:400}]},auto:{advanced:[{exposureMode:'continuous',exposureCompensation:0}]}};
+  // 5차 시험: 33ms·ISO 200이면 화면 평균 밝기 184로 너무 밝아, 레이저 가운데가 하얗게 날아가 빨강이 약해졌다 → 기본 ISO 100(밝기 약 90 예상).
+  const EXP={fix33:{advanced:[{exposureMode:'manual',exposureTime:330,iso:100}]},fix33b:{advanced:[{exposureMode:'manual',exposureTime:330,iso:200}]},auto:{advanced:[{exposureMode:'continuous',exposureCompensation:0}]}};
   async function applyComp(){
     if(!S.track)return;const caps=S.track.getCapabilities?S.track.getCapabilities():{};const mode=$('expSel').value;
     try{await S.track.applyConstraints({frameRate:{ideal:30}})}catch(_){}

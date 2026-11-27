@@ -36,6 +36,9 @@
     // 밝은 종이 위에서는 레이저 가장자리의 빨강이 종이보다 어두워(밝기 −76, V +108) 밝기 조건으로는 씨앗이 안 생겼다(PC 시험).
     // 쏘지 않은 장면의 V 흔들림은 최대 3, 색 없이 밝기만 오른 장면도 V+2~3이라 30이면 충분히 떨어져 있다.
     strongV: 30,
+    // 하얗게 날아간 흐린 점: 화면이 밝으면(평균 밝기 184, 5차 시험) 레이저 가운데가 포화돼 빨강이 V+10~11밖에 안 오른다.
+    // 밝기가 satSeedY 이상 크게 오르고 빨강도 satSeedV 이상 오르면 씨앗으로 본다. 밝기만 바뀐 장면(사람·조명)은 V가 2~7이었다.
+    satSeedV: 8, satSeedY: 50,
     growR: 2,           // 씨앗 주변으로 빛 덩어리를 넓힐 때 한 번에 보는 거리(px)
     minBlob: 2,         // 빛 덩어리 최소 크기(px) - 더 작으면 잡음. 4로 두면 멀리서 찍힌 흐린 점(2~3px)을 놓쳤다.
                         //   2로 낮춰도 녹화 재생(쏘지 않은 장면 35개)·2차 태블릿 시험(밝기만 바뀐 장면 36개)에서 가짜 발 0
@@ -95,13 +98,14 @@
       for (let i = 0; i < nh; i++) {
         if (!inScanH[i]) continue;
         const dv = V[i] - bgV[i];
-        if (dv < o.seedV || dv < o.seedNoiseK * nzV[i] || V[i] - prevV[i] < o.seedOnsetV) continue;
+        if (dv < o.satSeedV || dv < o.seedNoiseK * nzV[i] || V[i] - prevV[i] < Math.min(o.seedOnsetV, dv - 2)) continue;
         // 씨앗 자리 = 색차 칸(2x2) 안에서 밝기가 가장 많이 오른 픽셀. 멀리서 찍혀 1~2픽셀뿐인 흐린 점은
         // 칸의 왼쪽 위 픽셀만 보면 밝기가 안 오른 것처럼 보여 놓쳤다(2차 태블릿 시험, V+19·23 두 발).
         const bx = (i % hw) * 2, by = ((i / hw) | 0) * 2;
         let p0 = by * w + bx, bd = -1e9;
-        for (let q = 0; q < 4; q++) { const xx = bx + (q & 1), yy = by + (q >> 1); if (xx >= w || yy >= h) continue; const pq = yy * w + xx, d = Y[pq] - bgY[pq]; if (d > bd) { bd = d; p0 = pq; } }
-        if (mark[p0] || (bd < o.seedY && dv < o.strongV)) continue;
+        // 5차 시험: 흐린 점은 빨강이 오른 칸과 밝기가 오른 픽셀이 한 칸 어긋나 있기도 했다(V+19 칸의 밝기 +6, 바로 옆 픽셀 +48) → 칸 둘레 1픽셀까지 본다
+        for (let yy = by - 1; yy <= by + 2; yy++) for (let xx = bx - 1; xx <= bx + 2; xx++) { if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue; const pq = yy * w + xx, d = Y[pq] - bgY[pq]; if (d > bd) { bd = d; p0 = pq; } }
+        if (mark[p0] || (bd < o.seedY && dv < o.strongV) || (dv < o.seedV && bd < o.satSeedY)) continue;
         // 씨앗에서 시작해 이웃으로 빛 덩어리를 넓힌다(밝기가 오르고 색이 빨강 쪽이거나, 밝기가 크게 오른 포화 픽셀)
         let sp = 0, cnt = 0, sw = 0, sx = 0, sy = 0, minY = 1e9, maxY = -1, minX = 1e9, maxX = -1, maxDV = 0;
         let cc = 0, cw = 0, cxs = 0, cys = 0, cMinY = 1e9, cMaxY = -1;   // 중심부(예전 규칙) 픽셀만 따로: 탄착점 계산용
