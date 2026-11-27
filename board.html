@@ -9,10 +9,12 @@
 <style>
   /* TV·프로젝터용 전광판. 글자 크기는 화면 폭·높이(vw/vh)에 맞춘다.
      ※ 클래스 이름에 광고처럼 보이는 말(…-big, ad-, banner 등)을 쓰지 않는다 - 삼성 인터넷 광고 차단이 화면을 숨긴 적이 있다. */
-  /* 화면 크기 맞춤: 모든 크기를 --u(16:9 화면의 1vh) 단위로 쓴다. 가로가 좁은 화면(폴드 펼침 등 정사각형에 가까운 화면)은
-     세로 대신 가로 폭에 맞춰 줄여서 넘치지 않게 한다. 높이는 주소창을 뺀 실제 보이는 높이(dvh)를 쓴다(100vh는 휴대폰에서 아래가 잘렸다). */
-  :root{--u:min(1vh,.5625vw)}
-  @supports (height:1dvh){:root{--u:min(1dvh,.5625vw)}}
+  /* 화면 크기 맞춤: 모든 크기를 --u 단위로 쓴다. 보통 화면(가로:세로가 4:3보다 넓은 TV·모니터·노트북)에서는 --u = 1vh라
+     원래 디자인 그대로이고, 그보다 좁은 화면(폴드 펼침 등 정사각형에 가까운 화면)에서만 가로 폭에 맞춰 줄인다.
+     (처음엔 16:9 기준(.5625vw)으로 줄였더니 16:10 모니터에서도 글자가 약 10% 작아져 심심해 보였다)
+     높이는 주소창을 뺀 실제 보이는 높이(dvh)를 쓴다(100vh는 휴대폰에서 아래가 잘렸다). */
+  :root{--u:min(1vh,.75vw)}
+  @supports (height:1dvh){:root{--u:min(1dvh,.75vw)}}
   :root{--bg:#07111f;--panel:#101d30;--panel2:#0b1626;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--dim:#5b6f86;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;overflow:hidden;background:radial-gradient(circle at 50% -20%,#17375a 0,var(--bg) 55%);color:var(--text);font-family:system-ui,-apple-system,"Malgun Gothic","Noto Sans KR",sans-serif}
@@ -47,14 +49,15 @@
   .timer .clk.urgent{color:var(--red)}
   .timer.practice .lbl{color:var(--lime)}
   .lanes{flex:1;min-height:0;display:grid;gap:1.2vw;grid-auto-rows:1fr}
+  /* 사로 카드 글자는 카드 폭(한 줄에 4장)도 넘지 않게 상한(vw)을 둔다. 16:9·16:10 화면에서는 상한에 걸리지 않아 원래 크기 그대로. */
   .card{background:var(--panel);border:.calc(3*var(--u)) solid var(--line);border-radius:calc(1.6*var(--u));padding:calc(1.4*var(--u)) 1vw;display:flex;flex-direction:column;justify-content:space-between;align-items:center;text-align:center;min-width:0;overflow:hidden}
   .card .no{font-size:calc(2.2*var(--u));font-weight:900;color:var(--cyan)}
-  .card .cls{font-size:calc(4.6*var(--u));font-weight:900;white-space:nowrap}
-  .card .sc{font-size:calc(7.5*var(--u));font-weight:900;color:var(--lime);font-variant-numeric:tabular-nums;line-height:1}
-  .card .meta{font-size:calc(2.2*var(--u));font-weight:800;color:var(--muted)}
+  .card .cls{font-size:min(calc(4.6*var(--u)),3.1vw);font-weight:900;white-space:nowrap}
+  .card .sc{font-size:min(calc(7.5*var(--u)),5vw);font-weight:900;color:var(--lime);font-variant-numeric:tabular-nums;line-height:1}
+  .card .meta{font-size:min(calc(2.2*var(--u)),1.4vw);font-weight:800;color:var(--muted)}
   .card .bar{width:100%;height:calc(1*var(--u));background:var(--panel2);border-radius:calc(1*var(--u));overflow:hidden}
   .card .bar i{display:block;height:100%;background:var(--cyan)}
-  .card .st{font-size:calc(2.4*var(--u));font-weight:900;border-radius:999px;padding:.calc(4*var(--u)) 1.2vw;border:.calc(25*var(--u)) solid var(--line);color:var(--muted)}
+  .card .st{font-size:min(calc(2.4*var(--u)),1.5vw);font-weight:900;border-radius:999px;padding:.calc(4*var(--u)) 1.2vw;border:.calc(25*var(--u)) solid var(--line);color:var(--muted)}
   .card.fin{border-color:var(--lime)}.card.fin .st{color:var(--lime);border-color:var(--lime)}
   .card.tout{border-color:var(--gold)}.card.tout .st{color:var(--gold);border-color:var(--gold)}
   .msg{text-align:center;font-size:calc(7*var(--u));font-weight:900;line-height:1.3}
