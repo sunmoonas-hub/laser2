@@ -16,7 +16,8 @@
  * 메시지(일꾼 → 메인)
  *   {shot}  발 사건(엔진 결과 + 장면 번호)
  *   {stat}  1초마다: 장면 수, 장면 속도, 빠진 장면, 복사·엔진 처리 시간(평균·최대)
- *   {clip}  발(또는 레이저처럼 켜진 빛) 앞뒤 장면 묶음 - 엔진이 놓친 발을 PC에서 다시 확인하기 위함
+ *   {clip}  발(또는 레이저처럼 켜진 빛) 앞뒤 장면 묶음(빛 자리 주변 160x160만, x0·y0 = 잘라 낸 위치) - 엔진이 놓친 발을 PC에서 다시 확인하기 위함
+ *   stat.flashes = 레이저처럼 갑자기 켜진 빛의 수(엔진이 발로 인정했든 안 했든)
  *   {err}, {ended}
  */
 importScripts('laser-engine.js');
@@ -38,7 +39,19 @@ async function run(m) {
   const reader = m.readable.getReader(), RING = 6, AFTER = 6;
   let n = 0, lost = 0, lastTs = null, gapMed = 0, statAt = 0, buf = null;
   const gaps = [], cCopy = [], cEng = [];
-  let ring = [], prevY = null, prevV = null, clip = null, after = 0, lastTrig = -1e9;
+  let ring = [], prevY = null, prevV = null, clip = null, after = 0, lastTrig = -1e9, flashes = 0, wasLit = false;
+  // 장면 전체를 읽을 때 묶음을 통째로 올리면 묶음 하나가 6MB나 된다 → 빛 자리 주변 CxC만 잘라 올린다
+  const C = Math.min(160, w & ~1, h & ~1);
+  function crop(c) {
+    const x0 = Math.max(0, Math.min(w - C, Math.round(c.at[0] - C / 2))) & ~1, y0 = Math.max(0, Math.min(h - C, Math.round(c.at[1] - C / 2))) & ~1, H2 = C >> 1;
+    c.frames = c.frames.map(f => {
+      const Yc = new Uint8Array(C * C), Vc = new Uint8Array(H2 * H2);
+      for (let r = 0; r < C; r++) Yc.set(f.Y.subarray((y0 + r) * w + x0, (y0 + r) * w + x0 + C), r * C);
+      for (let r = 0; r < H2; r++) Vc.set(f.V.subarray(((y0 >> 1) + r) * hw + (x0 >> 1), ((y0 >> 1) + r) * hw + (x0 >> 1) + H2), r * H2);
+      return { ts: f.ts, dv: f.dv, dy: f.dy, Y: Yc, V: Vc };
+    });
+    c.x0 = x0; c.y0 = y0; c.w = C; c.h = C; return c;
+  }
   while (!stopped) {
     const { value: f, done } = await reader.read();
     if (done || !f) break;
@@ -78,21 +91,30 @@ async function run(m) {
     cCopy.push(t1 - t0); cEng.push(t2 - t1);
     for (const s of ev) { s.frameNo = n; postMessage({ shot: s }); }
     // 장면 묶음: 레이저처럼 갑자기 켜진 빛(직전 장면보다 V·Y가 확 오름)이나 엔진이 찾은 발 앞뒤 장면을 모은다
+    // 켜짐 신호: 직전 장면 대비 V(빨강 쪽 색차)·Y(밝기)가 가장 크게 오른 값과 그 자리.
+    // 엔진이 발로 인정하지 않은 빛도 '빛 켜짐'으로 세어, 엔진이 버린 것인지 카메라에 아예 안 찍힌 것인지 가린다.
+    let dv = 0, dy = 0, ai = -1, yi = -1;
+    if (prevV) { for (let i = 0; i < V.length; i++) { const d = V[i] - prevV[i]; if (d > dv) { dv = d; ai = i; } } for (let i = 0; i < Y.length; i += 2) { const d = Y[i] - prevY[i]; if (d > dy) { dy = d; yi = i; } } }
+    const lit = dv >= thrV || dy >= thrY;
+    if (lit && !wasLit) { flashes++; postMessage({ flash: { ts, frameNo: n, dv, dy, vx: ai < 0 ? -1 : (ai % hw) * 2, vy: ai < 0 ? -1 : ((ai / hw) | 0) * 2, yx: yi < 0 ? -1 : yi % w, yy: yi < 0 ? -1 : (yi / w) | 0 } }); }
+    wasLit = lit;
     if (clipOn) {
-      let dv = 0, dy = 0;
-      if (prevV) { for (let i = 0; i < V.length; i++) { const d = V[i] - prevV[i]; if (d > dv) dv = d; } for (let i = 0; i < Y.length; i += 2) { const d = Y[i] - prevY[i]; if (d > dy) dy = d; } }
       const fr = { ts, dv, dy, Y, V };
-      if (clip) { clip.frames.push(fr); for (const s of ev) clip.events.push(s); if (--after <= 0) { postMessage({ clip }); clip = null; } }
+      if (clip) { clip.frames.push(fr); for (const s of ev) clip.events.push(s); if (--after <= 0) { postMessage({ clip: crop(clip) }); clip = null; } }
       else {
         ring.push(fr); if (ring.length > RING) ring.shift();
-        if ((dv >= thrV || dy >= thrY || ev.length) && ts - lastTrig > 400) { clip = { trigTs: ts, dv, dy, frames: ring.slice(), events: ev.slice() }; ring = []; after = AFTER; lastTrig = ts; }
+        if ((lit || ev.length) && ts - lastTrig > 400) {
+          // 묶음 가운데 = 빨강이 가장 크게 오른 자리(없으면 밝기, 없으면 엔진 발 자리)
+          const at = dv >= thrV ? [(ai % hw) * 2, ((ai / hw) | 0) * 2] : dy >= thrY ? [yi % w, (yi / w) | 0] : [ev[0].x, ev[0].y];
+          clip = { trigTs: ts, dv, dy, at, frames: ring.slice(), events: ev.slice() }; ring = []; after = AFTER; lastTrig = ts;
+        }
       }
     } else { ring = []; clip = null; }
     prevY = Y; prevV = V;
     if (ts - statAt > 1000) {
       statAt = ts;
       const avg = a => a.length ? a.reduce((p, q) => p + q, 0) / a.length : 0, mx = a => a.length ? Math.max(...a) : 0;
-      postMessage({ stat: { n, lost, fps: gapMed ? Math.round(10000 / gapMed) / 10 : 0, copyAvg: avg(cCopy), copyMax: mx(cCopy), engAvg: avg(cEng), engMax: mx(cEng), eng: eng.stats() } });
+      postMessage({ stat: { n, lost, fps: gapMed ? Math.round(10000 / gapMed) / 10 : 0, copyAvg: avg(cCopy), copyMax: mx(cCopy), engAvg: avg(cEng), engMax: mx(cEng), flashes, eng: eng.stats() } });
       cCopy.length = 0; cEng.length = 0;
     }
   }

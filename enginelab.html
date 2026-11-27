@@ -56,7 +56,7 @@
   <div class="main">
     <div>
       <div class="stagebox"><video id="v" playsinline muted></video><canvas id="ov"></canvas></div>
-      <div class="muted" id="hint" style="margin-top:4px">카메라를 켠 뒤 화면에서 과녁 가운데 → 가장 바깥 원 테두리를 차례로 눌러 주세요.</div>
+      <div class="muted" id="hint" style="margin-top:4px">카메라를 켠 뒤 화면에서 과녁 가운데 → <b>인쇄된 원 중 가장 바깥 원(1점 원)</b>의 테두리를 차례로 눌러 주세요.</div>
     </div>
     <div>
       <div class="panel">
@@ -82,6 +82,7 @@
   const $=id=>document.getElementById(id);
   const lane=new URLSearchParams(location.search).get('lane')||'';
   const S={stream:null,track:null,db:null,dbTried:false,roi:null,target:null,taps:[],worker:null,capTrack:null,running:false,shots:[],clips:0,busy:null,uploads:Promise.resolve(),sess:'',lastStat:null};
+  window.__lab=S;   // 진단용(개발자 도구에서 상태 확인)
   const r1=v=>Math.round(v*10)/10,r2=v=>Math.round(v*100)/100;
   function log(s){$('log').textContent+=new Date().toLocaleTimeString('ko-KR',{hour12:false})+' '+s+'\n';$('log').scrollTop=1e9}
   // Firebase는 올리기를 켰을 때만 연결한다. 연결이 안 돼도(학교 유선망 차단 등) 인식 시험은 그대로 된다.
@@ -123,11 +124,12 @@
     const vx=(e.clientX-b.left-g.ox)/g.sc,vy=(e.clientY-b.top-g.oy)/g.sc;
     S.taps.push({x:vx,y:vy});if(S.taps.length>2)S.taps=[S.taps[2]];
     if(S.taps.length===2){
-      const [c0,c1]=S.taps,r=Math.hypot(c1.x-c0.x,c1.y-c0.y),half=Math.ceil(r*1.9);   // 엔진 채점 범위(바깥 원의 1.8배) + 여유
-      const even=n=>n&~1,x=even(Math.max(0,Math.round(c0.x-half))),y=even(Math.max(0,Math.round(c0.y-half)));
-      const w=even(Math.min(g.vw-x,half*2)),h=even(Math.min(g.vh-y,half*2));
-      S.roi={x,y,w,h,cx:c0.x,cy:c0.y,r};S.target={cx:c0.x-x,cy:c0.y-y,rx:r,ry:r,angle:0};
-      $('hint').textContent=`과녁 반지름 ${Math.round(r)}px · 읽는 범위 ${w}x${h}. 다시 정하려면 두 번 더 누르세요(인식 중이면 다시 시작됩니다).`;
+      // 장면 전체를 읽는다. 1차 태블릿 시험(6·7사로)에서 표적 주변(바깥 원의 1.9배)만 읽었더니,
+      // 그 안에 찍힌 빛은 18발 중 17발을 인식했지만 범위 밖으로 나간 발은 아예 보이지 않아 '인식 안 됨'으로 느껴졌다.
+      // 전체(640x480)를 읽어도 엔진은 PC에서 장면당 약 3ms라 장면 간격(33ms)에 넉넉하다. 범위 밖 발은 MISS로 보여 준다.
+      const [c0,c1]=S.taps,r=Math.hypot(c1.x-c0.x,c1.y-c0.y);
+      S.roi={x:0,y:0,w:g.vw&~1,h:g.vh&~1,cx:c0.x,cy:c0.y,r};S.target={cx:c0.x,cy:c0.y,rx:r,ry:r,angle:0};
+      $('hint').textContent=`과녁 반지름 ${Math.round(r)}px · 장면 전체(${S.roi.w}x${S.roi.h})를 읽습니다. 다시 정하려면 두 번 더 누르세요(인식 중이면 다시 시작됩니다).`;
       $('runBtn').disabled=!S.track||typeof MediaStreamTrackProcessor!=='function';
       if(S.running){stopRun();startRun()}
     }else $('hint').textContent='이제 가장 바깥 원의 테두리를 눌러 주세요.';
@@ -142,7 +144,6 @@
     const g=geom(),r=S.roi,X=vx=>g.ox+vx*g.sc,Y=vy=>g.oy+vy*g.sc;
     x.strokeStyle='#29e7d6';x.lineWidth=2;x.beginPath();x.arc(X(r.cx),Y(r.cy),r.r*g.sc,0,Math.PI*2);x.stroke();
     x.strokeStyle='rgba(41,231,214,.35)';x.beginPath();x.arc(X(r.cx),Y(r.cy),r.r*g.sc*.5,0,Math.PI*2);x.stroke();
-    x.strokeStyle='#ffc940';x.setLineDash([6,4]);x.strokeRect(X(r.x),Y(r.y),r.w*g.sc,r.h*g.sc);x.setLineDash([]);
     S.shots.forEach((s,i)=>{
       const last=i===S.shots.length-1,sx=X(s.vx),sy=Y(s.vy),cx=X(s.vcx),cy=Y(s.vcy);
       if(Math.hypot(sx-cx,sy-cy)>2){x.strokeStyle='rgba(200,210,220,.7)';x.lineWidth=1;x.beginPath();x.moveTo(sx,sy);x.lineTo(cx,cy);x.stroke();x.fillStyle='rgba(200,210,220,.8)';x.beginPath();x.arc(cx,cy,2.5,0,Math.PI*2);x.fill()}
@@ -156,12 +157,12 @@
   async function startRun(){
     if(!S.track||!S.roi)return;
     if($('saveChk').checked)await fbReady();
-    S.sess=(lane?'lane'+lane+'-':'')+Date.now().toString(36);S.clips=0;
+    S.sess=(lane?'lane'+lane+'-':'')+Date.now().toString(36);S.clips=0;S.flashN=0;S.flashes=[];
     put('meta',JSON.parse(JSON.stringify({at:new Date().toISOString(),ua:navigator.userAgent,lane,roi:S.roi,target:S.target,settings:S.track.getSettings()})));
     const capTrack=S.capTrack=S.track.clone(),rd=new MediaStreamTrackProcessor({track:capTrack}).readable;
     const w=S.worker=new Worker('engine/capture-worker.js');
     w.onmessage=onWorker;w.onerror=e=>log('일꾼 오류: '+(e.message||e));
-    w.postMessage({cmd:'start',readable:rd,roi:{x:S.roi.x,y:S.roi.y,w:S.roi.w,h:S.roi.h},target:S.target,opts:{},clip:{on:$('saveChk').checked&&!!S.db,thrV:14,thrY:45}},[rd]);
+    w.postMessage({cmd:'start',readable:rd,roi:{x:S.roi.x,y:S.roi.y,w:S.roi.w,h:S.roi.h},target:S.target,opts:{missLimit:99},clip:{on:$('saveChk').checked&&!!S.db,thrV:12,thrY:45}},[rd]);
     S.running=true;$('runBtn').textContent='② 인식 멈춤';$('runBtn').className='stop';$('busyBtn').disabled=false;
     log(`인식 시작 (세션 ${S.sess})`);
   }
@@ -187,10 +188,12 @@
     }
     if(d.clip){
       const c=d.clip,idx=++S.clips;
-      put('clips/'+String(idx).padStart(3,'0'),{trigTs:c.trigTs,dv:c.dv,dy:c.dy,w:S.roi.w,h:S.roi.h,events:c.events.map(s=>({ts:s.ts,x:r2(s.x),y:r2(s.y),cx:r2(s.cx),cy:r2(s.cy),sd:s.sd,len:s.len,frames:s.frames})),frames:c.frames.map(f=>({ts:f.ts,dv:f.dv,dy:f.dy,y:b64(f.Y),v:b64(f.V)}))});
+      put('clips/'+String(idx).padStart(3,'0'),{trigTs:c.trigTs,dv:c.dv,dy:c.dy,x0:c.x0,y0:c.y0,w:c.w,h:c.h,events:c.events.map(s=>({ts:s.ts,x:r2(s.x),y:r2(s.y),cx:r2(s.cx),cy:r2(s.cy),sd:s.sd,len:s.len,frames:s.frames})),frames:c.frames.map(f=>({ts:f.ts,dv:f.dv,dy:f.dy,y:b64(f.Y),v:b64(f.V)}))});
       return;
     }
-    if(d.stat){S.lastStat=d.stat;showStat(d.stat);return}
+    // 빛 켜짐 기록: 엔진이 발로 인정하지 않은 빛이 어디서 몇 번 있었는지 PC에서 맞춰 보기 위함
+    if(d.flash){S.flashes=(S.flashes||[]).concat([d.flash]).slice(-200);S.flashN=(S.flashN||0)+1;put('flashes/'+String(S.flashN).padStart(4,'0'),d.flash);return}
+    if(d.stat){S.lastStat=d.stat;showStat(d.stat);if(!S.statPut||Date.now()-S.statPut>5000){S.statPut=Date.now();const t=d.stat;put('stat',{at:Date.now(),n:t.n,lost:t.lost,fps:t.fps,flashes:t.flashes,shots:S.shots.length,copyAvg:r2(t.copyAvg),copyMax:r1(t.copyMax),engAvg:r2(t.engAvg),engMax:r1(t.engMax),eng:t.eng})}return}
     if(d.ended)log(`인식 끝: 장면 ${d.n}장 · 빠진 장면 ${d.lost}장`);
   }
   // 비교용: 같은 발을 예전 방식(빛 덩어리 전체 중심)으로 채점하면 몇 점이었는지
@@ -201,17 +204,19 @@
   function showStat(s){
     const lostCls=s.lost?'bad':'good',fpsCls=s.fps>=28?'good':'bad';
     $('stat').innerHTML=`장면 <b>${s.n}</b>장 · 속도 <span class="${fpsCls}">${s.fps}장/초</span> · 빠진 장면 <span class="${lostCls}">${s.lost}</span>장<br>`+
-      `표적 주변 복사 평균 ${r2(s.copyAvg)}ms (최대 ${r1(s.copyMax)}) · 엔진 평균 ${r2(s.engAvg)}ms (최대 ${r1(s.engMax)})<br>`+
+      `장면 복사 평균 ${r2(s.copyAvg)}ms (최대 ${r1(s.copyMax)}) · 엔진 평균 ${r2(s.engAvg)}ms (최대 ${r1(s.engMax)})<br>`+
+      `레이저처럼 켜진 빛 <b>${s.flashes}</b>번 · 발로 인정 <b>${S.shots.length}</b>개<br>`+
       `버린 빛: 너무 작음 ${s.eng.rejectedSmall} · 오래 켜짐 ${s.eng.rejectedLong} · 화면 전체 변화 ${s.eng.globalSkips}`+(S.busy?'<br><span class="bad">메인을 일부러 바쁘게 하는 중</span>':'')+
       (S.clips?`<br>올린 장면 묶음 ${S.clips}개`:'');
   }
   function render(){
     const a=S.shots,l=a[a.length-1];
-    $('last').innerHTML=l?`${l.sd.toFixed(1)}<small>정수 ${l.si}</small>`:'-<small></small>';
+    const sc=v=>v>0?v.toFixed(1):'MISS';
+    $('last').innerHTML=l?`${sc(l.sd)}<small>${l.sd>0?'정수 '+l.si:'바깥 원의 '+l.nr+'배'}</small>`:'-<small></small>';
     $('lastInfo').textContent=l?`#${l.i} · 줄 길이 ${l.len}px · 장면 ${l.frames}장`+(l.cenSd!=null&&Math.abs(l.cenSd-l.sd)>=0.05?` · 중심 기준이면 ${l.cenSd.toFixed(1)}`:''):' ';
     const tot=a.reduce((p,s)=>p+s.sd,0),toti=a.reduce((p,s)=>p+s.si,0);
     $('sum').textContent=a.length?` ${a.length}발 · 합계 ${r1(tot)} (정수 ${toti})`:'';
-    $('shots').innerHTML=a.slice().reverse().map(s=>`<tr><td>${s.i}</td><td>${s.sd.toFixed(1)}</td><td>${s.si}</td><td>${s.len}</td><td>${s.frames}</td><td>${s.cenSd!=null?s.cenSd.toFixed(1):'-'}</td></tr>`).join('');
+    $('shots').innerHTML=a.slice().reverse().map(s=>`<tr><td>${s.i}</td><td>${sc(s.sd)}</td><td>${s.si}</td><td>${s.len}</td><td>${s.frames}</td><td>${s.cenSd!=null?sc(s.cenSd):'-'}</td></tr>`).join('');
   }
   $('clrBtn').onclick=()=>{S.shots=[];render();draw()};
 

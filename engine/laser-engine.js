@@ -29,6 +29,10 @@
     blobY: 30,          // 빛 덩어리에 넣을 픽셀: 밝기 상승
     blobV: 6,           //   + 색 상승(약하게라도 빨강 쪽)
     blobSatY: 70,       //   또는 밝기가 크게 오른 포화 픽셀(색이 약해도 레이저 중심부)
+    // 빨강이 아주 크게 오르면 밝기가 안 올라도 레이저로 본다(씨앗·덩어리 모두).
+    // 밝은 종이 위에서는 레이저 가장자리의 빨강이 종이보다 어두워(밝기 −76, V +108) 밝기 조건으로는 씨앗이 안 생겼다(PC 시험).
+    // 쏘지 않은 장면의 V 흔들림은 최대 3, 색 없이 밝기만 오른 장면도 V+2~3이라 30이면 충분히 떨어져 있다.
+    strongV: 30,
     growR: 2,           // 씨앗 주변으로 빛 덩어리를 넓힐 때 한 번에 보는 거리(px)
     minBlob: 4,         // 빛 덩어리 최소 크기(px) - 더 작으면 잡음
     maxLitFrames: 3,    // 이 장면 수보다 오래 켜져 있으면 레이저가 아니라 장면 변화(조명·그림자·사람)
@@ -89,14 +93,14 @@
         const dv = V[i] - bgV[i];
         if (dv < o.seedV || dv < o.seedNoiseK * nzV[i] || V[i] - prevV[i] < o.seedOnsetV) continue;
         const x0 = (i % hw) * 2, y0 = ((i / hw) | 0) * 2, p0 = y0 * w + x0;
-        if (mark[p0] || Y[p0] - bgY[p0] < o.seedY) continue;
+        if (mark[p0] || (Y[p0] - bgY[p0] < o.seedY && dv < o.strongV)) continue;
         // 씨앗에서 시작해 이웃으로 빛 덩어리를 넓힌다(밝기가 오르고 색이 빨강 쪽이거나, 밝기가 크게 오른 포화 픽셀)
         let sp = 0, cnt = 0, sw = 0, sx = 0, sy = 0, minY = 1e9, maxY = -1, minX = 1e9, maxX = -1, maxDV = 0;
         stack[sp++] = p0; mark[p0] = 1;
         while (sp) {
           const p = stack[--sp], x = p % w, y = (p / w) | 0;
           const dY = Y[p] - bgY[p], ph = (y >> 1) * hw + (x >> 1), dV = V[ph] - bgV[ph];
-          const inBlob = (dY >= o.blobY && dV >= o.blobV) || dY >= o.blobSatY || p === p0;
+          const inBlob = (dY >= o.blobY && dV >= o.blobV) || dY >= o.blobSatY || dV >= o.strongV || p === p0;
           if (!inBlob) continue;
           const wt = Math.max(1, dY) + Math.max(0, dV) * 2;
           accP[cnt] = p; accW[cnt] = wt; cnt++; sw += wt; sx += x * wt; sy += y * wt; if (dV > maxDV) maxDV = dV;
