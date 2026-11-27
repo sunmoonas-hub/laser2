@@ -96,7 +96,15 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v==null?'':v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   function norm(o){const r={};Object.keys(o||{}).forEach(k=>{if(o[k]!=null)r[k]=o[k]});return r}
-  const now=()=>Date.now()+S.offset;
+  // 서버 시각: 태블릿(lgSync)과 같은 방법으로 직접 재서 쓴다. Firebase 기본 보정값은 실제와 약 40ms 달랐다(태블릿 기록).
+  const now=()=>Date.now()+(S.sync!=null?S.sync:S.offset);
+  async function syncClock(){
+    if(S.syncing||!S.db)return;S.syncing=true;const r=S.db.ref(ROOT+'/clock/board');let best=null;
+    try{for(let i=0;i<8;i++){const t0=Date.now();await r.set(firebase.database.ServerValue.TIMESTAMP);const t1=Date.now();const sv=Number((await r.get()).val());if(!sv)continue;const rtt=t1-t0,off=sv-(t0+t1)/2;if(!best||rtt<best.rtt)best={rtt,off};await new Promise(z=>setTimeout(z,150))}
+      if(best)S.sync=Math.round(best.off)}catch(e){}finally{S.syncing=false}
+  }
+  // 남은 시간 숫자가 바뀌는 순간(1초 경계) 바로 뒤에 다시 그린다(예전: 0.25초마다 → 태블릿과 최대 0.25초 어긋나 보임)
+  function sched(){try{render()}catch(e){console.warn(e)}const st=S.st,ref=(st&&st.endAt)||0;const rem=((ref-now())%1000+1000)%1000;setTimeout(sched,Math.min(250,rem+4))}
   const ref=p=>S.db.ref(ROOT+'/'+p);
   function fmt(ms){const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
   const clsName=(g,c)=>`${g}학년 ${c}반`;
@@ -209,7 +217,7 @@
     firebase.auth().signInAnonymously().then(()=>{
       ref('state').on('value',s=>{S.st=s.val();if(S.st)S.st.lanes=norm(S.st.lanes);watchReveal(S.st);render()});
       ref('live').on('value',s=>{S.live=norm(s.val());render()});
-      setInterval(render,250);
+      sched();syncClock();setInterval(()=>{const st=S.st;if(!(st&&(st.phase==='practice'||st.phase==='shooting')))syncClock()},120000);   // 사격 중에는 다시 재지 않는다(시계가 튀지 않게)
     }).catch(e=>{$('conn').textContent='로그인 실패: '+e.message});
   }
   init();

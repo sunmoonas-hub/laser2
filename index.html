@@ -454,10 +454,15 @@
     const tick=()=>{
       const left=Math.ceil((state.countdownEnd-performance.now())/1000);
       els.countdown.classList.add('show');
-      if(left>0){els.countdownText.className='';els.countdownText.textContent=String(left)}
-      else{clearInterval(countdownTimer);countdownTimer=0;if(!state.detectorReady){els.countdownText.className='go';els.countdownText.textContent='준비 중'}}
+      if(left>0){els.countdownText.className='';els.countdownText.textContent=String(left);return true}
+      if(!state.detectorReady){els.countdownText.className='go';els.countdownText.textContent='준비 중'}
+      return false;
     };
-    tick();countdownTimer=setInterval(tick,150);
+    // 숫자가 바뀌는 순간(끝 시각 기준 1초 경계) 바로 뒤에 다시 그린다. 0.15초마다 그리면 태블릿마다 숫자가 바뀌는 순간이 최대 0.15초 달랐다.
+    // (리그는 lgBegin이 countdownEnd를 컨트롤 타워 시작 시각에 맞춰 다시 정하므로, 매번 그 값을 기준으로 계산한다)
+    // 새 인식이면 카운트다운이 끝나는 바로 그 순간 '사격 시작'(다음 카메라 장면까지 기다리지 않게 - 태블릿끼리 같은 순간에 뜨도록)
+    const loop=()=>{if(!tick()){countdownTimer=0;if(ne.on&&neActive()&&!state.detectorReady&&performance.now()-ne.startAt>=400)markDetectorReady();return}const rem=((state.countdownEnd-performance.now())%1000+1000)%1000;countdownTimer=setTimeout(loop,Math.min(200,rem+4))};
+    loop();
   }
   function showGo(){
     if(!(state.countdownSec>0)||state.announced)return;
@@ -893,7 +898,7 @@
     if(!fb.ready||!LANE_FIXED||lg.syncing)return;lg.syncing=true;
     const ref=fb.db.ref(LG_ROOT+'/clock/'+LANE_FIXED);let best=null;
     try{
-      for(let i=0;i<5;i++){
+      for(let i=0;i<8;i++){   // 8번 재서 왕복이 가장 짧은 값(예전 5번)
         const t0=Date.now();await ref.set(firebase.database.ServerValue.TIMESTAMP);const t1=Date.now();
         // get()은 서버에서 실제로 기록된 값을 읽는다(once는 기기 안의 추정값을 돌려줄 수 있음)
         const sv=Number((await ref.get()).val());if(!sv)continue;
@@ -918,7 +923,7 @@
       addsRef.on('child_added',c=>{if(lg.seenAdds.has(c.key))return;lg.seenAdds.add(c.key);const v=c.val()||{};
         if(lg.run&&!lg.run.done&&lg.run.kind==='match'&&v.runId===lg.run.runId&&state.running){recordShot(null,null,0);toast('📡 컨트롤 타워에서 0점 1발을 추가했어요.')}});
     });
-    setInterval(lgTick,200);setInterval(lgPush,5000);   // 5초마다 상태를 다시 올려 컨트롤 타워의 '태블릿 연결' 표시를 유지
+    lgSched();setInterval(lgPush,5000);   // 5초마다 상태를 다시 올려 컨트롤 타워의 '태블릿 연결' 표시를 유지
     // 시계 맞추기: 접속 직후 한 번, 이후 2분마다(사격 중에는 하지 않음 - 진행 중 시계가 바뀌면 남은 시간이 튐)
     lgSync();setInterval(()=>{if(!(lg.run&&!lg.run.done&&state.running))lgSync()},120000);
   }
@@ -957,6 +962,9 @@
   // 0.25초 안에 여러 발이 오면 한 번만 저장한다.
   function lgOnShot(s){const r=lg.run;s.t=Math.max(0,lgNow()-r.startAt);r.lastT=s.t;
     if(!lg.pushTimer)lg.pushTimer=setTimeout(()=>{lg.pushTimer=0;const go=()=>{lgPush();lgRender()};window.requestIdleCallback?requestIdleCallback(go,{timeout:400}):go()},250)}
+  // 남은 시간 숫자가 바뀌는 순간(시작·종료 시각 기준 1초 경계) 바로 뒤에 다시 그린다. 예전처럼 0.2초마다 그리면
+  // 태블릿마다 숫자가 바뀌는 순간과 제한 시간 종료 처리가 최대 0.2초씩 달랐다. 경계가 멀면 최대 0.2초마다 확인한다.
+  function lgSched(){try{lgTick()}catch(e){console.warn(e)}const r=lg.run,st=lg.st,ref=r?r.endAt:(st&&st.endAt)||0;const rem=((ref-lgNow())%1000+1000)%1000;setTimeout(lgSched,Math.min(200,rem+4))}
   function lgTick(){
     const r=lg.run;
     if(r&&!r.done&&!r.failed&&state.running&&state.matchCfg&&state.matchCfg.mode==='league'&&lgNow()>=r.endAt){if(r.kind==='practice')lgAbort('연습 시간이 끝났어요.');else lgFinish(true)}
@@ -1045,6 +1053,8 @@
 
   function recordShot(x,y,manualScore=null,kind){
     if(!state.running||state.shots.length>=state.maxShots)return;
+    // 리그: 제한 시간이 끝난 뒤의 빛은 인정하지 않는다(종료 처리가 돌기 전 짧은 틈에 들어온 발). 모든 태블릿이 같은 서버 시각으로 자른다.
+    if(manualScore==null&&lg.run&&!lg.run.done&&state.matchCfg&&state.matchCfg.mode==='league'&&lgNow()>=lg.run.endAt)return;
     const dx=x==null?0:x-state.center.x,dy=y==null?0:y-state.center.y,ca=Math.cos(state.targetAngle),sa=Math.sin(state.targetAngle),ex=dx*ca+dy*sa,ey=-dx*sa+dy*ca,nr=manualScore==null?Math.hypot(ex/state.radiusX,ey/state.radiusY):0;
     // 실제 사격 채점 규칙처럼, 링 경계선에 걸치면 더 높은 점수로 인정한다.
     // (경계선(예: 10점/9점 사이)에서 살짝 안쪽으로 기운 만큼은 위쪽 점수로 쳐준다)
