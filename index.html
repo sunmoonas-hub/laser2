@@ -426,7 +426,8 @@
     return {x:mapped.x,y:mapped.y,radiusX:found.rx*vw/sw*mapped.scale,radiusY:found.ry*vw/sw*mapped.scale,angle:found.a,rings:found.rings};
   }
 
-  function missLimit(){return state.paperMultiple||MISS_LIMIT}
+  // 리그 경기 중이면 컨트롤 타워 대회 설정의 0점 인정 경계(state.missLimit)를 쓴다(없으면 1.8).
+  function missLimit(){if(state.paperMultiple)return state.paperMultiple;let m=0;try{m=state.matchCfg&&state.matchCfg.mode==='league'&&lg.st&&Number(lg.st.missLimit)}catch(_){}   // lg는 아래쪽에서 만들어져 처음 그릴 때는 아직 없을 수 있다return m>=1.2&&m<=6?m:MISS_LIMIT}
   function canvasPoint(ev){const r=els.overlay.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top}}
   function drawOverlay(){
     const width=els.overlay.clientWidth,height=els.overlay.clientHeight;ctx.clearRect(0,0,width,height);
@@ -1007,7 +1008,7 @@
     const n=shots.length,per=rl.per||1,team=st.teamSize||15,dec=st.scoring!=='int';
     let sum=0;for(const s of shots)sum+=dec?(Number(s.sd==null?s.score:s.sd)||0):(Number(s.si!=null?s.si:s.score)||0);
     const sumTxt=dec?sum.toFixed(1):String(sum);
-    const title=`${st.grade}학년 ${cls}반 · ${st.round}라운드${st.round===1?' '+st.heat+'조':''}`;
+    const title=`${st.grade}학년 ${cls}반 · ${st.round}라운드${st.so?' 슛오프':st.round===1?' '+st.heat+'조':''}`;
     // 큰 시계 판: 연습·본사격 중과 끝난 직후에만 오른쪽 버튼 영역을 덮는다(대기 중에는 카메라·보정 버튼을 써야 하므로 작은 표시만).
     const big=!!(r&&!r.failed&&!r.aborted&&(state.running||r.done));
     if(document.body.classList.contains('lmboard')!==big){

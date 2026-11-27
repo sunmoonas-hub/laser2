@@ -9,70 +9,74 @@
 <style>
   /* TV·프로젝터용 전광판. 글자 크기는 화면 폭·높이(vw/vh)에 맞춘다.
      ※ 클래스 이름에 광고처럼 보이는 말(…-big, ad-, banner 등)을 쓰지 않는다 - 삼성 인터넷 광고 차단이 화면을 숨긴 적이 있다. */
+  /* 화면 크기 맞춤: 모든 크기를 --u(16:9 화면의 1vh) 단위로 쓴다. 가로가 좁은 화면(폴드 펼침 등 정사각형에 가까운 화면)은
+     세로 대신 가로 폭에 맞춰 줄여서 넘치지 않게 한다. 높이는 주소창을 뺀 실제 보이는 높이(dvh)를 쓴다(100vh는 휴대폰에서 아래가 잘렸다). */
+  :root{--u:min(1vh,.5625vw)}
+  @supports (height:1dvh){:root{--u:min(1dvh,.5625vw)}}
   :root{--bg:#07111f;--panel:#101d30;--panel2:#0b1626;--line:#29415e;--text:#f5f8ff;--muted:#b9c7d8;--dim:#5b6f86;--cyan:#29e7d6;--lime:#b7ff3c;--red:#ff4d66;--gold:#ffc940}
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;overflow:hidden;background:radial-gradient(circle at 50% -20%,#17375a 0,var(--bg) 55%);color:var(--text);font-family:system-ui,-apple-system,"Malgun Gothic","Noto Sans KR",sans-serif}
-  .screen{height:100vh;display:flex;flex-direction:column;padding:1.6vh 2vw;gap:1.6vh}
+  .screen{height:100vh;height:100dvh;display:flex;flex-direction:column;padding:calc(1.6*var(--u)) 2vw;gap:calc(1.6*var(--u))}
   /* 왼쪽·오른쪽 칸 폭을 같게(1fr) 고정해야 가운데 경기명이 정확히 화면 가운데에 온다 */
   .top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:2vw;position:relative}
   /* 오른쪽 순위 기둥이 있을 때는 경기명을 왼쪽 영역(시계·사로 카드)의 가운데에 맞춘다. 연결 표시는 화면 오른쪽 끝에 그대로 둔다. */
   .screen.hasrank .top{padding-right:26.5vw}
   .screen.hasrank .conn{position:absolute;right:0;top:50%;transform:translateY(-50%)}
-  .brand{font-size:2.2vh;font-weight:900;color:var(--cyan);letter-spacing:.05em;justify-self:start}
-  .game{font-size:4.2vh;font-weight:900;text-align:center}
-  .conn{justify-self:end;font-size:1.6vh;font-weight:800;border:.2vh solid #ffffff28;border-radius:999px;padding:.6vh 1.2vw;color:var(--muted)}
+  .brand{font-size:calc(2.2*var(--u));font-weight:900;color:var(--cyan);letter-spacing:.05em;justify-self:start}
+  .game{font-size:calc(4.2*var(--u));font-weight:900;text-align:center}
+  .conn{justify-self:end;font-size:calc(1.6*var(--u));font-weight:800;border:.calc(2*var(--u)) solid #ffffff28;border-radius:999px;padding:.calc(6*var(--u)) 1.2vw;color:var(--muted)}
   .conn.ok{color:var(--lime);border-color:#b7ff3c66}.conn.bad{color:#ff7a8c;border-color:#ff4d6666}
   /* 사격 중: 왼쪽(시계+사로 카드) | 오른쪽(실시간 순위) */
   .body{flex:1;min-height:0;display:flex;gap:1.5vw}
-  #main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1.6vh}
-  .rankcol{width:25vw;flex:none;display:flex;flex-direction:column;background:var(--panel2);border:.3vh solid var(--line);border-radius:1.6vh;padding:1.6vh 1vw;min-height:0}
+  #main{flex:1;min-width:0;display:flex;flex-direction:column;gap:calc(1.6*var(--u))}
+  .rankcol{width:25vw;flex:none;display:flex;flex-direction:column;background:var(--panel2);border:.calc(3*var(--u)) solid var(--line);border-radius:calc(1.6*var(--u));padding:calc(1.6*var(--u)) 1vw;min-height:0}
   .rankcol[hidden]{display:none}
-  .rankcol h3{margin:0 0 1.2vh;font-size:3.2vh;font-weight:900;color:var(--cyan);text-align:center}
+  .rankcol h3{margin:0 0 calc(1.2*var(--u));font-size:calc(3.2*var(--u));font-weight:900;color:var(--cyan);text-align:center}
   .rlist{position:relative;flex:1;min-height:0}
-  .ritem{position:absolute;left:0;right:0;height:7.4vh;display:grid;grid-template-columns:5vh minmax(0,1fr) auto;align-items:center;gap:.8vw;background:var(--panel);border:.25vh solid var(--line);border-radius:1.2vh;padding:0 1vw;transition:top .6s ease}
-  .ritem .rn{font-size:3.4vh;font-weight:900;color:var(--gold);text-align:center}
-  .ritem .rc{font-size:3.2vh;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ritem .rc small{display:block;font-size:1.7vh;color:var(--muted);font-weight:800}
-  .ritem .rs{font-size:3.8vh;font-weight:900;color:var(--lime);font-variant-numeric:tabular-nums}
+  .ritem{position:absolute;left:0;right:0;height:calc(7.4*var(--u));display:grid;grid-template-columns:calc(5*var(--u)) minmax(0,1fr) auto;align-items:center;gap:.8vw;background:var(--panel);border:.calc(25*var(--u)) solid var(--line);border-radius:calc(1.2*var(--u));padding:0 1vw;transition:top .6s ease}
+  .ritem .rn{font-size:calc(3.4*var(--u));font-weight:900;color:var(--gold);text-align:center}
+  .ritem .rc{font-size:calc(3.2*var(--u));font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ritem .rc small{display:block;font-size:calc(1.7*var(--u));color:var(--muted);font-weight:800}
+  .ritem .rs{font-size:calc(3.8*var(--u));font-weight:900;color:var(--lime);font-variant-numeric:tabular-nums}
   .ritem.fin{border-color:var(--lime)}
-  .rcut{position:absolute;left:0;right:0;border-top:.35vh dashed var(--lime);color:var(--lime);font-size:1.6vh;font-weight:900;text-align:center;transition:top .6s ease}
-  .rnote{font-size:1.7vh;color:var(--muted);text-align:center;margin-top:1vh;font-weight:800}
+  .rcut{position:absolute;left:0;right:0;border-top:.calc(35*var(--u)) dashed var(--lime);color:var(--lime);font-size:calc(1.6*var(--u));font-weight:900;text-align:center;transition:top .6s ease}
+  .rnote{font-size:calc(1.7*var(--u));color:var(--muted);text-align:center;margin-top:calc(1*var(--u));font-weight:800}
   .timer{text-align:center;line-height:1}
-  .timer .lbl{font-size:3.6vh;font-weight:900;color:var(--cyan);margin-bottom:.6vh}
-  .timer .clk{font-size:22vh;font-weight:900;font-variant-numeric:tabular-nums;color:var(--gold)}
+  .timer .lbl{font-size:calc(3.6*var(--u));font-weight:900;color:var(--cyan);margin-bottom:.calc(6*var(--u))}
+  .timer .clk{font-size:calc(22*var(--u));font-weight:900;font-variant-numeric:tabular-nums;color:var(--gold)}
   .timer .clk.urgent{color:var(--red)}
   .timer.practice .lbl{color:var(--lime)}
   .lanes{flex:1;min-height:0;display:grid;gap:1.2vw;grid-auto-rows:1fr}
-  .card{background:var(--panel);border:.3vh solid var(--line);border-radius:1.6vh;padding:1.4vh 1vw;display:flex;flex-direction:column;justify-content:space-between;align-items:center;text-align:center;min-width:0;overflow:hidden}
-  .card .no{font-size:2.2vh;font-weight:900;color:var(--cyan)}
-  .card .cls{font-size:4.6vh;font-weight:900;white-space:nowrap}
-  .card .sc{font-size:7.5vh;font-weight:900;color:var(--lime);font-variant-numeric:tabular-nums;line-height:1}
-  .card .meta{font-size:2.2vh;font-weight:800;color:var(--muted)}
-  .card .bar{width:100%;height:1vh;background:var(--panel2);border-radius:1vh;overflow:hidden}
+  .card{background:var(--panel);border:.calc(3*var(--u)) solid var(--line);border-radius:calc(1.6*var(--u));padding:calc(1.4*var(--u)) 1vw;display:flex;flex-direction:column;justify-content:space-between;align-items:center;text-align:center;min-width:0;overflow:hidden}
+  .card .no{font-size:calc(2.2*var(--u));font-weight:900;color:var(--cyan)}
+  .card .cls{font-size:calc(4.6*var(--u));font-weight:900;white-space:nowrap}
+  .card .sc{font-size:calc(7.5*var(--u));font-weight:900;color:var(--lime);font-variant-numeric:tabular-nums;line-height:1}
+  .card .meta{font-size:calc(2.2*var(--u));font-weight:800;color:var(--muted)}
+  .card .bar{width:100%;height:calc(1*var(--u));background:var(--panel2);border-radius:calc(1*var(--u));overflow:hidden}
   .card .bar i{display:block;height:100%;background:var(--cyan)}
-  .card .st{font-size:2.4vh;font-weight:900;border-radius:999px;padding:.4vh 1.2vw;border:.25vh solid var(--line);color:var(--muted)}
+  .card .st{font-size:calc(2.4*var(--u));font-weight:900;border-radius:999px;padding:.calc(4*var(--u)) 1.2vw;border:.calc(25*var(--u)) solid var(--line);color:var(--muted)}
   .card.fin{border-color:var(--lime)}.card.fin .st{color:var(--lime);border-color:var(--lime)}
   .card.tout{border-color:var(--gold)}.card.tout .st{color:var(--gold);border-color:var(--gold)}
-  .msg{text-align:center;font-size:7vh;font-weight:900;line-height:1.3}
-  .msg small{display:block;font-size:3.2vh;color:var(--muted);font-weight:800;margin-top:1.5vh}
+  .msg{text-align:center;font-size:calc(7*var(--u));font-weight:900;line-height:1.3}
+  .msg small{display:block;font-size:calc(3.2*var(--u));color:var(--muted);font-weight:800;margin-top:calc(1.5*var(--u))}
   .pulse{animation:pulse 1.6s ease-in-out infinite}
   @keyframes pulse{50%{opacity:.55}}
-  .center{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3vh}
+  .center{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:calc(3*var(--u))}
   /* 결과 발표 표 */
-  .rank{flex:1;min-height:0;display:flex;flex-direction:column;gap:.8vh}
+  .rank{flex:1;min-height:0;display:flex;flex-direction:column;gap:.calc(8*var(--u))}
   .rank .head,.rank .row{display:grid;grid-template-columns:9vw minmax(0,1.4fr) 1fr 1fr 1fr 1.2fr 1.1fr;align-items:center;gap:1vw;padding:0 1.5vw}
-  .rank .head{font-size:2vh;color:var(--muted);font-weight:800}
-  .rank .row{flex:1;min-height:0;background:var(--panel);border:.25vh solid var(--line);border-radius:1.2vh;font-size:3.6vh;font-weight:900;font-variant-numeric:tabular-nums}
+  .rank .head{font-size:calc(2*var(--u));color:var(--muted);font-weight:800}
+  .rank .row{flex:1;min-height:0;background:var(--panel);border:.calc(25*var(--u)) solid var(--line);border-radius:calc(1.2*var(--u));font-size:calc(3.6*var(--u));font-weight:900;font-variant-numeric:tabular-nums}
   .rank .row .rk{color:var(--gold)}
-  .rank .row .fin{color:var(--lime);font-size:4.2vh}
-  .rank .row .tag{font-size:2.4vh;justify-self:start;border-radius:999px;padding:.3vh 1vw;border:.25vh solid var(--line);color:var(--muted)}
+  .rank .row .fin{color:var(--lime);font-size:calc(4.2*var(--u))}
+  .rank .row .tag{font-size:calc(2.4*var(--u));justify-self:start;border-radius:999px;padding:.calc(3*var(--u)) 1vw;border:.calc(25*var(--u)) solid var(--line);color:var(--muted)}
   .rank .row.hid{color:var(--dim);border-style:dashed}
   .rank .row.hid .rk{color:var(--dim)}
   .rank .row.adv{border-color:var(--lime);background:#11301f}
   .rank .row.adv .tag{color:var(--lime);border-color:var(--lime)}
   .rank .row.new{animation:pop .7s ease-out}
   @keyframes pop{from{transform:scale(1.06);background:#2a3d14}to{transform:none}}
-  .cut{text-align:center;font-size:2.2vh;font-weight:900;color:var(--lime);border-top:.35vh dashed var(--lime);padding-top:.4vh}
+  .cut{text-align:center;font-size:calc(2.2*var(--u));font-weight:900;color:var(--lime);border-top:.calc(35*var(--u)) dashed var(--lime);padding-top:.calc(4*var(--u))}
 </style>
 <script src="config.js"></script>
 <script src="league.js"></script>
@@ -122,13 +126,13 @@
       if(mine&&v.done){if(v.timeUp){cls+=' tout';stTxt='시간 종료'}else{cls+=' fin';stTxt=`완료 ${(Number(v.finishMs)/1000).toFixed(1)}초`}}
       const pct=rl.shots?Math.min(100,n/rl.shots*100):0;
       return `<div class="${cls}"><div class="no">${l}사로</div><div class="cls">${esc(clsName(st.grade,lanes[l]))}</div>
-        <div class="sc">${practice?n+'<span style="font-size:3vh"> 발</span>':(dec?sum.toFixed(1):sum)}</div>
+        <div class="sc">${practice?n+'<span style="font-size:calc(3*var(--u))"> 발</span>':(dec?sum.toFixed(1):sum)}</div>
         <div class="meta">${practice?'연습':`${n} / ${rl.shots}발 · 사수 ${Math.min(team,Math.floor(n/per)+1)} / ${team}`}</div>
         ${practice?'':`<div class="bar"><i style="width:${pct}%"></i></div>`}<div class="st">${stTxt}</div></div>`}).join('')+'</div>';
   }
 
   // 오른쪽 실시간 순위(사격 점수 기준). 사로마다 줄을 하나씩 계속 두고 위치(top)만 바꿔서, 순위가 바뀌면 줄이 미끄러지듯 움직인다.
-  const ROW_VH=8.3;   // 줄 높이 7.4vh + 간격
+  const ROW_VH=8.3;   // 줄 높이 calc(7.4*var(--u)) + 간격
   function renderRank(st,show){
     const col=$('rankCol'),list=$('rList');
     document.querySelector('.screen').classList.toggle('hasrank',!!show);
@@ -144,14 +148,14 @@
     const topOf=i=>i*ROW_VH+(showCut&&i>=adv?CUT_GAP:0);   // 진출선 아래 줄들은 글씨가 들어갈 만큼 띄운다
     rows.forEach((r,i)=>{
       let el=list.querySelector(`[data-l="${r.l}"]`);
-      if(!el){el=document.createElement('div');el.className='ritem';el.dataset.l=r.l;el.style.top=topOf(i)+'vh';list.appendChild(el)}
+      if(!el){el=document.createElement('div');el.className='ritem';el.dataset.l=r.l;el.style.top=`calc(${topOf(i)}*var(--u))`;list.appendChild(el)}
       const html=`<span class="rn">${i+1}</span><span class="rc">${esc(st.grade+'-'+r.cls+'반')}<small>${r.l}사로 · ${r.n}/${rl.shots||'-'}발${r.done?' · 완료':''}</small></span><span class="rs">${dec?r.sum.toFixed(1):r.sum}</span>`;
       if(el.dataset.h!==html){el.dataset.h=html;el.innerHTML=html}
-      el.style.top=topOf(i)+'vh';el.classList.toggle('fin',r.done);seen[r.l]=1;
+      el.style.top=`calc(${topOf(i)}*var(--u))`;el.classList.toggle('fin',r.done);seen[r.l]=1;
     });
     list.querySelectorAll('.ritem').forEach(el=>{if(!seen[el.dataset.l])el.remove()});
     let cut=list.querySelector('.rcut');
-    if(showCut){if(!cut){cut=document.createElement('div');cut.className='rcut';cut.textContent='▲ 현재 진출권';list.appendChild(cut)}cut.style.top=(adv*ROW_VH-.3)+'vh'}
+    if(showCut){if(!cut){cut=document.createElement('div');cut.className='rcut';cut.textContent='▲ 현재 진출권';list.appendChild(cut)}cut.style.top=`calc(${adv*ROW_VH-.3}*var(--u))`}
     else if(cut)cut.remove();
   }
 
@@ -160,7 +164,7 @@
     const showRank=!!(st&&st.grade&&st.kind==='match'&&(st.phase==='shooting'||st.phase==='done')&&st.startAt);
     renderRank(st,showRank);
     if(!st||!st.grade){$('game').textContent='';put('<div class="center"><div class="msg">LASER MATCH 리그<small>경기 준비 중</small></div></div>');return}
-    const heat=st.round===1?' '+st.heat+'조':'';
+    const heat=st.so?' 슛오프':st.round===1?' '+st.heat+'조':'';
     $('game').textContent=`${st.grade}학년 · ${st.round}라운드${heat}`;
     const t=now(),p=st.phase;
     if((p==='practice'||p==='shooting')&&st.startAt){
@@ -172,13 +176,13 @@
     }
     if(p==='done'){
       const heatA=st.round===1&&st.heat==='A';
-      put(`<div class="msg pulse" style="font-size:5.5vh">${heatA?'A조 경기 종료':'결과 발표가 있겠습니다'}<small>${heatA?'B조 경기가 끝난 뒤 두 조를 합쳐 발표합니다':'잠시만 기다려 주세요'}</small></div>`+laneCards(st,true));
+      put(`<div class="msg pulse" style="font-size:calc(5.5*var(--u))">${heatA?'A조 경기 종료':'결과 발표가 있겠습니다'}<small>${heatA?'B조 경기가 끝난 뒤 두 조를 합쳐 발표합니다':'잠시만 기다려 주세요'}</small></div>`+laneCards(st,true));
       return;
     }
     if(p==='reveal'){renderReveal(st);return}
     // 대기·연습 종료·중지: 배정된 학급만 보여 준다
     const sub=p==='standby'?'연습 종료 · 곧 본사격을 시작합니다':p==='stopped'?'경기가 중지됐어요':'곧 경기를 시작합니다';
-    put(`<div class="msg" style="font-size:5vh">${sub}</div>`+laneCards(st,false));
+    put(`<div class="msg" style="font-size:calc(5*var(--u))">${sub}</div>`+laneCards(st,false));
   }
 
   function renderReveal(st){
@@ -189,7 +193,7 @@
     // 아래 순위부터 공개: 아래쪽 k개 행이 보인다. 방금 공개된 행은 잠깐 강조.
     if(S.shown!==k){S.shown=k;S.newIdx=N-k;S.newUntil=Date.now()+1500}
     const justShown=Date.now()<(S.newUntil||0)?S.newIdx:-1;
-    let html=`<div class="msg" style="font-size:4.6vh">${allShown?(adv?`🎉 ${R.round+1}라운드 진출 학급`:'🏆 최종 순위'):'결과 발표'}<small style="margin-top:.5vh">${R.grade}학년 ${R.round}라운드 · 최종 점수 = 사격 점수 + 시간 보너스</small></div>`;
+    let html=`<div class="msg" style="font-size:calc(4.6*var(--u))">${allShown?(adv?`🎉 ${R.round+1}라운드 진출 학급`:'🏆 최종 순위'):'결과 발표'}<small style="margin-top:.calc(5*var(--u))">${R.grade}학년 ${R.round}라운드 · 최종 점수 = 사격 점수 + 시간 보너스</small></div>`;
     html+=`<div class="rank"><div class="head"><span>순위</span><span>학급</span><span>사격</span><span>완료 시간</span><span>보너스</span><span>최종</span><span></span></div>`;
     rows.forEach((x,i)=>{
       const vis=i>=N-k;

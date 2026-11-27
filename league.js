@@ -5,7 +5,8 @@
  * 규칙(2026 교내 리그전 계획서):
  *  - 사격 점수 = 발별 점수 합(소수점 또는 정수, 대회 설정의 채점 방식)
  *  - 시간 보너스 = (제한 시간 − 완료 시간[초]) × 보너스(점/초) — 팀 발수를 모두 쐈을 때만
- *  - 동점: 최종 점수 → 사격 점수 → (정수 채점 시) 10점 개수 → 9점 개수 → 그래도 같으면 슛오프(운영자가 결정)
+ *  - 동점: 최종 점수 → 사격 점수 → (정수 채점 시) 10점 개수 → 9점 개수 → 그래도 같으면 학급 대표 1발 슛오프
+ *    (컨트롤 타워 [슛오프]. 점수는 row.so = {슛오프키: 점수}에 담기고, 같은 슛오프를 쏜 학급끼리 순서대로 비교한다. 또 같으면 다시 슛오프)
  */
 (function () {
   'use strict';
@@ -27,7 +28,9 @@
   // rows: [{cls, ...laneResult}] → 순위(rank)·동점(tie) 표시 후 정렬해서 돌려준다
   function rank(rows, cfg) {
     const dec = cfg.scoring !== 'int';
-    const cmp = (a, b) => b.final - a.final || b.shoot - a.shoot || (dec ? 0 : (b.tens - a.tens || b.nines - a.nines));
+    // 슛오프: 두 학급이 함께 쏜 슛오프만 비교한다(슛오프 키 = 시간 순서). 하나라도 점수가 다르면 그 슛오프로 정한다.
+    const soCmp = (a, b) => { const A = a.so || {}, B = b.so || {}; for (const k of Object.keys(A).sort()) if (k in B && A[k] !== B[k]) return B[k] - A[k]; return 0; };
+    const cmp = (a, b) => b.final - a.final || b.shoot - a.shoot || (dec ? 0 : (b.tens - a.tens || b.nines - a.nines)) || soCmp(a, b);
     rows.sort(cmp);
     rows.forEach((r, i) => { r.rank = i + 1; r.tie = false; });
     for (let i = 1; i < rows.length; i++) if (cmp(rows[i - 1], rows[i]) === 0) { rows[i].rank = rows[i - 1].rank; rows[i].tie = rows[i - 1].tie = true; }

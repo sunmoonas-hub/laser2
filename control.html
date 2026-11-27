@@ -51,6 +51,21 @@
   .tag{font-size:.75rem;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted)}
   .tag.done{color:var(--lime);border-color:#b7ff3c66}
   details summary{cursor:pointer;color:var(--cyan);font-weight:800}
+  /* 사로 배정: 학급 버튼을 고르고(또는 자동으로 다음 학급이 골라짐) 사로 버튼을 누르면 배정 */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .chip{min-height:46px;font-size:1rem;padding:0 14px}
+  .chip.sel{background:var(--cyan);border-color:var(--cyan);color:#07111f}
+  .chip.used{opacity:.45}
+  .chip .rk{font-size:.75rem;color:var(--gold);margin-right:5px}
+  .chip.sel .rk{color:#07111f}
+  .lanebtns{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+  @media(max-width:600px){.lanebtns{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  .lb{min-height:72px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;padding:4px}
+  .lb .ln{font-size:.78rem;color:var(--cyan)}
+  .lb .lc{font-size:1.05rem;font-weight:900}
+  .lb.empty .lc{color:var(--dim);font-weight:700}
+  .lb.target{border-color:var(--cyan);box-shadow:0 0 0 2px #29e7d655 inset}
+  .sobar{background:#2a1e05;border:1px solid var(--gold);color:var(--gold);border-radius:10px;padding:8px 10px;margin-bottom:8px;font-weight:800;font-size:.88rem}
 </style>
 <script src="config.js"></script>
 <script src="league.js"></script>
@@ -81,6 +96,7 @@
           <label class="f" id="heatWrap">조<select id="selHeat"><option value="A">A조</option><option value="B">B조</option></select></label>
         </div>
         <div class="rule" id="ruleText" style="margin-top:10px"></div>
+        <div class="row"><button id="nextBtn">다음 경기 ▶</button><span class="small muted" id="nextLbl"></span></div>
       </section>
 
       <section class="panel">
@@ -89,7 +105,11 @@
           <button id="drawBtn">🎲 1라운드 무작위 추첨 (A·B조)</button>
         </div>
         <div class="small" id="advHint" style="margin-bottom:8px;line-height:1.6"></div>
-        <table><thead><tr><th>사로</th><th>학급</th></tr></thead><tbody id="assignBody"></tbody></table>
+        <div id="soBar" class="sobar" hidden></div>
+        <div class="small muted" id="pickHint" style="margin-bottom:6px"></div>
+        <div class="chips" id="clsChips"></div>
+        <div class="lanebtns" id="laneBtns"></div>
+        <div class="row" style="margin-top:8px"><button class="sm" id="clearAssignBtn">배정 모두 비우기</button><button class="sm danger" id="soCancelBtn" hidden>슛오프 배정 취소</button></div>
         <div class="row" style="margin-top:10px">
           <button id="saveAssignBtn">배정 저장</button>
           <button class="go" id="applyBtn">이 경기로 준비 ▶</button>
@@ -107,6 +127,7 @@
             <label class="f">채점<select id="setScoring"><option value="dec">소수점</option><option value="int">정수</option></select></label>
             <label class="f">1학년 학급 수<input type="number" id="setC1" min="1" max="20"></label>
             <label class="f">2학년 학급 수<input type="number" id="setC2" min="1" max="20"></label>
+            <label class="f" title="가장 바깥 원 반지름의 몇 배까지 맞은 빛을 0점(MISS)으로 기록할지. 넓히면 종이 밖 발도 자동으로 0점이 되지만, 카메라에 옆 사로 과녁이 보이면 그 레이저까지 잡힐 수 있어요.">0점 인정 경계(×바깥 원)<input type="number" id="setMiss" step="0.1" min="1.2" max="4"></label>
           </div>
           <table><thead><tr><th>라운드</th><th>1인 발수</th><th>팀 발수</th><th>제한(초)</th><th>연습(초)</th><th>진출 학급</th></tr></thead><tbody id="setBody"></tbody></table>
           <div class="row" style="margin-top:10px"><button id="saveSetBtn">설정 저장</button><button class="danger" id="resetSetBtn">기본값으로</button></div>
@@ -140,9 +161,14 @@
       </section>
 
       <section class="panel">
-        <div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">⑤ 라운드 결과 <span class="small muted" id="resTitle"></span></h2><button class="sm" id="resRefreshBtn">다시 계산</button></div>
+        <div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">⑤ 라운드 결과 <span class="small muted" id="resTitle"></span></h2><div class="row"><select id="resGrade" style="min-height:34px"><option value="2">2학년</option><option value="1">1학년</option></select><select id="resRound" style="min-height:34px"><option value="1">1R</option><option value="2">2R</option><option value="3">3R</option><option value="4">4R</option></select><button class="sm" id="resRefreshBtn">다시 계산</button><button class="sm" id="csvBtn">CSV 내려받기</button></div></div>
         <div class="small muted" id="resNote" style="margin-bottom:6px"></div>
         <table><thead><tr><th>순위</th><th>학급</th><th>조·사로</th><th>발수</th><th>사격</th><th>완료</th><th>보너스</th><th>최종</th><th></th></tr></thead><tbody id="resBody"></tbody></table>
+        <div id="soBox" style="margin-top:10px"></div>
+        <details style="margin-top:12px"><summary>이 라운드의 모든 경기 기록 (다시 쏜 경기·슛오프 포함)</summary>
+          <div class="small muted" style="margin:6px 0">경기 기록은 지워지지 않고 모두 남아요. 같은 조를 다시 쏘면 마지막 경기가 공식 기록이 되는데, 다른 경기를 공식 기록으로 바꿀 수 있어요.</div>
+          <table><thead><tr><th>시각</th><th>구분</th><th>사로</th><th>상태</th><th></th></tr></thead><tbody id="runsBody"></tbody></table>
+        </details>
       </section>
     </div>
   </div>
@@ -155,11 +181,12 @@
   const LANES=[1,2,3,4,5,6,7];
   // 카운트다운(3-2-1)을 보여 줄 여유. 명령이 태블릿에 닿는 데 와이파이에 따라 0.1~0.5초쯤 걸려서, 시작 시각을 '지금+4초'로 정해 보내면 모든 태블릿이 같은 순간에 시작한다.
   const START_LEAD_MS=4000;
-  const DEF={teamSize:15,bonus:0.2,scoring:'dec',classes:{1:12,2:10},
+  const SO_LIMIT=60;   // 슛오프 1발 제한 시간(초)
+  const DEF={teamSize:15,bonus:0.2,scoring:'dec',missLimit:1.8,classes:{1:12,2:10},
     rounds:{1:{per:3,limit:300,practice:120,advance:7},2:{per:2,limit:240,practice:120,advance:5},3:{per:2,limit:240,practice:0,advance:3},4:{per:2,limit:240,practice:0,advance:0}}};
   const PHASE={idle:'대기 (준비됨)',practice:'연습 중',standby:'연습 종료 · 본사격 대기',shooting:'사격 중',done:'사격 종료',reveal:'결과 발표 중',stopped:'중지됨'};
   const $=id=>document.getElementById(id);
-  const S={db:null,offset:0,set:clone(DEF),st:null,heats:{},live:{}};
+  const S={db:null,offset:0,set:clone(DEF),st:null,heats:{},live:{},draft:{},draftKey:'',dirty:false,pick:null,so:null,reveal:{}};
   function clone(o){return JSON.parse(JSON.stringify(o))}
   // Firebase는 {1:..,2:..,3:..}처럼 숫자 키가 촘촘한 객체를 배열([null,..])로 돌려준다. 빈칸(null)을 빼고 객체로 되돌린다.
   function norm(o){const r={};Object.keys(o||{}).forEach(k=>{if(o[k]!=null)r[k]=o[k]});return r}
@@ -177,25 +204,51 @@
     const {g,r}=sel(),x=rule(r);
     $('heatWrap').hidden=r!==1;$('drawBtn').hidden=r!==1;
     $('ruleText').innerHTML=`<b>${r}라운드 규칙</b> · 1인 ${x.per}발 × ${S.set.teamSize}명 = <b>${x.shots}발</b> · 제한 <b>${x.limit}초</b> · 연습 ${x.practice?x.practice+'초':'없음'} · `+(x.advance?`상위 <b>${x.advance}개 학급</b> 진출`:'<b>순위 결정전</b>')+` · 채점 ${S.set.scoring==='int'?'정수':'소수점'} · 보너스 ${S.set.bonus}점/초`;
-    renderAssign();renderAdvHint();
+    renderAssign();renderAdvHint();renderNext();
   }
   ['selGrade','selRound','selHeat'].forEach(id=>$(id).onchange=()=>{renderSel();if(!(S.st&&S.st.grade))renderResults()});
 
   /* ===== ② 사로 배정 ===== */
   function curAssign(){const {g,r,h}=sel();return norm(S.heats[g]&&S.heats[g][r]&&S.heats[g][r][h])}
-  function renderAssign(){
-    const {g}=sel(),n=S.set.classes[g]||0,a=curAssign();
-    $('assignBody').innerHTML=LANES.map(l=>`<tr><td><b>${l}사로</b></td><td><select data-lane="${l}"><option value="">— 비움 —</option>${Array.from({length:n},(_,i)=>`<option value="${i+1}"${Number(a[l])===i+1?' selected':''}>${g}학년 ${i+1}반</option>`).join('')}</select></td></tr>`).join('');
+  // 배정할 학급 목록(순서대로): 슛오프면 동점 학급, 2라운드부터는 앞 라운드 진출 학급(1위부터), 아니면 학년 전체.
+  function candidates(){
+    const {g,r,h}=sel();
+    if(S.so)return S.so.classes.map(c=>({c,tag:''}));
+    if(r>1){const prev=S.reveal&&S.reveal[g]&&S.reveal[g][r-1];const rows=prev&&prev.rows?(Array.isArray(prev.rows)?prev.rows:Object.values(prev.rows)).filter(x=>x&&x.advanced).sort((a,b)=>a.rank-b.rank):[];
+      if(rows.length)return rows.map(x=>({c:Number(x.cls),tag:x.rank+'위'}))}
+    const n=S.set.classes[g]||0,other=r===1?norm(S.heats[g]&&S.heats[g][1]&&S.heats[g][1][h==='A'?'B':'A']):{},inOther={};Object.values(other).forEach(c=>inOther[c]=1);
+    return Array.from({length:n},(_,i)=>({c:i+1,tag:inOther[i+1]?(h==='A'?'B조':'A조'):''}));
   }
+  function nextPick(){const used=new Set(Object.values(S.draft).map(Number));const x=candidates().find(x=>!used.has(x.c));return x?x.c:null}
+  // 고치는 중(dirty)이 아니면, 학년·라운드·조가 바뀌거나 저장값이 바뀔 때 저장된 배정으로 다시 불러온다(슛오프 배정 중엔 그대로).
+  function loadDraft(){if(S.so)return;const {g,r,h}=sel(),key=g+'/'+r+'/'+h;if(key!==S.draftKey||!S.dirty){S.draft=curAssign();S.draftKey=key;S.dirty=false;S.pick=nextPick()}}
+  function renderAssign(){
+    loadDraft();
+    const {g}=sel(),cands=candidates(),byCls={};Object.entries(S.draft).forEach(([l,c])=>byCls[c]=l);
+    $('soBar').hidden=!S.so;$('soCancelBtn').hidden=!S.so;
+    if(S.so)$('soBar').textContent=`🎯 슛오프 배정 중 · ${S.so.label} · 학급 대표 1발 · 제한 ${SO_LIMIT}초 → 사로를 확인하고 [슛오프로 준비 ▶]`;
+    $('applyBtn').textContent=S.so?'슛오프로 준비 ▶':'이 경기로 준비 ▶';
+    $('pickHint').textContent=S.pick?`${clsName(g,S.pick)} 학급이 고른 사로를 누르세요. (배정된 사로를 누르면 비워져요)`:'모든 학급을 배정했어요. 사로를 누르면 비우고 다시 고를 수 있어요.';
+    $('clsChips').innerHTML=cands.map(x=>`<button class="chip${S.pick===x.c?' sel':''}${byCls[x.c]?' used':''}" data-cls="${x.c}">${x.tag?`<span class="rk">${esc(x.tag)}</span>`:''}${esc(clsName(g,x.c))}${byCls[x.c]?` · ${byCls[x.c]}사로`:''}</button>`).join('')||'<span class="small muted">학급이 없어요(대회 설정의 학급 수 확인)</span>';
+    $('laneBtns').innerHTML=LANES.map(l=>{const c=S.draft[l];return `<button class="lb${c?'':' empty'}${S.pick&&!c?' target':''}" data-lane="${l}"><span class="ln">${l}사로</span><span class="lc">${c?esc(clsName(g,c)):'비움'}</span></button>`}).join('');
+  }
+  $('clsChips').onclick=e=>{const b=e.target.closest('[data-cls]');if(!b)return;const c=Number(b.dataset.cls);S.pick=S.pick===c?null:c;renderAssign()};
+  $('laneBtns').onclick=e=>{const b=e.target.closest('[data-lane]');if(!b)return;const l=b.dataset.lane;
+    if(S.pick){Object.keys(S.draft).forEach(k=>{if(Number(S.draft[k])===S.pick)delete S.draft[k]});S.draft[l]=S.pick;S.dirty=true;S.pick=nextPick()}
+    else if(S.draft[l]){S.pick=Number(S.draft[l]);delete S.draft[l];S.dirty=true}
+    renderAssign()};
+  $('clearAssignBtn').onclick=()=>{S.draft={};S.dirty=true;S.pick=nextPick();renderAssign()};
+  $('soCancelBtn').onclick=()=>{S.so=null;S.dirty=false;S.draftKey='';renderAssign()};
   function readAssign(){
     const out={},seen={};let dup='';
-    document.querySelectorAll('#assignBody select').forEach(s=>{if(!s.value)return;const c=Number(s.value);if(seen[c])dup=c;seen[c]=1;out[s.dataset.lane]=c});
+    Object.entries(S.draft).forEach(([l,c])=>{c=Number(c);if(!c)return;if(seen[c])dup=c;seen[c]=1;out[l]=c});
     return{out,dup};
   }
   $('saveAssignBtn').onclick=()=>{
     const {g,r,h}=sel(),{out,dup}=readAssign();
     if(dup){$('assignMsg').textContent=`⚠ ${g}학년 ${dup}반이 두 사로에 들어가 있어요.`;return}
-    ref(heatKey(g,r,h)).set(Object.keys(out).length?out:null).then(()=>$('assignMsg').textContent='✔ 배정을 저장했어요.').catch(e=>$('assignMsg').textContent='저장 실패: '+e.message);
+    if(S.so){$('assignMsg').textContent='슛오프는 저장하지 않고 바로 [슛오프로 준비 ▶]를 누르세요.';return}
+    ref(heatKey(g,r,h)).set(Object.keys(out).length?out:null).then(()=>{S.dirty=false;$('assignMsg').textContent='✔ 배정을 저장했어요.'}).catch(e=>$('assignMsg').textContent='저장 실패: '+e.message);
   };
   function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
   $('drawBtn').onclick=()=>{
@@ -217,9 +270,17 @@
     const {g,r,h}=sel(),{out,dup}=readAssign();
     if(dup){$('assignMsg').textContent=`⚠ ${g}학년 ${dup}반이 두 사로에 들어가 있어요.`;return}
     if(!Object.keys(out).length){$('assignMsg').textContent='⚠ 배정된 사로가 없어요.';return}
+    const miss=Number(S.set.missLimit)||1.8;
+    if(S.so){   // 슛오프: 동점 학급 대표 1발. 조 기록(heats·results)은 건드리지 않고, 끝나면 shootoff/{학년}/{라운드}에 남는다.
+      const so=S.so,ok=so.classes.every(c=>Object.values(out).map(Number).includes(c));
+      if(!ok&&!confirm('슛오프 학급 중 사로에 배정되지 않은 학급이 있어요. 그래도 준비할까요?'))return;
+      ref('state').set({grade:so.g,round:so.r,heat:'S',so:true,soLabel:so.label,phase:'idle',lanes:out,rule:{per:1,shots:1,limit:SO_LIMIT,practice:0,advance:0},scoring:S.set.scoring,bonus:0,teamSize:1,missLimit:miss,runId:null,kind:null,startAt:null,endAt:null,at:TS()})
+        .then(()=>{$('assignMsg').textContent=`✔ 슛오프로 준비했어요(${so.label}). [준비 시작 (3-2-1)]을 누르세요.`;S.so=null;S.draftKey='';renderAssign()}).catch(e=>$('assignMsg').textContent='실패: '+e.message);
+      return;
+    }
     const x=rule(r);
-    ref(heatKey(g,r,h)).set(out).then(()=>ref('state').set({grade:g,round:r,heat:h,phase:'idle',lanes:out,rule:x,scoring:S.set.scoring,bonus:S.set.bonus,teamSize:S.set.teamSize,runId:null,kind:null,startAt:null,endAt:null,at:TS()}))
-      .then(()=>$('assignMsg').textContent=`✔ ${g}학년 ${r}라운드${r===1?' '+h+'조':''}로 준비했어요. 태블릿에 학급이 표시됩니다.`)
+    ref(heatKey(g,r,h)).set(out).then(()=>ref('state').set({grade:g,round:r,heat:h,phase:'idle',lanes:out,rule:x,scoring:S.set.scoring,bonus:S.set.bonus,teamSize:S.set.teamSize,missLimit:miss,runId:null,kind:null,startAt:null,endAt:null,at:TS()}))
+      .then(()=>{S.dirty=false;$('assignMsg').textContent=`✔ ${g}학년 ${r}라운드${r===1?' '+h+'조':''}로 준비했어요. 태블릿에 학급이 표시됩니다.`})
       .catch(e=>$('assignMsg').textContent='실패: '+e.message);
   };
   function begin(kind){
@@ -236,7 +297,7 @@
   // 시간이 다 됐거나 배정된 사로가 모두 끝나면 다음 단계로. 컨트롤 타워가 두 대 열려 있어도 한 번만 바뀌도록 트랜잭션으로 쓴다.
   // 본사격이 끝나면(done) 이 조의 공식 기록으로 이 경기ID를 남긴다. 같은 조를 다시 쏘면 마지막 경기가 공식 기록이 된다.
   function advance(from,to,runId){ref('state').transaction(s=>s&&s.phase===from&&s.runId===runId?Object.assign(s,{phase:to,at:Date.now()}):undefined)
-    .then(res=>{if(res&&res.committed&&to==='done'){const s=res.snapshot.val();saveHeatResult(s).then(()=>setTimeout(renderResults,2500))}}).catch(()=>{})}
+    .then(res=>{if(res&&res.committed&&to==='done'){const s=res.snapshot.val();(s.so?ref(`shootoff/${s.grade}/${s.round}`).push({runId:s.runId,lanes:norm(s.lanes),label:s.soLabel||'',scoring:s.scoring||'dec',at:TS()}):saveHeatResult(s)).then(()=>setTimeout(renderResults,2500))}}).catch(()=>{})}
   function saveHeatResult(s){return ref(`results/${s.grade}/${s.round}/${s.heat}`).set({runId:s.runId,lanes:norm(s.lanes),rule:s.rule,cfg:{scoring:s.scoring||'dec',bonus:Number(s.bonus)||0},at:TS()})}
 
   /* ===== ⑤ 라운드 결과 · 발표 ===== */
@@ -254,26 +315,96 @@
       }
     }
     if(!cfg)return{g,r,rows:[],heats:[],need,adv:0,shots:0};
+    // 슛오프: 끝난 슛오프마다 학급별 1발 점수를 row.so[슛오프키]에 넣는다 → LeagueCalc.rank가 동점일 때 비교
+    const sos=norm((await ref(`shootoff/${g}/${r}`).once('value')).val());
+    for(const k of Object.keys(sos).sort()){const so=sos[k];if(!so||!so.runId)continue;const runs=norm((await ref('runs/'+so.runId).once('value')).val());
+      for(const [lane,cls] of Object.entries(norm(so.lanes))){const row=rows.find(x=>x.cls===Number(cls));if(!row)continue;
+        let d=runs[lane];if(!d&&S.live[lane]&&S.live[lane].runId===so.runId&&S.live[lane].done)d=S.live[lane];
+        const sh=LeagueCalc.shotsOf(d)[0];const v=sh?(cfg.scoring==='int'?Number(sh.si)||0:Number(sh.sd!=null?sh.sd:sh.si)||0):0;
+        (row.so=row.so||{})[k]=v;(row.soList=row.soList||[]).push(cfg.scoring==='int'?String(v):v.toFixed(1))}}
     LeagueCalc.rank(rows,cfg);
     rows.forEach((row,i)=>{row.advanced=adv>0&&i<adv});
     const cutTie=adv>0&&rows[adv]&&rows[adv].tie&&rows[adv].rank===rows[adv-1].rank;
     return{g,r,rows,cfg,adv,shots,heats:Object.keys(res),need,cutTie};
   }
-  function resRound(){const st=S.st;return st&&st.grade?{g:st.grade,r:st.round}:{g:sel().g,r:sel().r}}
+  // 결과 표는 ⑤의 학년·라운드 선택을 따른다(경기가 바뀌면 그 경기로 자동으로 맞춰짐). 지난 라운드도 골라서 볼 수 있다.
+  function resRound(){return{g:Number($('resGrade').value),r:Number($('resRound').value)}}
+  ['resGrade','resRound'].forEach(id=>$(id).onchange=()=>renderResults());
+  function followState(){const st=S.st;if(st&&st.grade){$('resGrade').value=String(st.grade);$('resRound').value=String(st.round)}}
   async function renderResults(){
     const {g,r}=resRound();$('resTitle').textContent=`${g}학년 ${r}라운드`;
     let R;try{R=await computeRound(g,r)}catch(e){$('resNote').textContent='계산 실패: '+e.message;return}
     S.lastRes=R;
-    if(!R.rows.length){$('resNote').textContent='아직 끝난 본사격 기록이 없어요.';$('resBody').innerHTML='';return}
+    renderRuns(g,r);
+    if(!R.rows.length){$('resNote').textContent='아직 끝난 본사격 기록이 없어요.';$('resBody').innerHTML='';$('soBox').innerHTML='';return}
     const dec=R.cfg.scoring!=='int',F=LeagueCalc.fmt,F2=LeagueCalc.fmt2;
     const notes=[];
     if(R.heats.length<R.need)notes.push(`⏳ ${R.need}개 조 중 ${R.heats.length}개 조 기록만 있어요(${R.heats.join('·')}조). 나머지 조가 끝나야 최종 순위입니다.`);
     if(R.rows.some(x=>x.tie))notes.push('⚠ 동점이 있어요 - 학급 대표 1발 슛오프로 정해 주세요.'+(R.cutTie?' (진출선에 걸린 동점!)':''));
     if(R.rows.some(x=>x.missing))notes.push('⚠ 기록이 없는 학급이 있어요(태블릿 문제). 재경기를 검토하세요.');
     $('resNote').textContent=notes.join(' ');
-    $('resBody').innerHTML=R.rows.map(x=>`<tr${x.advanced?' style="color:var(--lime)"':''}><td><b>${x.rank}</b>${x.tie?' ⚠':''}</td><td><b>${esc(clsName(g,x.cls))}</b></td><td class="small">${x.heat}·${x.lane}</td><td class="small">${x.n}/${R.shots}</td><td>${F(x.shoot,dec)}</td><td class="small">${x.finishSec!=null?x.finishSec.toFixed(1)+'초':(x.timeUp?'시간 초과':'-')}</td><td>${F2(x.bonus)}</td><td><b>${F2(x.final)}</b></td><td class="small">${R.adv?(x.advanced?'진출':x.rank+'위 확정'):'최종 '+x.rank+'위'}</td></tr>`).join('');
+    renderSoBox(R);
+    $('resBody').innerHTML=R.rows.map(x=>`<tr${x.advanced?' style="color:var(--lime)"':''}><td><b>${x.rank}</b>${x.tie?' ⚠':''}${x.soList?`<div class="small" style="color:var(--gold)">슛오프 ${x.soList.join('·')}</div>`:''}</td><td><b>${esc(clsName(g,x.cls))}</b></td><td class="small">${x.heat}·${x.lane}</td><td class="small">${x.n}/${R.shots}</td><td>${F(x.shoot,dec)}</td><td class="small">${x.finishSec!=null?x.finishSec.toFixed(1)+'초':(x.timeUp?'시간 초과':'-')}</td><td>${F2(x.bonus)}</td><td><b>${F2(x.final)}</b></td><td class="small">${R.adv?(x.advanced?'진출':x.rank+'위 확정'):'최종 '+x.rank+'위'}</td></tr>`).join('');
   }
   $('resRefreshBtn').onclick=renderResults;
+
+  /* ===== 슛오프 ===== */
+  // 같은 순위로 묶인 학급(동점)마다 [슛오프 배정] 버튼. 누르면 ②가 슛오프 배정으로 바뀐다(학급은 원래 사로로, 겹치면 빈 사로로).
+  function renderSoBox(R){
+    const groups={};R.rows.filter(x=>x.tie).forEach(x=>(groups[x.rank]=groups[x.rank]||[]).push(x));
+    const keys=Object.keys(groups).sort((a,b)=>a-b);
+    $('soBox').innerHTML=keys.map(k=>{const list=groups[k],cut=R.adv>0&&Number(k)<=R.adv&&Number(k)+list.length-1>R.adv;
+      return `<div class="row" style="margin-bottom:6px"><span class="small" style="color:var(--gold);font-weight:800">⚠ 공동 ${k}위${cut?' (진출선)':''}: ${list.map(x=>esc(clsName(R.g,x.cls))).join(' · ')}</span><button class="sm warn" data-so="${k}">슛오프 배정 ▶</button></div>`}).join('');
+    S.soGroups={R,groups};
+  }
+  $('soBox').onclick=e=>{const b=e.target.closest('[data-so]');if(!b||!S.soGroups)return;
+    if(!canSetup()){$('runMsg').textContent='⚠ 경기가 진행 중이에요. 끝난 뒤에 슛오프를 준비하세요.';return}
+    const {R,groups}=S.soGroups,list=groups[b.dataset.so],draft={},taken={};
+    list.forEach(x=>{if(!taken[x.lane]){draft[x.lane]=x.cls;taken[x.lane]=1}});
+    list.forEach(x=>{if(Object.values(draft).includes(x.cls))return;const free=LANES.find(l=>!taken[l]);if(free){draft[free]=x.cls;taken[free]=1}});
+    S.so={g:R.g,r:R.r,classes:list.map(x=>x.cls),label:`${R.r}라운드 공동 ${b.dataset.so}위`};
+    $('selGrade').value=String(R.g);$('selRound').value=String(R.r);
+    S.draft=draft;S.dirty=true;S.pick=null;renderSel();
+    $('assignMsg').textContent='슛오프 사로를 확인하고 [슛오프로 준비 ▶]를 누르세요.';$('soBar').scrollIntoView({behavior:'smooth',block:'center'})};
+
+  /* ===== 모든 경기 기록(다시 쏜 경기 포함) ===== */
+  // 경기ID는 'M-학년-라운드-조-시각'이라 앞부분으로 그 라운드의 본사격·슛오프를 모두 찾는다.
+  async function renderRuns(g,r){
+    try{
+      const pre=`M-${g}-${r}-`,snap=await ref('runs').orderByKey().startAt(pre).endAt(pre+'\uf8ff').once('value'),runs=snap.val()||{};
+      const off=norm((await ref(`results/${g}/${r}`).once('value')).val()),sos=norm((await ref(`shootoff/${g}/${r}`).once('value')).val());
+      const offIds={};Object.entries(off).forEach(([h,x])=>{if(x&&x.runId)offIds[x.runId]=h});const soIds={};Object.values(sos).forEach(x=>{if(x&&x.runId)soIds[x.runId]=1});
+      const ids=Object.keys(runs).sort().reverse();
+      $('runsBody').innerHTML=ids.map(id=>{const p=id.split('-'),h=p[3],t=parseInt(p[4],36),lanes=norm(runs[id]),n=Object.keys(lanes).length,done=Object.values(lanes).filter(v=>v&&v.done).length;
+        const kind=h==='S'?'슛오프':(r===1?h+'조':'본사격'),official=offIds[id]?'공식 기록':soIds[id]?'반영됨':'';
+        const btn=h!=='S'&&!offIds[id]?`<button class="sm" data-official="${id}">공식 기록으로</button>`:'';
+        return `<tr><td class="small">${isFinite(t)?new Date(t).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'-'}</td><td>${kind}</td><td class="small">${n}개 (완료 ${done})</td><td class="small" style="color:${official?'var(--lime)':'var(--muted)'}">${official||'-'}</td><td>${btn}</td></tr>`}).join('')||'<tr><td colspan="5" class="small muted">이 라운드의 본사격 기록이 아직 없어요.</td></tr>';
+      S.runsCache={g,r,runs};
+    }catch(e){$('runsBody').innerHTML=`<tr><td colspan="5" class="small muted">기록을 불러오지 못했어요: ${esc(e.message)}</td></tr>`}
+  }
+  $('runsBody').onclick=e=>{const b=e.target.closest('[data-official]');if(!b||!S.runsCache)return;const id=b.dataset.official,{g,r,runs}=S.runsCache,h=id.split('-')[3];
+    if(!confirm(`이 경기를 ${g}학년 ${r}라운드${r===1?' '+h+'조':''}의 공식 기록으로 바꿀까요? (지금 공식 기록은 목록에 그대로 남아요)`))return;
+    const lanes={};Object.entries(norm(runs[id])).forEach(([l,v])=>{if(v&&v.cls)lanes[l]=Number(v.cls)});
+    ref(`results/${g}/${r}/${h}`).once('value').then(s=>{const cur=s.val()||{};const rl=cur.rule||rule(r);return ref(`results/${g}/${r}/${h}`).set({runId:id,lanes,rule:rl,cfg:cur.cfg||{scoring:S.set.scoring,bonus:S.set.bonus},at:TS(),manual:true})})
+      .then(()=>{$('resNote').textContent='✔ 공식 기록을 바꿨어요.';renderResults()}).catch(err=>$('resNote').textContent='실패: '+err.message)};
+
+  /* ===== CSV 내려받기(엑셀에서 열림) ===== */
+  $('csvBtn').onclick=()=>{
+    const R=S.lastRes;if(!R||!R.rows||!R.rows.length){$('resNote').textContent='내려받을 결과가 없어요.';return}
+    const dec=R.cfg.scoring!=='int',q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+    const lines=[['순위','학급','조','사로','발수','사격 점수','완료 시간(초)','보너스','최종 점수','슛오프','결과'].map(q).join(',')];
+    R.rows.forEach(x=>lines.push([x.rank+(x.tie?' (동점)':''),clsName(R.g,x.cls),x.heat,x.lane,x.n+'/'+R.shots,dec?x.shoot.toFixed(1):x.shoot,x.finishSec!=null?x.finishSec.toFixed(1):(x.timeUp?'시간 초과':''),x.bonus,x.final,(x.soList||[]).join(' / '),R.adv?(x.advanced?'진출':'탈락'):'최종 '+x.rank+'위'].map(q).join(',')));
+    const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download=`리그_${R.g}학년_${R.r}라운드_결과.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+  };
+
+  /* ===== 다음 경기 ===== */
+  // 1라운드 A조 다음은 B조, 그다음부터는 다음 라운드. 2라운드부터는 앞 라운드 진출 학급이 1위부터 순서대로 골라져 있어서 사로만 누르면 된다.
+  function nextOf(){const st=S.st;if(!st||!st.grade||st.so)return null;if(st.round===1&&st.heat==='A')return{g:st.grade,r:1,h:'B'};if(st.round<4)return{g:st.grade,r:st.round+1,h:'A'};return null}
+  function renderNext(){const n=nextOf();$('nextBtn').disabled=!n;$('nextLbl').textContent=n?`→ ${n.g}학년 ${n.r}라운드${n.r===1?' '+n.h+'조':''}`:'(지금 경기가 정해지면 다음 경기로 넘어갈 수 있어요)'}
+  $('nextBtn').onclick=()=>{const n=nextOf();if(!n)return;S.so=null;$('selGrade').value=String(n.g);$('selRound').value=String(n.r);$('selHeat').value=n.h;S.draftKey='';S.dirty=false;renderSel();
+    $('assignMsg').textContent=n.r>1?'진출 학급이 1위부터 순서대로 골라져요. 학급이 고른 사로를 차례로 누른 뒤 [이 경기로 준비 ▶].':'배정을 확인하고 [이 경기로 준비 ▶].';
+    if(n.r>1&&!(S.reveal&&S.reveal[n.g]&&S.reveal[n.g][n.r-1]))$('assignMsg').textContent='⚠ 앞 라운드 결과 발표 기록이 없어 진출 학급을 모르겠어요. 먼저 [결과 발표]를 하세요.'};
 
   // [결과 발표]: 계산한 순위를 reveal/{학년}/{라운드}에 고정해 두고, 전광판은 revealStep만큼 아래 순위부터 하나씩 공개한다.
   $('revealBtn').onclick=async()=>{
@@ -307,7 +438,7 @@
   function tick(){
     const st=S.st,box=$('phaseBox');
     if(!st||!st.grade){$('phaseText').textContent='대기';$('clock').textContent='--:--';box.className='phase';setButtons();return}
-    $('curGame').textContent=`${st.grade}학년 ${st.round}라운드${st.round===1?' '+st.heat+'조':''} · 1인 ${st.rule.per}발 · ${st.rule.shots}발 · 제한 ${st.rule.limit}초`;
+    $('curGame').textContent=st.so?`${st.grade}학년 ${st.round}라운드 슛오프 (${st.soLabel||''}) · 학급 대표 1발 · 제한 ${st.rule.limit}초`:`${st.grade}학년 ${st.round}라운드${st.round===1?' '+st.heat+'조':''} · 1인 ${st.rule.per}발 · ${st.rule.shots}발 · 제한 ${st.rule.limit}초`;
     let txt=PHASE[st.phase]||st.phase,clock='--:--';const t=now();
     if((st.phase==='practice'||st.phase==='shooting')&&st.startAt){
       if(t<st.startAt){txt+=' · 시작 '+Math.ceil((st.startAt-t)/1000)+'초 전';clock=fmt(st.endAt-st.startAt)}
@@ -356,13 +487,14 @@
 
   /* ===== 설정 ===== */
   function renderSet(){
-    const s=S.set;$('setTeam').value=s.teamSize;$('setBonus').value=s.bonus;$('setScoring').value=s.scoring;$('setC1').value=s.classes[1];$('setC2').value=s.classes[2];
+    const s=S.set;$('setTeam').value=s.teamSize;$('setBonus').value=s.bonus;$('setScoring').value=s.scoring;$('setC1').value=s.classes[1];$('setC2').value=s.classes[2];$('setMiss').value=s.missLimit||1.8;
     $('setBody').innerHTML=[1,2,3,4].map(r=>{const x=s.rounds[r];return `<tr><td><b>${r}R</b></td><td><input type="number" min="1" max="10" data-r="${r}" data-k="per" value="${x.per}"></td><td class="muted">${x.per*s.teamSize}</td><td><input type="number" min="10" step="10" data-r="${r}" data-k="limit" value="${x.limit}"></td><td><input type="number" min="0" step="10" data-r="${r}" data-k="practice" value="${x.practice}"></td><td><input type="number" min="0" max="7" data-r="${r}" data-k="advance" value="${x.advance}"></td></tr>`}).join('');
   }
   $('saveSetBtn').onclick=()=>{
     const s=clone(S.set),num=(v,d)=>{const n=Number(v);return isFinite(n)?n:d};
     s.teamSize=Math.max(1,Math.round(num($('setTeam').value,15)));s.bonus=Math.max(0,num($('setBonus').value,0.2));s.scoring=$('setScoring').value==='int'?'int':'dec';
     s.classes={1:Math.round(num($('setC1').value,12)),2:Math.round(num($('setC2').value,10))};
+    s.missLimit=Math.min(4,Math.max(1.2,Math.round(num($('setMiss').value,1.8)*10)/10));
     document.querySelectorAll('#setBody input').forEach(i=>{s.rounds[i.dataset.r][i.dataset.k]=Math.max(0,Math.round(num(i.value,0)))});
     ref('settings').set(s).then(()=>$('setMsg').textContent='✔ 설정을 저장했어요.').catch(e=>$('setMsg').textContent='저장 실패: '+e.message);
   };
@@ -379,9 +511,9 @@
     firebase.auth().signInAnonymously().then(()=>{
       ref('settings').on('value',s=>{const v=s.val();S.set=v?Object.assign(clone(DEF),v,{rounds:Object.assign(clone(DEF.rounds),v.rounds||{}),classes:Object.assign({},DEF.classes,v.classes||{})}):clone(DEF);renderSet();renderSel()});
       ref('heats').on('value',s=>{S.heats=s.val()||{};renderAssign()});
-      ref('state').on('value',s=>{const prev=S.st&&(S.st.grade+'/'+S.st.round+'/'+S.st.phase);S.st=s.val();if(S.st)S.st.lanes=norm(S.st.lanes);renderLanes();tick();
-        const cur=S.st&&(S.st.grade+'/'+S.st.round+'/'+S.st.phase);if(cur!==prev)renderResults()});
-      ref('reveal').on('value',s=>{S.reveal=s.val()||{};renderAdvHint()});
+      ref('state').on('value',s=>{const prev=S.st&&(S.st.grade+'/'+S.st.round+'/'+S.st.phase);S.st=s.val();if(S.st)S.st.lanes=norm(S.st.lanes);renderLanes();tick();renderNext();
+        const cur=S.st&&(S.st.grade+'/'+S.st.round+'/'+S.st.phase);if(cur!==prev){followState();renderResults()}});
+      ref('reveal').on('value',s=>{S.reveal=s.val()||{};renderAdvHint();renderAssign()});
       ref('live').on('value',s=>{S.live=s.val()||{};renderLanes()});
       setInterval(tick,250);
     }).catch(e=>{$('connPill').textContent='로그인 실패: '+e.message;$('connPill').className='pill bad'});
