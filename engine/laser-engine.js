@@ -34,7 +34,8 @@
     // 쏘지 않은 장면의 V 흔들림은 최대 3, 색 없이 밝기만 오른 장면도 V+2~3이라 30이면 충분히 떨어져 있다.
     strongV: 30,
     growR: 2,           // 씨앗 주변으로 빛 덩어리를 넓힐 때 한 번에 보는 거리(px)
-    minBlob: 4,         // 빛 덩어리 최소 크기(px) - 더 작으면 잡음
+    minBlob: 2,         // 빛 덩어리 최소 크기(px) - 더 작으면 잡음. 4로 두면 멀리서 찍힌 흐린 점(2~3px)을 놓쳤다.
+                        //   2로 낮춰도 녹화 재생(쏘지 않은 장면 35개)·2차 태블릿 시험(밝기만 바뀐 장면 36개)에서 가짜 발 0
     maxLitFrames: 3,    // 이 장면 수보다 오래 켜져 있으면 레이저가 아니라 장면 변화(조명·그림자·사람)
     mergeDist: 80,      // 이어진 두 장면의 빛이 이 거리 안이면 같은 발(2장에 걸친 발, 줄 길이 최대 60px)
     lockoutMs: 120,     // 한 발 직후 이 시간 안의 새 빛은 같은 발의 잔광으로 본다(연사 최소 간격 420ms보다 충분히 짧게)
@@ -92,18 +93,28 @@
         if (!inScanH[i]) continue;
         const dv = V[i] - bgV[i];
         if (dv < o.seedV || dv < o.seedNoiseK * nzV[i] || V[i] - prevV[i] < o.seedOnsetV) continue;
-        const x0 = (i % hw) * 2, y0 = ((i / hw) | 0) * 2, p0 = y0 * w + x0;
-        if (mark[p0] || (Y[p0] - bgY[p0] < o.seedY && dv < o.strongV)) continue;
+        // 씨앗 자리 = 색차 칸(2x2) 안에서 밝기가 가장 많이 오른 픽셀. 멀리서 찍혀 1~2픽셀뿐인 흐린 점은
+        // 칸의 왼쪽 위 픽셀만 보면 밝기가 안 오른 것처럼 보여 놓쳤다(2차 태블릿 시험, V+19·23 두 발).
+        const bx = (i % hw) * 2, by = ((i / hw) | 0) * 2;
+        let p0 = by * w + bx, bd = -1e9;
+        for (let q = 0; q < 4; q++) { const xx = bx + (q & 1), yy = by + (q >> 1); if (xx >= w || yy >= h) continue; const pq = yy * w + xx, d = Y[pq] - bgY[pq]; if (d > bd) { bd = d; p0 = pq; } }
+        if (mark[p0] || (bd < o.seedY && dv < o.strongV)) continue;
         // 씨앗에서 시작해 이웃으로 빛 덩어리를 넓힌다(밝기가 오르고 색이 빨강 쪽이거나, 밝기가 크게 오른 포화 픽셀)
         let sp = 0, cnt = 0, sw = 0, sx = 0, sy = 0, minY = 1e9, maxY = -1, minX = 1e9, maxX = -1, maxDV = 0;
+        let cc = 0, cw = 0, cxs = 0, cys = 0, cMinY = 1e9, cMaxY = -1;   // 중심부(예전 규칙) 픽셀만 따로: 탄착점 계산용
         stack[sp++] = p0; mark[p0] = 1;
         while (sp) {
           const p = stack[--sp], x = p % w, y = (p / w) | 0;
           const dY = Y[p] - bgY[p], ph = (y >> 1) * hw + (x >> 1), dV = V[ph] - bgV[ph];
-          const inBlob = (dY >= o.blobY && dV >= o.blobV) || dY >= o.blobSatY || dV >= o.strongV || p === p0;
+          // 중심부: 밝기가 오르고 색이 빨강 쪽이거나, 밝기가 크게 오른 포화 픽셀
+          const core = (dY >= o.blobY && dV >= o.blobV) || dY >= o.blobSatY || p === p0;
+          // 가장자리: 빨강만 크게 오른 픽셀(밝은 종이 위 레이저 가장자리), 빨강이 씨앗만큼 오르고 어두워지지 않은 픽셀(흐린 작은 점).
+          // 발을 찾는 데(크기·이어짐)만 쓰고 탄착점 계산에는 넣지 않는다 - 넣었더니 녹화 재생에서 점수가 발마다 0.1~0.9 흔들렸다.
+          const inBlob = core || dV >= o.strongV || (dV >= o.seedV && dY >= 0);
           if (!inBlob) continue;
           const wt = Math.max(1, dY) + Math.max(0, dV) * 2;
-          accP[cnt] = p; accW[cnt] = wt; cnt++; sw += wt; sx += x * wt; sy += y * wt; if (dV > maxDV) maxDV = dV;
+          if (core) { cc++; cw += wt; cxs += x * wt; cys += y * wt; if (y < cMinY) cMinY = y; if (y > cMaxY) cMaxY = y; }
+          accP[cnt] = p; accW[cnt] = core ? wt : 0; cnt++; sw += wt; sx += x * wt; sy += y * wt; if (dV > maxDV) maxDV = dV;
           if (y < minY) minY = y; if (y > maxY) maxY = y; if (x < minX) minX = x; if (x > maxX) maxX = x;
           for (let oy = -o.growR; oy <= o.growR; oy++) for (let ox = -o.growR; ox <= o.growR; ox++) {
             const nx = x + ox, ny = y + oy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
@@ -111,15 +122,18 @@
           }
         }
         if (cnt < o.minBlob) { st.rejectedSmall++; continue; }
-        // 시작점: 줄의 시작 쪽 끝 startRows줄만 모아 중심을 낸다
-        let tx = sx / sw, ty = sy / sw;
+        // 탄착점은 중심부 픽셀로(중심부가 1개뿐인 아주 흐린 점이면 덩어리 전체로). 시작점: 줄의 시작 쪽 끝 startRows줄만 모아 중심을 낸다
+        const useCore = cc >= 2;
+        if (!useCore) for (let j = 0; j < cnt; j++) { const p = accP[j], y = (p / w) | 0, dY = Y[p] - bgY[p], dV = V[(y >> 1) * hw + ((p % w) >> 1)] - bgV[(y >> 1) * hw + ((p % w) >> 1)]; accW[j] = Math.max(1, dY) + Math.max(0, dV) * 2; }
+        const bw = useCore ? cw : sw, bxs = useCore ? cxs : sx, bys = useCore ? cys : sy, bMinY = useCore ? cMinY : minY, bMaxY = useCore ? cMaxY : maxY;
+        let tx = bxs / bw, ty = bys / bw;
         if (o.startEnd !== 'center') {
-          const lo = o.startEnd === 'top' ? minY : maxY - o.startRows + 1, hi = o.startEnd === 'top' ? minY + o.startRows - 1 : maxY;
+          const lo = o.startEnd === 'top' ? bMinY : bMaxY - o.startRows + 1, hi = o.startEnd === 'top' ? bMinY + o.startRows - 1 : bMaxY;
           let w2 = 0, x2 = 0, y2 = 0;
           for (let j = 0; j < cnt; j++) { const p = accP[j], y = (p / w) | 0; if (y < lo || y > hi) continue; w2 += accW[j]; x2 += (p % w) * accW[j]; y2 += y * accW[j]; }
           if (w2 > 0) { tx = x2 / w2; ty = y2 / w2; }
         }
-        blobs.push({ x: tx, y: ty, cx: sx / sw, cy: sy / sw, e: sw, size: cnt, len: Math.max(maxY - minY, maxX - minX) + 1, maxDV });
+        blobs.push({ x: tx, y: ty, cx: bxs / bw, cy: bys / bw, e: sw, size: cnt, len: Math.max(maxY - minY, maxX - minX) + 1, maxDV });
       }
       return blobs;
     }

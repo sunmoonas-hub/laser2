@@ -50,7 +50,7 @@
     <button id="runBtn" disabled>② 인식 시작</button>
     <button id="busyBtn" class="alt" disabled>메인 일부러 바쁘게</button>
     <button id="clrBtn" class="alt">기록 지우기</button>
-    <label><input type="checkbox" id="compChk" checked> 노출 보정 최저(30장/초)</label>
+    <label><input type="checkbox" id="compChk"> 노출 보정 최저</label>
     <label><input type="checkbox" id="saveChk" checked> 발 앞뒤 장면 올리기</label>
   </div>
   <div class="main">
@@ -95,14 +95,15 @@
   const put=(path,val)=>{if(!S.db||!$('saveChk').checked)return;S.uploads=S.uploads.then(()=>S.db.ref(`${ROOT}/enginelab/${S.sess}/${path}`).set(val)).catch(e=>log('올리기 실패: '+e.message))};
 
   /* ---------- 카메라 ---------- */
-  // 녹화(camlab)와 같은 조건: 640x480 · 30장/초 요청 → 노출 보정 최저.
-  // 0단계 측정: 자동 노출이면 노출 41.7ms라 24장/초밖에 안 나오고, 보정 −2면 29.8장/초(밝기 159→69).
-  // 노출 시간을 직접 짧게 하면 안 된다(레이저가 5ms만 켜져 장면 사이 빈틈에 떨어짐).
+  // 기본은 자동 노출(보정 0). 0단계 측정에서 보정 −2면 29.8장/초(자동은 24장/초)라 처음엔 −2를 기본으로 했지만,
+  // 2차 태블릿 시험(2026-11-27)에서 −2로 두니 안 보이는 발이 많았고 끄니 인식됐다.
+  // 노출이 짧아지면 장면과 장면 사이 빈틈이 생기고, 약 5ms만 켜지는 레이저가 그 빈틈에 떨어져 아예 안 찍히는 것으로 본다.
+  // 비교 시험용으로 선택은 남겨 두고, 바꿀 때마다 설정을 기록한다(settings/).
   async function applyComp(){
     if(!S.track)return;const caps=S.track.getCapabilities?S.track.getCapabilities():{};
     const c=caps.exposureCompensation,val=$('compChk').checked&&c&&Number.isFinite(c.min)?c.min:0;
     try{await S.track.applyConstraints({frameRate:{ideal:30},advanced:[{exposureMode:'continuous',exposureCompensation:val}]})}catch(e){log('노출 보정 실패: '+e.message)}
-    const s=S.track.getSettings();log(`카메라 ${s.width}x${s.height} · ${s.frameRate||'?'}fps 요청 · 노출 보정 ${s.exposureCompensation} · 노출 ${s.exposureTime??'-'}`);
+    const s=S.track.getSettings();if(S.running)put('settings/'+Date.now(),JSON.parse(JSON.stringify({comp:$('compChk').checked,s})));log(`카메라 ${s.width}x${s.height} · ${s.frameRate||'?'}fps 요청 · 노출 보정 ${s.exposureCompensation} · 노출 ${s.exposureTime??'-'}`);
   }
   $('camBtn').onclick=async()=>{
     try{
@@ -193,7 +194,7 @@
     }
     // 빛 켜짐 기록: 엔진이 발로 인정하지 않은 빛이 어디서 몇 번 있었는지 PC에서 맞춰 보기 위함
     if(d.flash){S.flashes=(S.flashes||[]).concat([d.flash]).slice(-200);S.flashN=(S.flashN||0)+1;put('flashes/'+String(S.flashN).padStart(4,'0'),d.flash);return}
-    if(d.stat){S.lastStat=d.stat;showStat(d.stat);if(!S.statPut||Date.now()-S.statPut>5000){S.statPut=Date.now();const t=d.stat;put('stat',{at:Date.now(),n:t.n,lost:t.lost,fps:t.fps,flashes:t.flashes,shots:S.shots.length,copyAvg:r2(t.copyAvg),copyMax:r1(t.copyMax),engAvg:r2(t.engAvg),engMax:r1(t.engMax),eng:t.eng})}return}
+    if(d.stat){S.lastStat=d.stat;showStat(d.stat);if(!S.statPut||Date.now()-S.statPut>5000){S.statPut=Date.now();const t=d.stat;put('stats/'+S.statPut,{comp:$('compChk').checked,at:Date.now(),n:t.n,lost:t.lost,fps:t.fps,flashes:t.flashes,shots:S.shots.length,copyAvg:r2(t.copyAvg),copyMax:r1(t.copyMax),engAvg:r2(t.engAvg),engMax:r1(t.engMax),eng:t.eng})}return}
     if(d.ended)log(`인식 끝: 장면 ${d.n}장 · 빠진 장면 ${d.lost}장`);
   }
   // 비교용: 같은 발을 예전 방식(빛 덩어리 전체 중심)으로 채점하면 몇 점이었는지
