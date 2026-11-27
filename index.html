@@ -427,7 +427,8 @@
   }
 
   // 리그 경기 중이면 컨트롤 타워 대회 설정의 0점 인정 경계(state.missLimit)를 쓴다(없으면 1.8).
-  function missLimit(){if(state.paperMultiple)return state.paperMultiple;let m=0;try{m=state.matchCfg&&state.matchCfg.mode==='league'&&lg.st&&Number(lg.st.missLimit)}catch(_){}   // lg는 아래쪽에서 만들어져 처음 그릴 때는 아직 없을 수 있다return m>=1.2&&m<=6?m:MISS_LIMIT}
+  // (lg는 아래쪽에서 만들어져 처음 그릴 때는 아직 없을 수 있어 try로 감싼다)
+  function missLimit(){if(state.paperMultiple)return state.paperMultiple;let m=0;try{m=state.matchCfg&&state.matchCfg.mode==='league'&&lg.st&&Number(lg.st.missLimit)}catch(_){}return m>=1.2&&m<=6?m:MISS_LIMIT}
   function canvasPoint(ev){const r=els.overlay.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top}}
   function drawOverlay(){
     const width=els.overlay.clientWidth,height=els.overlay.clientHeight;ctx.clearRect(0,0,width,height);
