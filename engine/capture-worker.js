@@ -113,8 +113,9 @@ async function run(m) {
     prevY = Y; prevV = V;
     if (ts - statAt > 1000) {
       statAt = ts;
+      let ls = 0, lc = 0; for (let i = 0; i < Y.length; i += 61) { ls += Y[i]; lc++; }   // 화면 평균 밝기(노출 설정 비교용)
       const avg = a => a.length ? a.reduce((p, q) => p + q, 0) / a.length : 0, mx = a => a.length ? Math.max(...a) : 0;
-      postMessage({ stat: { n, lost, fps: gapMed ? Math.round(10000 / gapMed) / 10 : 0, copyAvg: avg(cCopy), copyMax: mx(cCopy), engAvg: avg(cEng), engMax: mx(cEng), flashes, eng: eng.stats() } });
+      postMessage({ stat: { lum: Math.round(ls / lc), n, lost, fps: gapMed ? Math.round(10000 / gapMed) / 10 : 0, copyAvg: avg(cCopy), copyMax: mx(cCopy), engAvg: avg(cEng), engMax: mx(cEng), flashes, eng: eng.stats() } });
       cCopy.length = 0; cEng.length = 0;
     }
   }

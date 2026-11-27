@@ -50,7 +50,7 @@
     <button id="runBtn" disabled>② 인식 시작</button>
     <button id="busyBtn" class="alt" disabled>메인 일부러 바쁘게</button>
     <button id="clrBtn" class="alt">기록 지우기</button>
-    <label><input type="checkbox" id="compChk"> 노출 보정 최저</label>
+    <label>노출 <select id="expSel"><option value="fix33">고정 33ms (ISO 200)</option><option value="fix33b">고정 33ms (ISO 400, 어두운 곳)</option><option value="auto">자동</option><option value="comp">자동 + 보정 최저</option></select></label>
     <label><input type="checkbox" id="saveChk" checked> 발 앞뒤 장면 올리기</label>
   </div>
   <div class="main">
@@ -98,12 +98,20 @@
   // 기본은 자동 노출(보정 0). 0단계 측정에서 보정 −2면 29.8장/초(자동은 24장/초)라 처음엔 −2를 기본으로 했지만,
   // 2차 태블릿 시험(2026-11-27)에서 −2로 두니 안 보이는 발이 많았고 끄니 인식됐다.
   // 노출이 짧아지면 장면과 장면 사이 빈틈이 생기고, 약 5ms만 켜지는 레이저가 그 빈틈에 떨어져 아예 안 찍히는 것으로 본다.
+  // 3차 시험(두 대가 같은 과녁, 28발): 둘 다 자동 노출인데 카메라가 정한 노출이 6사로 25ms·7사로 33ms로 달랐고,
+  // 6사로는 6발, 7사로는 2발을 놓쳤다. 놓친 발은 빛 자체가 안 찍혔다(엔진은 찍힌 레이저 빛 48개를 모두 발로 인정).
+  // → 노출을 장면 간격(33.3ms)에 맞춰 '고정'하면 빈틈이 없어진다. 노출 고정은 ISO를 함께 줘야 적용된다(0단계 측정).
+  //   0단계 측정 밝기: 10ms·ISO 800 = 111 → 33ms·ISO 200이면 비슷한 밝기(약 90)로 본다.
   // 비교 시험용으로 선택은 남겨 두고, 바꿀 때마다 설정을 기록한다(settings/).
+  const EXP={fix33:{advanced:[{exposureMode:'manual',exposureTime:330,iso:200}]},fix33b:{advanced:[{exposureMode:'manual',exposureTime:330,iso:400}]},auto:{advanced:[{exposureMode:'continuous',exposureCompensation:0}]}};
   async function applyComp(){
-    if(!S.track)return;const caps=S.track.getCapabilities?S.track.getCapabilities():{};
-    const c=caps.exposureCompensation,val=$('compChk').checked&&c&&Number.isFinite(c.min)?c.min:0;
-    try{await S.track.applyConstraints({frameRate:{ideal:30},advanced:[{exposureMode:'continuous',exposureCompensation:val}]})}catch(e){log('노출 보정 실패: '+e.message)}
-    const s=S.track.getSettings();if(S.running)put('settings/'+Date.now(),JSON.parse(JSON.stringify({comp:$('compChk').checked,s})));log(`카메라 ${s.width}x${s.height} · ${s.frameRate||'?'}fps 요청 · 노출 보정 ${s.exposureCompensation} · 노출 ${s.exposureTime??'-'}`);
+    if(!S.track)return;const caps=S.track.getCapabilities?S.track.getCapabilities():{};const mode=$('expSel').value;
+    try{await S.track.applyConstraints({frameRate:{ideal:30}})}catch(_){}
+    if(mode==='fix33'||mode==='fix33b'){try{await S.track.applyConstraints({advanced:[{exposureMode:'continuous',exposureCompensation:0}]})}catch(_){}}
+    let cons=EXP[mode];if(mode==='comp'){const c=caps.exposureCompensation;cons={advanced:[{exposureMode:'continuous',exposureCompensation:c&&Number.isFinite(c.min)?c.min:0}]}}
+    try{await S.track.applyConstraints(cons)}catch(e){log('노출 설정 실패('+mode+'): '+e.message+' → 자동으로');try{await S.track.applyConstraints(EXP.auto)}catch(_){}}
+    await new Promise(r=>setTimeout(r,600));
+    const s=S.track.getSettings();if(S.running)put('settings/'+Date.now(),JSON.parse(JSON.stringify({mode,s})));log(`카메라 ${s.width}x${s.height} · ${s.frameRate||'?'}fps 요청 · 노출 ${s.exposureMode} ${s.exposureTime??'-'} · ISO ${s.iso??'-'} · 보정 ${s.exposureCompensation}`);S.expInfo=`${s.exposureMode==='manual'?'고정':'자동'} 노출 ${s.exposureTime!=null?r1(s.exposureTime/10)+'ms':'-'} · ISO ${s.iso??'-'}`;
   }
   $('camBtn').onclick=async()=>{
     try{
@@ -115,7 +123,7 @@
       if(typeof MediaStreamTrackProcessor!=='function'){log('⚠ 이 브라우저는 장면 줄 세우기(MediaStreamTrackProcessor)를 지원하지 않아 시험할 수 없어요');$('runBtn').disabled=true}
     }catch(e){log('카메라 실패: '+e.message)}
   };
-  $('compChk').onchange=applyComp;
+  $('expSel').onchange=applyComp;
 
   /* ---------- 과녁 지정(두 번 누르기) ---------- */
   function sizeOverlay(){const c=$('ov'),b=c.getBoundingClientRect();if(!b.width||!b.height)return;c.width=b.width;c.height=b.height;draw()}
@@ -194,7 +202,7 @@
     }
     // 빛 켜짐 기록: 엔진이 발로 인정하지 않은 빛이 어디서 몇 번 있었는지 PC에서 맞춰 보기 위함
     if(d.flash){S.flashes=(S.flashes||[]).concat([d.flash]).slice(-200);S.flashN=(S.flashN||0)+1;put('flashes/'+String(S.flashN).padStart(4,'0'),d.flash);return}
-    if(d.stat){S.lastStat=d.stat;showStat(d.stat);if(!S.statPut||Date.now()-S.statPut>5000){S.statPut=Date.now();const t=d.stat;put('stats/'+S.statPut,{comp:$('compChk').checked,at:Date.now(),n:t.n,lost:t.lost,fps:t.fps,flashes:t.flashes,shots:S.shots.length,copyAvg:r2(t.copyAvg),copyMax:r1(t.copyMax),engAvg:r2(t.engAvg),engMax:r1(t.engMax),eng:t.eng})}return}
+    if(d.stat){S.lastStat=d.stat;showStat(d.stat);if(!S.statPut||Date.now()-S.statPut>5000){S.statPut=Date.now();const t=d.stat;const cs=S.track?S.track.getSettings():{};put('stats/'+S.statPut,{exp:$('expSel').value,expMode:cs.exposureMode||'',expTime:cs.exposureTime??null,iso:cs.iso??null,lum:t.lum,at:Date.now(),n:t.n,lost:t.lost,fps:t.fps,flashes:t.flashes,shots:S.shots.length,copyAvg:r2(t.copyAvg),copyMax:r1(t.copyMax),engAvg:r2(t.engAvg),engMax:r1(t.engMax),eng:t.eng})}return}
     if(d.ended)log(`인식 끝: 장면 ${d.n}장 · 빠진 장면 ${d.lost}장`);
   }
   // 비교용: 같은 발을 예전 방식(빛 덩어리 전체 중심)으로 채점하면 몇 점이었는지
@@ -204,7 +212,7 @@
   }
   function showStat(s){
     const lostCls=s.lost?'bad':'good',fpsCls=s.fps>=28?'good':'bad';
-    $('stat').innerHTML=`장면 <b>${s.n}</b>장 · 속도 <span class="${fpsCls}">${s.fps}장/초</span> · 빠진 장면 <span class="${lostCls}">${s.lost}</span>장<br>`+
+    $('stat').innerHTML=(S.expInfo?S.expInfo+' · 화면 밝기 '+s.lum+'<br>':'')+`장면 <b>${s.n}</b>장 · 속도 <span class="${fpsCls}">${s.fps}장/초</span> · 빠진 장면 <span class="${lostCls}">${s.lost}</span>장<br>`+
       `장면 복사 평균 ${r2(s.copyAvg)}ms (최대 ${r1(s.copyMax)}) · 엔진 평균 ${r2(s.engAvg)}ms (최대 ${r1(s.engMax)})<br>`+
       `레이저처럼 켜진 빛 <b>${s.flashes}</b>번 · 발로 인정 <b>${S.shots.length}</b>개<br>`+
       `버린 빛: 너무 작음 ${s.eng.rejectedSmall} · 오래 켜짐 ${s.eng.rejectedLong} · 화면 전체 변화 ${s.eng.globalSkips}`+(S.busy?'<br><span class="bad">메인을 일부러 바쁘게 하는 중</span>':'')+
