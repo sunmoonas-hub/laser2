@@ -82,6 +82,8 @@
   const $=id=>document.getElementById(id);
   const lane=new URLSearchParams(location.search).get('lane')||'';
   const S={stream:null,track:null,db:null,dbTried:false,roi:null,target:null,taps:[],worker:null,capTrack:null,running:false,shots:[],clips:0,busy:null,uploads:Promise.resolve(),sess:'',lastStat:null};
+  // 일꾼·엔진 파일 판번호: 고칠 때마다 올린다(태블릿 캐시에 남은 예전 파일을 쓰지 않도록)
+  const ENGINE_VER='20261127c';
   window.__lab=S;   // 진단용(개발자 도구에서 상태 확인)
   const r1=v=>Math.round(v*10)/10,r2=v=>Math.round(v*100)/100;
   function log(s){$('log').textContent+=new Date().toLocaleTimeString('ko-KR',{hour12:false})+' '+s+'\n';$('log').scrollTop=1e9}
@@ -92,7 +94,8 @@
     catch(e){log('Firebase 연결 실패(기록은 이 화면에만 남음): '+e.message)}
     return S.db;
   }
-  const put=(path,val)=>{if(!S.db||!$('saveChk').checked)return;S.uploads=S.uploads.then(()=>S.db.ref(`${ROOT}/enginelab/${S.sess}/${path}`).set(val)).catch(e=>log('올리기 실패: '+e.message))};
+  const put=(path,val)=>{if(!S.db||!$('saveChk').checked)return;val=JSON.parse(JSON.stringify(val));   // 값이 비어(undefined) 있으면 Firebase가 통째로 거절한다(4차 시험에서 상태 기록이 하나도 안 남음)
+    S.uploads=S.uploads.then(()=>S.db.ref(`${ROOT}/enginelab/${S.sess}/${path}`).set(val)).catch(e=>log('올리기 실패: '+e.message))};
 
   /* ---------- 카메라 ---------- */
   // 기본은 자동 노출(보정 0). 0단계 측정에서 보정 −2면 29.8장/초(자동은 24장/초)라 처음엔 −2를 기본으로 했지만,
@@ -167,13 +170,13 @@
     if(!S.track||!S.roi)return;
     if($('saveChk').checked)await fbReady();
     S.sess=(lane?'lane'+lane+'-':'')+Date.now().toString(36);S.clips=0;S.flashN=0;S.flashes=[];
-    put('meta',JSON.parse(JSON.stringify({at:new Date().toISOString(),ua:navigator.userAgent,lane,roi:S.roi,target:S.target,settings:S.track.getSettings()})));
+    put('meta',JSON.parse(JSON.stringify({ver:ENGINE_VER,at:new Date().toISOString(),ua:navigator.userAgent,lane,roi:S.roi,target:S.target,settings:S.track.getSettings()})));
     const capTrack=S.capTrack=S.track.clone(),rd=new MediaStreamTrackProcessor({track:capTrack}).readable;
-    const w=S.worker=new Worker('engine/capture-worker.js');
+    const w=S.worker=new Worker('engine/capture-worker.js?v='+ENGINE_VER);
     w.onmessage=onWorker;w.onerror=e=>log('일꾼 오류: '+(e.message||e));
     w.postMessage({cmd:'start',readable:rd,roi:{x:S.roi.x,y:S.roi.y,w:S.roi.w,h:S.roi.h},target:S.target,opts:{missLimit:99},clip:{on:$('saveChk').checked&&!!S.db,thrV:12,thrY:45}},[rd]);
     S.running=true;$('runBtn').textContent='② 인식 멈춤';$('runBtn').className='stop';$('busyBtn').disabled=false;
-    log(`인식 시작 (세션 ${S.sess})`);
+    log(`인식 시작 (세션 ${S.sess}, 엔진 판 ${ENGINE_VER})`);
   }
   function stopRun(){
     if(S.worker){S.worker.postMessage({cmd:'stop'});const w=S.worker;setTimeout(()=>w.terminate(),1500)}

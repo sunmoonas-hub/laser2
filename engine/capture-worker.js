@@ -20,7 +20,8 @@
  *   stat.flashes = 레이저처럼 갑자기 켜진 빛의 수(엔진이 발로 인정했든 안 했든)
  *   {err}, {ended}
  */
-importScripts('laser-engine.js');
+// 엔진도 같은 판번호(?v=)로 불러온다 - 태블릿이 예전 파일을 캐시에 들고 있어 고친 엔진이 안 돌던 일이 있었다(4차 시험)
+importScripts('laser-engine.js' + self.location.search);
 
 let stopped = false, eng = null, clipOn = false;
 self.onmessage = e => {
